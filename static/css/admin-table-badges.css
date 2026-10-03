@@ -1,0 +1,258 @@
+/* Compact semantic badges used by admin data tables. */
+:where(
+  .transaction-table,
+  .return-table,
+  .shop-table,
+  .product-table,
+  .category-table,
+  .policy-fee-table,
+  #panel-customers,
+  #panel-reviews,
+  #panel-complaints,
+  .authorization-table,
+  #panel-logs,
+  .activity-history-table
+) :where(
+  .status,
+  .badge,
+  .transaction-type,
+  .transaction-status,
+  .return-status,
+  .product-status,
+  .category-status,
+  .fee-status,
+  .log-badge,
+  .imp-badge
+) {
+  box-sizing: border-box;
+  display: inline-flex !important;
+  min-height: 24px !important;
+  width: fit-content;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 3px 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 16px !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+}
+
+:where(
+  .transaction-table,
+  .return-table,
+  #panel-customers,
+  #panel-reviews,
+  #panel-complaints,
+  .authorization-table,
+  #panel-logs
+) .status::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Blue: active, approved, paid and completed. */
+.transaction-type--payment,
+.transaction-status--success,
+.return-status--accepted,
+.shop-table .badge--paid,
+.shop-table .status--active,
+.product-status--selling,
+.category-status--active,
+.fee-status--active,
+#panel-customers .status--info,
+#panel-reviews .status--info,
+#panel-reviews .status--ok,
+#panel-complaints .status--info,
+#panel-complaints .status--ok,
+.authorization-table td:nth-child(3) .status--info,
+.authorization-table td:nth-child(3) .status--ok,
+.authorization-table td:nth-child(5) .status--info,
+#panel-logs .status--info,
+.activity-history-table .log-badge--blue {
+  border-color: #b8d8ff !important;
+  background: #e3f0ff !important;
+  color: #245aa8 !important;
+}
+
+/* Amber: pending, attention and money-related states. */
+.transaction-type--refund,
+.transaction-status--processing,
+.return-status--pending,
+.shop-table .badge--debt,
+.shop-table .badge--overdue,
+.shop-table .status--pending,
+.product-status--pending,
+#panel-customers .status--warn,
+#panel-customers .status--bad,
+#panel-reviews .status--warn,
+#panel-complaints .status--warn,
+#panel-complaints .status--bad,
+.authorization-table td:nth-child(3) .status--warn,
+#panel-logs .status--warn,
+.activity-history-table .log-badge--red,
+.activity-history-table .imp-badge {
+  border-color: #ffd39a !important;
+  background: #fff0d5 !important;
+  color: #9a5200 !important;
+}
+
+/* Gray: paused, rejected and neutral categories. */
+.transaction-type--payout,
+.transaction-status--failed,
+.return-status--verifying,
+.return-status--rejected,
+.product-status--hidden,
+.category-status--hidden,
+.fee-status--paused,
+#panel-reviews .status--bad,
+#panel-complaints .status:not([class*="status--"]),
+.authorization-table td:nth-child(3) .status:not([class*="status--"]),
+.authorization-table td:nth-child(5) .status--bad,
+#panel-logs .status:not([class*="status--"]),
+#panel-logs .status--ok,
+.activity-history-table .log-badge--gray {
+  border-color: #d7dde4 !important;
+  background: #f1f4f6 !important;
+  color: #4f5d6d !important;
+}
+
+.category-table .category-status {
+  border-radius: 6px !important;
+}
+
+:where(#panel-customers, #panel-reviews, #panel-complaints) .status > i {
+  font-size: 11px;
+}
+
+/* Page-level sizing from the table references. */
+#panel-complaints {
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+}
+
+#panel-complaints .complaint-table thead th {
+  height: 58px;
+  padding: 13px 18px !important;
+}
+
+#panel-complaints .complaint-table tbody td {
+  height: 78px;
+  padding: 13px 18px !important;
+}
+
+#panel-complaints .status {
+  min-height: 28px !important;
+  padding: 4px 11px !important;
+  font-size: 12px !important;
+}
+
+#panel-complaints input[type="checkbox"],
+.category-table input[type="checkbox"],
+.permission-matrix-panel input[type="checkbox"] {
+  width: 18px !important;
+  min-width: 18px;
+  height: 18px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 0 0 18px;
+  accent-color: #2563eb;
+}
+
+.admin-ui .shell__content .shop-table-card .category-table input[type="checkbox"] {
+  width: 18px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  flex: 0 0 18px !important;
+}
+
+#panel-complaints .complaint-action-button {
+  min-width: 80px !important;
+  width: auto !important;
+  min-height: 40px !important;
+  height: 40px !important;
+  gap: 6px !important;
+  padding: 0 12px !important;
+  border-color: #dfe3e8 !important;
+  background: #fff !important;
+  color: #334155 !important;
+  font-size: 13px !important;
+}
+
+#panel-complaints .complaint-action-button > i {
+  color: #475569 !important;
+  font-size: 12px !important;
+}
+
+#panel-complaints .complaint-action-button:hover {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+#panel-complaints .complaint-action-button:hover > i {
+  color: #334155 !important;
+}
+
+.admin-ui .shell__content .shop-table-card .category-table thead th {
+  height: 60px !important;
+  padding: 14px 18px !important;
+  font-size: 13px !important;
+}
+
+.admin-ui .shell__content .shop-table-card .category-table tbody td {
+  height: 94px !important;
+  padding: 16px 18px !important;
+  font-size: 15px !important;
+}
+
+.admin-ui .shell__content .category-table .category-name {
+  font-size: 16px !important;
+}
+
+.admin-ui .shell__content .category-table td small {
+  margin-top: 3px;
+  font-size: 14px !important;
+}
+
+.admin-ui .shell__content .category-table .category-status {
+  min-height: 30px !important;
+  padding: 5px 12px !important;
+  border-radius: 7px !important;
+  font-size: 14px !important;
+}
+
+.admin-ui .shell__content .category-table .category-actions button {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+}
+
+.admin-ui .shell__content .category-table .category-actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+.authorization-time-filter {
+  position: relative;
+}
+
+.authorization-time-filter > i {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  color: #475569;
+  font-size: 14px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.authorization-time-filter > select {
+  padding-left: 36px !important;
+}

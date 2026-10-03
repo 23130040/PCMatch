@@ -1,0 +1,238 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trung tâm trợ giúp - PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/support.css' %}">
+    <link rel="stylesheet" href="{% static 'css/support-effects.css' %}">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="support-page">
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content support-main" id="main">
+        <nav class="support-breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>/</span><span>Trợ giúp</span></nav>
+        <header class="support-heading">
+            <h1>Trung tâm trợ giúp</h1>
+            <p>Hướng dẫn thao tác vận hành sàn PCMatch: đơn hàng, giao dịch, shop, phân quyền và bảo mật tài khoản.</p>
+            <div><i class="fa-solid fa-headset"></i> Đội hỗ trợ phản hồi trung bình trong <strong>1,4 giờ</strong> · hỗ trợ trong giờ hành chính</div>
+        </header>
+
+        <section class="support-search-card">
+            <label class="support-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m20 20-4-4" stroke-linecap="round"/>
+                </svg>
+                <input type="search" data-support-search
+                       placeholder="Bạn cần hướng dẫn điều gì? Ví dụ: xác nhận đơn hàng, hoàn tiền, phân quyền">
+            </label>
+            <div class="support-quick-tags"><strong>Tìm nhanh:</strong>
+                <button type="button" data-search-term="Xác nhận đơn">Xác nhận đơn</button>
+                <button type="button" data-search-term="Hoàn tiền">Hoàn tiền</button>
+                <button type="button" data-search-term="Duyệt shop">Duyệt shop</button>
+                <button type="button" data-search-term="Phân quyền">Phân quyền</button>
+                <button type="button" data-search-term="Đổi mật khẩu">Đổi mật khẩu</button>
+            </div>
+        </section>
+
+        <section class="support-kpi-grid">
+            <article><span>Chủ đề hướng dẫn</span>
+                <div><strong>6</strong><small>chủ đề</small><em>↗ +2</em></div>
+                <p>Nhóm nội dung hướng dẫn vận hành sàn PCMatch</p></article>
+            <article><span>Bài viết trợ giúp</span>
+                <div><strong>48</strong><small>bài</small><em>↗ +6</em></div>
+                <p>Hướng dẫn thao tác chi tiết theo từng nghiệp vụ</p></article>
+            <article><span>Thời gian phản hồi</span>
+                <div><strong>1,4</strong><small>giờ</small><em>↓ -22 phút</em></div>
+                <p>Thời gian trung bình đội hỗ trợ trả lời yêu cầu</p></article>
+            <article class="is-warm"><span>Yêu cầu đang mở</span>
+                <div><strong>3</strong><small>yêu cầu</small><em>↓ -1</em></div>
+                <p>Yêu cầu hỗ trợ của bạn đang được xử lý</p></article>
+        </section>
+
+        <section class="support-topics">
+            <div class="support-section-heading"><h2>Chủ đề hướng dẫn</h2>
+                <p>Chọn một chủ đề để lọc danh sách bài viết bên dưới</p></div>
+            <div class="support-topic-grid" data-topic-grid>
+                <button type="button" class="support-topic is-active" data-topic="all"><span
+                        class="support-topic__icon is-blue">◈</span><strong>Bắt đầu với PCMatch</strong><small>Làm quen
+                    giao diện quản trị, phân quyền ban đầu và các nghiệp vụ nền tảng.</small><em>▤ 8 bài hướng dẫn</em>
+                </button>
+                <button type="button" class="support-topic" data-topic="orders"><span
+                        class="support-topic__icon">▤</span><strong>Quản lý đơn hàng</strong><small>Xác nhận đơn, bàn
+                    giao vận chuyển, xử lý đơn huỷ và ghi nhận trả hàng.</small><em>▤ 11 bài hướng dẫn</em></button>
+                <button type="button" class="support-topic" data-topic="transactions"><span
+                        class="support-topic__icon is-amber">◉</span><strong>Giao dịch &amp; đối soát</strong><small>Đối
+                    soát thanh toán, hoàn tiền, chi trả cho shop và xử lý giao dịch lệch.</small><em>▤ 9 bài hướng
+                    dẫn</em></button>
+                <button type="button" class="support-topic" data-topic="ecosystem"><span
+                        class="support-topic__icon is-blue">▣</span><strong>Shop, sản phẩm &amp; danh
+                    mục</strong><small>Duyệt shop tham gia sàn, kiểm duyệt sản phẩm và tổ chức danh mục.</small><em>▤ 10
+                    bài hướng dẫn</em></button>
+                <button type="button" class="support-topic" data-topic="users"><span
+                        class="support-topic__icon">♙</span><strong>Người dùng &amp; phân quyền</strong><small>Quản lý
+                    khách hàng, đánh giá, khiếu nại và gán quyền cho tài khoản quản trị.</small><em>▤ 6 bài hướng
+                    dẫn</em></button>
+                <button type="button" class="support-topic" data-topic="security"><span
+                        class="support-topic__icon is-amber">♙</span><strong>Bảo mật &amp; tài khoản</strong><small>Đổi
+                    mật khẩu, xác thực hai lớp, quản lý phiên đăng nhập và nhật ký bảo mật.</small><em>▤ 4 bài hướng
+                    dẫn</em></button>
+            </div>
+        </section>
+
+        <div class="support-content-grid">
+            <section class="support-articles">
+                <header class="support-article-list__header">
+                    <div><span>▯</span>
+                        <div><h2>Bài viết hướng dẫn</h2>
+                            <p><strong data-article-count>9</strong> bài viết</p></div>
+                    </div>
+                    <span data-article-filter-label>Tất cả danh mục</span></header>
+                <div class="support-article-list" data-article-list>
+                    <article data-topic="orders" data-title="Xác nhận đơn hàng và bàn giao cho đơn vị vận chuyển"><span>▤</span>
+                        <div><h3>Xác nhận đơn hàng và bàn giao cho đơn vị vận chuyển <em>Phổ biến</em></h3>
+                            <p>Quy trình xử lý đơn mới: kiểm tra thông tin, xác nhận và bàn giao vận chuyển đúng
+                                hạn.</p><small>▤ Quản lý đơn hàng · ◉ 2.418 lượt xem · ◷ 19/09/2026 · 09:20</small>
+                        </div>
+                        <b>›</b></article>
+                    <article data-topic="transactions"
+                             data-title="Cách đối soát giao dịch và xử lý giao dịch lệch số tiền"><span>▤</span>
+                        <div><h3>Cách đối soát giao dịch và xử lý giao dịch lệch số tiền <em>Phổ biến</em></h3>
+                            <p>Hướng dẫn đọc bảng giao dịch, đối chiếu với đơn hàng và xử lý khi số tiền không khớp.</p>
+                            <small>▤ Giao dịch &amp; đối soát · ◉ 1.876 lượt xem · ◷ 18/09/2026 · 14:05</small></div>
+                        <b>›</b></article>
+                    <article data-topic="ecosystem" data-title="Duyệt hồ sơ shop tham gia sàn"><span>▤</span>
+                        <div><h3>Duyệt hồ sơ shop tham gia sàn <em>Phổ biến</em></h3>
+                            <p>Tiêu chí duyệt shop, kiểm tra giấy tờ pháp lý và điều kiện phát sinh đơn hàng.</p><small>▤
+                                Shop, sản phẩm &amp; danh mục · ◉ 1.204 lượt xem · ◷ 17/09/2026 · 10:40</small></div>
+                        <b>›</b></article>
+                    <article data-topic="ecosystem" data-title="Kiểm duyệt sản phẩm đăng bán và xử lý sản phẩm vi phạm">
+                        <span>▤</span>
+                        <div><h3>Kiểm duyệt sản phẩm đăng bán và xử lý sản phẩm vi phạm</h3>
+                            <p>Quy định hình ảnh, mô tả sản phẩm và cách xử lý sản phẩm thuộc danh mục cấm.</p><small>▤
+                                Shop, sản phẩm &amp; danh mục · ◉ 986 lượt xem · ◷ 16/09/2026 · 16:15</small></div>
+                        <b>›</b></article>
+                    <article data-topic="ecosystem" data-title="Thêm, sửa và sắp xếp danh mục ngành hàng"><span>▤</span>
+                        <div><h3>Thêm, sửa và sắp xếp danh mục ngành hàng</h3>
+                            <p>Tổ chức danh mục theo cấp cha - con, tạo slug tự động và ẩn danh mục tạm thời.</p><small>▤
+                                Shop, sản phẩm &amp; danh mục · ◉ 754 lượt xem · ◷ 15/09/2026 · 11:30</small></div>
+                        <b>›</b></article>
+                    <article data-topic="users" data-title="Phân quyền cho tài khoản quản trị và chủ shop">
+                        <span>▤</span>
+                        <div><h3>Phân quyền cho tài khoản quản trị và chủ shop</h3>
+                            <p>Gán vai trò, bật tắt quyền chi tiết theo nhóm nghiệp vụ và tạm ngưng quyền.</p><small>▤
+                                Người dùng &amp; phân quyền · ◉ 642 lượt xem · ◷ 14/09/2026 · 09:10</small></div>
+                        <b>›</b></article>
+                    <article data-topic="transactions" data-title="Xử lý hoàn trả và ra quyết định hoàn tiền">
+                        <span>▤</span>
+                        <div><h3>Xử lý hoàn trả và ra quyết định hoàn tiền</h3>
+                            <p>Quy trình xác minh yêu cầu hoàn trả và thời hạn phản hồi cho người mua.</p><small>▤ Giao
+                                dịch &amp; đối soát · ◉ 1.058 lượt xem · ◷ 13/09/2026 · 15:45</small></div>
+                        <b>›</b></article>
+                    <article data-topic="security" data-title="Bật xác thực hai lớp và quản lý phiên đăng nhập">
+                        <span>▤</span>
+                        <div><h3>Bật xác thực hai lớp và quản lý phiên đăng nhập <em>Phổ biến</em></h3>
+                            <p>Tăng cường bảo mật tài khoản quản trị bằng mã xác thực và kiểm soát phiên.</p><small>▤
+                                Bảo mật &amp; tài khoản · ◉ 1.312 lượt xem · ◷ 12/09/2026 · 08:20</small></div>
+                        <b>›</b></article>
+                    <article data-topic="all" data-title="Tạo cửa và xuất nhật ký hoạt động của sàn"><span>▤</span>
+                        <div><h3>Tạo cửa và xuất nhật ký hoạt động của sàn</h3>
+                            <p>Tìm kiếm nhật ký thay đổi dữ liệu và xuất báo cáo phục vụ kiểm toán.</p><small>▤ Bắt đầu
+                                với PCMatch · ◉ 588 lượt xem · ◷ 11/09/2026 · 13:05</small></div>
+                        <b>›</b></article>
+                </div>
+                <div class="support-empty" data-article-empty hidden><span>⌕</span>
+                    <p>Không tìm thấy bài viết nào khớp từ khóa hoặc chủ đề đã chọn</p></div>
+            </section>
+
+            <aside class="support-sidebar-panels">
+                <section class="most-read">
+                    <header><span>◈</span>
+                        <div><h2>Đọc nhiều nhất</h2>
+                            <p>Bài viết được nhấn mạnh</p></div>
+                    </header>
+                    <div>
+                        <button type="button" data-most-read="Xác nhận đơn hàng và bàn giao cho đơn vị vận chuyển"
+                                data-views="2.418 lượt xem"><b>1</b><span>Xác nhận đơn hàng và bàn giao cho đơn vị vận chuyển<small>2.418 lượt xem</small></span>
+                        </button>
+                        <button type="button" data-most-read="Cách đối soát giao dịch và xử lý giao dịch lệch số tiền"
+                                data-views="1.876 lượt xem"><b>2</b><span>Cách đối soát giao dịch và xử lý giao dịch lệch số tiền<small>1.876 lượt xem</small></span>
+                        </button>
+                        <button type="button" data-most-read="Duyệt hồ sơ shop tham gia sàn"
+                                data-views="1.204 lượt xem"><b>3</b><span>Duyệt hồ sơ shop tham gia sàn<small>1.204 lượt xem</small></span>
+                        </button>
+                        <button type="button" data-most-read="Bật xác thực hai lớp và quản lý phiên đăng nhập"
+                                data-views="1.312 lượt xem"><b>4</b><span>Bật xác thực hai lớp và quản lý phiên đăng nhập<small>1.312 lượt xem</small></span>
+                        </button>
+                    </div>
+                </section>
+                <section class="support-quick-links">
+                    <header><span>◉</span>
+                        <h2>Các hỏi thường gặp</h2></header>
+                    <div>
+                        <details open>
+                            <summary>Tôi có thể xử lý nhiều đơn hàng cùng lúc không?<em>+</em></summary>
+                            <p>Có. Trình duyệt cho phép bạn duyệt nhiều đơn cùng lúc. Chỉ cần lọc, chọn toàn bộ đơn cần
+                                xử lý và sử dụng thanh thao tác hàng loạt.</p></details>
+                        <details>
+                            <summary>Vì sao thay đổi không có hiệu lực ngay?<em>+</em></summary>
+                            <p>Dữ liệu cần thời gian đồng bộ. Vui lòng tải lại trang sau khi thao tác cập nhật hoàn
+                                tất.</p></details>
+                        <details>
+                            <summary>Làm sao để đổi mật khẩu tài khoản quản trị?<em>+</em></summary>
+                            <p>Mở phần Bảo mật &amp; tài khoản, sau đó làm theo hướng dẫn đổi mật khẩu và xác thực
+                                lại.</p></details>
+                        <details>
+                            <summary>Shop có thể phản hồi khi thị trường thay đổi thế nào?<em>+</em></summary>
+                            <p>Thay đổi sẽ được ghi nhận trong nhật ký hoạt động và thông báo tới các bên liên quan.</p>
+                        </details>
+                        <details>
+                            <summary>Tôi muốn xem lịch sử thao tác của mình?<em>+</em></summary>
+                            <p>Vào Nhật ký hoạt động ở nhóm Quản trị để xem và lọc các thay đổi gần đây.</p></details>
+                    </div>
+                </section>
+            </aside>
+        </div>
+
+        <section class="support-contact">
+            <div class="support-section-heading"><h2>Kênh liên hệ hỗ trợ</h2>
+                <p>Không tìm thấy câu trả lời? Liên hệ trực tiếp với đội hỗ trợ PCMatch</p></div>
+            <div class="support-contact-grid">
+                <article><span>✉</span>
+                    <h3>Email hỗ trợ</h3>
+                    <p>Gửi mô tả lỗi kiểm định chụp màn hình và mã đơn hàng để được xử lý nhanh nhất.</p><strong>support@pcmatch.vn</strong>
+                    <button type="button">↗ Soạn email</button>
+                </article>
+                <article><span>☎</span>
+                    <h3>Hotline vận hành</h3>
+                    <p>Hỗ trợ khẩn cấp cho sự cố ảnh hưởng đơn hàng và giao dịch, hoạt động giờ hành chính.</p><strong>1900
+                        6868</strong>
+                    <button type="button">↗ Gọi ngay</button>
+                </article>
+                <article><span>◌</span>
+                    <h3>Khởi nghĩa bộ</h3>
+                    <p>Trao đổi nhanh với đội kỹ thuật và tối ưu trải nghiệm chính sàn.</p><strong>#pcmatch-ops</strong>
+                    <button type="button">↗ Mở kênh</button>
+                </article>
+            </div>
+        </section>
+    </main>
+</div>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script src="{% static 'js/support-effects.js' %}"></script>
+</body>
+</html>

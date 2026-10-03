@@ -1,0 +1,345 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý danh mục - PCMatch Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shop-admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/categories.css' %}">
+    <link rel="stylesheet" href="{% static 'css/category-effects.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="categories-page">
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content shop-main category-main" id="main">
+        <section class="page-heading category-heading">
+            <div>
+                <div class="breadcrumbs"><a
+                        href="{% url 'staff_dashboard' %}">Admin</a><span>/</span><span>Quản lý danh mục</span></div>
+                <h1>Quản lý danh mục</h1>
+                <p>Thêm, chỉnh sửa, ẩn hoặc xóa các danh mục ngành hàng trên sàn để shop đăng bán đúng chỗ.</p>
+                <div class="pending-note">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>58 sản phẩm chưa được gán danh mục cần phân loại</span>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button class="button button--secondary" type="button" data-time-filter>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                              stroke-linecap="round"/>
+                    </svg>
+                    <span data-time-label>Hôm nay · 26/09/2026</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         aria-hidden="true">
+                        <path d="m19 9-7 7-7-7" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="button button--primary" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                        <path d="M12 4v16m8-8H4" stroke-linecap="round"/>
+                    </svg>
+                    <span>Thêm danh mục</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="kpi-grid category-kpi-grid" aria-label="Số liệu quản lý danh mục">
+            <article class="category-kpi-card">
+                <h2>Tổng danh mục</h2>
+                <div class="category-kpi-value"><strong>12</strong><span>danh mục</span><em
+                        class="category-trend category-trend--blue">↑ +1 tháng này</em></div>
+                <p>Danh mục cấp 1 và cấp 2 đang quản lý trên sàn linh kiện</p>
+            </article>
+            <article class="category-kpi-card">
+                <h2>Đang hoạt động</h2>
+                <div class="category-kpi-value"><strong>10</strong><span>danh mục</span><em
+                        class="category-trend category-trend--green">↑ Ổn định</em></div>
+                <p>Danh mục hiển thị công khai cho người mua</p>
+            </article>
+            <article class="category-kpi-card">
+                <h2>Tạm ẩn</h2>
+                <div class="category-kpi-value"><strong>2</strong><span>danh mục</span><em
+                        class="category-trend category-trend--amber">↓ +1</em></div>
+                <p>Danh mục đang ẩn, không cho shop đăng bán mới</p>
+            </article>
+            <article class="category-kpi-card">
+                <h2>Sản phẩm chưa phân loại</h2>
+                <div class="category-kpi-value"><strong>58</strong><span>sản phẩm</span><em
+                        class="category-trend category-trend--red">↓ -12</em></div>
+                <p>Linh kiện cần gán danh mục để hiển thị đúng ngành hàng</p>
+            </article>
+        </section>
+
+        <section class="shop-table-card category-table-card" data-selection-container
+                 data-selection-actions="Kích hoạt|Tạm ẩn|Xóa">
+            <div class="category-toolbar">
+                <label class="category-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="m20 20-4-4" stroke-linecap="round"/>
+                    </svg>
+                    <input type="search" placeholder="Tìm theo tên danh mục hoặc đường dẫn">
+                </label>
+                <div class="category-toolbar-right">
+                    <div class="category-status-tabs" role="tablist" aria-label="Lọc trạng thái danh mục">
+                        <button class="is-active" type="button" role="tab" aria-selected="true">Tất cả <span>12</span>
+                        </button>
+                        <button type="button" role="tab" aria-selected="false">Đang hoạt động <span>10</span></button>
+                        <button type="button" role="tab" aria-selected="false">Tạm ẩn <span>2</span></button>
+                    </div>
+                    <div class="category-result"><strong>12</strong> danh mục khớp bộ lọc</div>
+                </div>
+            </div>
+
+            <div class="table-scroll">
+                <table class="category-table" data-selectable-table data-selection-noun="danh mục" data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" aria-label="Chọn tất cả danh mục"></th>
+                        <th>Danh mục</th>
+                        <th>Cấp cha</th>
+                        <th>Sản phẩm</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật</th>
+                        <th class="right">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Vi điều khiển và Board mạch">
+                        </td>
+                        <td><strong class="category-name">Vi điều khiển &amp; Board mạch</strong><small>/vi-dieu-khien-va-board-mach</small>
+                        </td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">512</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">18/09/2026 · 10:20</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa"
+                                        aria-label="Chỉnh sửa Vi điều khiển và Board mạch">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa"
+                                        aria-label="Xóa Vi điều khiển và Board mạch">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Cảm biến"></td>
+                        <td><strong class="category-name">Cảm biến</strong><small>/cam-bien</small></td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">348</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">15/09/2026 · 14:05</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Cảm biến">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Cảm biến">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Linh kiện thụ động"></td>
+                        <td><strong class="category-name">Linh kiện thụ động</strong><small>/linh-kien-thu-dong</small>
+                        </td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">342</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">19/09/2026 · 09:40</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Linh kiện thụ động">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Linh kiện thụ động">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Module chức năng"></td>
+                        <td><strong class="category-name">Module chức năng</strong><small>/module-chuc-nang</small></td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">128</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">17/09/2026 · 16:30</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Module chức năng">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Module chức năng">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Nguồn và Pin"></td>
+                        <td><strong class="category-name">Nguồn &amp; Pin</strong><small>/nguon-va-pin</small></td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">264</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">20/09/2026 · 08:15</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Nguồn và Pin">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Nguồn và Pin">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Dụng cụ và Thiết bị đo"></td>
+                        <td><strong class="category-name">Dụng cụ &amp; Thiết bị đo</strong><small>/dung-cu-va-thiet-bi-do</small>
+                        </td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">233</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">16/09/2026 · 11:50</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Dụng cụ và Thiết bị đo">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa"
+                                        aria-label="Xóa Dụng cụ và Thiết bị đo">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Linh kiện cơ khí"></td>
+                        <td><strong class="category-name">Linh kiện cơ khí</strong><small>/linh-kien-co-khi</small></td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">96</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">14/09/2026 · 15:10</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Linh kiện cơ khí">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Linh kiện cơ khí">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Đèn và Hiển thị"></td>
+                        <td><strong class="category-name">Đèn &amp; Hiển thị</strong><small>/den-va-hien-thi</small>
+                        </td>
+                        <td>Danh mục cấp 1</td>
+                        <td class="category-product-count">187</td>
+                        <td><span class="category-status category-status--active">Đang hoạt động</span></td>
+                        <td class="category-updated">12/09/2026 · 08:45</td>
+                        <td>
+                            <div class="category-actions">
+                                <button type="button" title="Chỉnh sửa" aria-label="Chỉnh sửa Đèn và Hiển thị">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                    </svg>
+                                </button>
+                                <button class="delete" type="button" title="Xóa" aria-label="Xóa Đèn và Hiển thị">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M9 7V4h6v3M4 7h16"
+                                              stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <footer class="table-pagination">
+                <p>Hiển thị <strong>1 – 8</strong> trên <strong>12</strong> bản ghi</p>
+                <nav aria-label="Phân trang">
+                    <button type="button" disabled aria-label="Trang trước">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m15 18-6-6 6-6" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="is-active" type="button" aria-current="page">1</button>
+                    <button type="button">2</button>
+                    <button type="button" aria-label="Trang sau">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m9 18 6-6-6-6" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </nav>
+            </footer>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}"></script>
+<script src="{% static 'js/category-effects.js' %}"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

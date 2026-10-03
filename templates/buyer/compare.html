@@ -1,0 +1,22 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>So sánh linh kiện — PCMatch</title>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
+{% include 'includes/frontend_config.html' %}</head>
+<body data-buyer-app>
+  <main id="main"><p role="status">Đang tải so sánh linh kiện…</p></main>
+  <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
+  <template data-page="compare">
+<nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav><header data-content="heading"></header><p>Chỉ so sánh các model cùng danh mục. Giá, thông số và nguồn là dữ liệu demo.</p><div data-content="comparison"></div>
+  </template>
+  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+</body>
+</html>

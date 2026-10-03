@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tìm linh kiện — PCMatch</title>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
+{% include 'includes/frontend_config.html' %}</head>
+<body data-buyer-app>
+  <main id="main"><p role="status">Đang tải tìm linh kiện…</p></main>
+  <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
+  <template data-page="search">
+<nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
+<header data-content="heading"></header>
+<div data-content="status"></div>
+<div class="catalog-toolbar"><button class="btn btn--secondary filter-toggle" type="button" data-action="filters-open" aria-controls="filter-drawer" aria-expanded="false">Bộ lọc & sắp xếp</button><p data-content="count" role="status"></p><a class="btn btn--secondary" href="{% url 'buyer_compare' %}" data-compare-link>So sánh (0)</a></div>
+<div class="search-layout"><aside id="filter-home" class="filter-sidebar"><form data-form="filters" class="stack" id="catalog-filters">
+  <h2>Bộ lọc sản phẩm</h2>
+  <label class="field"><span>Từ khóa</span><input name="q" type="search" placeholder="Tên, hãng hoặc mã model"></label>
+  <label class="field"><span>Danh mục</span><select name="category"></select></label>
+  <label class="field"><span>Hãng</span><select name="brand"></select></label>
+  <div class="price-fields"><label class="field"><span>Giá từ (₫)</span><input name="min" type="number" min="0" step="1"></label><label class="field"><span>Giá đến (₫)</span><input name="max" type="number" min="0" step="1"></label></div>
+  <label class="field"><span>Shop bán</span><select name="shop"></select></label>
+  <label class="field"><span>Khu vực nhận hàng</span><select name="region"></select></label>
+  <p class="muted filter-hint">Chỉ hiện offer có hỗ trợ giao đến khu vực đã chọn. Giá lọc chưa gồm phí giao.</p>
+  <label class="field"><span>Tình trạng hàng</span><select name="availability"><option value="">Tất cả</option><option value="in">Còn hàng</option><option value="out">Hết hàng</option><option value="paused">Tạm ngừng bán</option></select></label>
+  <fieldset class="technical-fields"><legend>Thông số theo danh mục</legend><div data-technical class="stack"></div></fieldset>
+  <label class="field"><span>Sắp xếp</span><select name="sort"><option value="">Theo danh mục</option><option value="price">Giá tăng dần</option><option value="desc">Giá giảm dần</option><option value="name">Tên A–Z</option></select></label>
+  <div class="filter-submit"><button class="btn btn--primary" type="submit">Áp dụng bộ lọc</button><a class="btn btn--secondary" data-clear-filters href="{% url 'buyer_search' %}">Xóa bộ lọc</a></div>
+  <p class="form-error" role="alert"></p>
+</form></aside><section aria-label="Kết quả tìm kiếm"><div class="cluster filter-chips" data-content="chips"></div><div class="catalog-grid results" data-content="results"></div><div data-content="pagination"></div></section></div>
+<div data-content="compare-tray" class="compare-tray"></div><dialog id="filter-drawer" class="filter-drawer" aria-label="Bộ lọc sản phẩm"><button type="button" class="btn btn--secondary drawer-close" data-action="filters-close">Đóng bộ lọc</button><div data-drawer-body></div></dialog>
+  </template>
+  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+</body>
+</html>

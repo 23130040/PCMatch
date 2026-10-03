@@ -1,0 +1,334 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Quản lý hoàn trả — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="admin-dashboard">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content operations-page admin-dashboard-content return-page" id="main">
+        <div class="admin-page-head">
+            <div>
+                <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý hoàn trả</span></nav>
+                <h1>Quản lý hoàn trả</h1>
+                <p>Tiếp nhận và xử lý yêu cầu trả hàng, hoàn tiền từ người mua trên toàn sàn.</p>
+                <p class="admin-updated"><i class="fa-solid fa-bell-concierge"></i> 48 yêu cầu đang chờ xử lý · 6 yêu cầu sắp quá hạn SLA 48 giờ</p>
+            </div>
+            <div class="cluster admin-page-actions">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            </div>
+        </div>
+
+        <section class="dashboard-metrics admin-metrics return-metrics" aria-label="Chỉ số hoàn trả">
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Tổng yêu cầu</span>
+                <strong class="metric-value">232 <small>yêu cầu</small> <em><i class="fa-solid fa-arrow-up"></i> +3,1%</em></strong>
+                <p>Tính từ đầu tháng 09/2026</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--amber">
+                <span class="metric-label">Chờ xử lý</span>
+                <strong class="metric-value">48 <small>yêu cầu</small> <em><i class="fa-solid fa-arrow-up"></i> +8,4%</em></strong>
+                <p>Cần admin duyệt hoặc chuyển shop xác minh</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Đã chấp nhận</span>
+                <strong class="metric-value">156 <small>yêu cầu</small> <em><i class="fa-solid fa-arrow-up"></i> +2,6%</em></strong>
+                <p>Đã hoàn tiền cho người mua</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--plain">
+                <span class="metric-label">Đã từ chối</span>
+                <strong class="metric-value">28 <small>yêu cầu</small> <em class="return-negative"><i class="fa-solid fa-arrow-down"></i> -1,4%</em></strong>
+                <p>Không đủ điều kiện theo chính sách đổi trả</p>
+            </article>
+        </section>
+
+        <section class="panel return-panel" data-selection-container
+                 data-selection-actions="Chấp nhận hoàn tiền|Chuyển xác minh|Từ chối">
+            <div class="return-toolbar">
+                <div class="return-filters">
+                    <label class="return-search">
+                        <span class="sr-only">Tìm yêu cầu hoàn trả</span>
+                        <i class="search__glyph"></i>
+                        <input id="returnSearch" type="search"
+                               placeholder="Tìm theo mã hoàn trả, mã đơn, người mua hoặc shop">
+                    </label>
+                    <label class="return-select">
+                        <span class="sr-only">Shop</span>
+                        <select id="returnShopFilter">
+                            <option value="">Tất cả shop</option>
+                            <option value="techzone">Linh Kiện TechZone</option>
+                            <option value="saoviet">Linh Kiện Sao Việt</option>
+                            <option value="pcexpress">PCB Express Việt</option>
+                            <option value="smartboard">Board Mạch Thông Minh</option>
+                            <option value="ledpro">Đèn LED &amp; Hiển Thị Pro</option>
+                        </select>
+                    </label>
+                </div>
+                <strong class="return-result"><span id="returnResultCount">12</span> yêu cầu khớp bộ lọc</strong>
+            </div>
+
+            <div class="return-tabs" role="tablist" aria-label="Trạng thái hoàn trả">
+                <button class="return-tab is-active" type="button" data-return-status="all" role="tab"
+                        aria-selected="true">Tất cả <span>12</span></button>
+                <button class="return-tab" type="button" data-return-status="pending" role="tab" aria-selected="false">
+                    Chờ xử lý <span>3</span></button>
+                <button class="return-tab" type="button" data-return-status="verifying" role="tab"
+                        aria-selected="false">Đang xác minh <span>2</span></button>
+                <button class="return-tab" type="button" data-return-status="accepted" role="tab" aria-selected="false">
+                    Đã chấp nhận <span>4</span></button>
+                <button class="return-tab" type="button" data-return-status="rejected" role="tab" aria-selected="false">
+                    Đã từ chối <span>3</span></button>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="data-table return-table" data-selectable-table data-selection-noun="yêu cầu"
+                       data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th class="return-check"><input id="selectAllReturns" type="checkbox"
+                                                        aria-label="Chọn tất cả yêu cầu hoàn trả"></th>
+                        <th>MÃ HOÀN TRẢ</th>
+                        <th>ĐƠN HÀNG</th>
+                        <th>NGƯỜI MUA</th>
+                        <th>SHOP</th>
+                        <th>SẢN PHẨM</th>
+                        <th>SỐ TIỀN</th>
+                        <th>LÝ DO</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>THAO TÁC</th>
+                    </tr>
+                    </thead>
+                    <tbody id="returnBody">
+                    <tr data-status="pending" data-shop="techzone">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260920-018"></td>
+                        <td><strong>HT-260920-018</strong><small>20/09/2026 · 08:10</small></td>
+                        <td>VM-260920-0118</td>
+                        <td><strong>Đỗ Thanh Hà</strong><small>0967 339 401</small></td>
+                        <td>Linh Kiện<br>TechZone</td>
+                        <td>Module Relay 5V 4 kênh<br>chống nhiễu</td>
+                        <td><strong>145.000 ₫</strong></td>
+                        <td>Module nhận được không đúng mô tả, hộp bị móp</td>
+                        <td><span class="status return-status return-status--pending">Chờ xử lý</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="pending" data-shop="ledpro">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260920-012"></td>
+                        <td><strong>HT-260920-012</strong><small>20/09/2026 · 07:46</small></td>
+                        <td>VM-260920-0124</td>
+                        <td><strong>Phạm Minh Tuấn</strong><small>0938 012 664</small></td>
+                        <td>Đèn LED &amp;<br>Hiển Thị Pro</td>
+                        <td>ESP32 DevKit V1 WiFi<br>Bluetooth</td>
+                        <td><strong>320.000 ₫</strong></td>
+                        <td>Khách đổi ý, không còn nhu cầu</td>
+                        <td><span class="status return-status return-status--pending">Chờ xử lý</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="verifying" data-shop="pcexpress">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260920-009"></td>
+                        <td><strong>HT-260920-009</strong><small>20/09/2026 · 07:05</small></td>
+                        <td>VM-260919-0941</td>
+                        <td><strong>Bùi Thu Trang</strong><small>0977 118 662</small></td>
+                        <td>PCB<br>Express Việt</td>
+                        <td>PCB chấm vuông 7x9cm<br>(combo 10 tấm)</td>
+                        <td><strong>78.000 ₫</strong></td>
+                        <td>Giao thiếu 2 tấm PCB trong combo</td>
+                        <td><span class="status return-status return-status--verifying">Đang xác minh</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i> Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="accepted" data-shop="saoviet">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260919-198"></td>
+                        <td><strong>HT-260919-198</strong><small>19/09/2026 · 17:40</small></td>
+                        <td>VM-260918-0711</td>
+                        <td><strong>Phan Thanh Tùng</strong><small>0938 776 240</small></td>
+                        <td>Linh Kiện<br>TechZone</td>
+                        <td>ESP32 DevKit V1 WiFi<br>Bluetooth</td>
+                        <td><strong>320.000 ₫</strong></td>
+                        <td>Khách đổi ý, không còn nhu cầu</td>
+                        <td><span class="status return-status return-status--rejected">Đã từ chối</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="accepted" data-shop="pcexpress">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260919-186"></td>
+                        <td><strong>HT-260919-186</strong><small>19/09/2026 · 15:22</small></td>
+                        <td>VM-260918-0693</td>
+                        <td><strong>Trương Mỹ Hạnh</strong><small>0912 118 907</small></td>
+                        <td>PCB<br>Express Việt</td>
+                        <td>PCB chấm vuông 7x9cm<br>(combo 10 tấm)</td>
+                        <td><strong>78.000 ₫</strong></td>
+                        <td>Giao thiếu 2 tấm PCB trong combo</td>
+                        <td><span class="status return-status return-status--accepted">Đã chấp nhận</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="accepted" data-shop="saoviet">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260919-174"></td>
+                        <td><strong>HT-260919-174</strong><small>19/09/2026 · 11:08</small></td>
+                        <td>VM-260917-0654</td>
+                        <td><strong>Lâm Quốc Huy</strong><small>0977 662 013</small></td>
+                        <td>Linh Kiện<br>Sao Việt</td>
+                        <td>Bộ dây jumper đực-cái 40<br>sợi</td>
+                        <td><strong>35.000 ₫</strong></td>
+                        <td>Dây jumper bị đứt chân sau vài lần cắm</td>
+                        <td><span class="status return-status return-status--accepted">Đã chấp nhận</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="verifying" data-shop="smartboard">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260919-162"></td>
+                        <td><strong>HT-260919-162</strong><small>19/09/2026 · 09:30</small></td>
+                        <td>VM-260917-0611</td>
+                        <td><strong>Hồ Nhật Minh</strong><small>0903 551 887</small></td>
+                        <td>Board Mạch<br>Thông Minh</td>
+                        <td>Raspberry Pi Pico W chính<br>hãng</td>
+                        <td><strong>240.000 ₫</strong></td>
+                        <td>Bo mạch bị trầy xước chân pin khi vận chuyển</td>
+                        <td><span class="status return-status return-status--verifying">Đang xác minh</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="rejected" data-shop="techzone">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260919-151"></td>
+                        <td><strong>HT-260919-151</strong><small>19/09/2026 · 08:42</small></td>
+                        <td>VM-260917-0532</td>
+                        <td><strong>Nguyễn Quốc Bảo</strong><small>0908 224 119</small></td>
+                        <td>Linh Kiện<br>TechZone</td>
+                        <td>Cáp USB Type-C<br>1m</td>
+                        <td><strong>49.000 ₫</strong></td>
+                        <td>Khách đổi ý sau thời hạn đổi trả</td>
+                        <td><span class="status return-status return-status--rejected">Đã từ chối</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="accepted" data-shop="ledpro">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260918-142"></td>
+                        <td><strong>HT-260918-142</strong><small>18/09/2026 · 16:25</small></td>
+                        <td>VM-260918-0448</td>
+                        <td><strong>Võ Minh Khang</strong><small>0914 508 772</small></td>
+                        <td>Đèn LED &amp;<br>Hiển Thị Pro</td>
+                        <td>Đèn LED RGB WS2812B<br>cuộn 5m</td>
+                        <td><strong>420.000 ₫</strong></td>
+                        <td>Sản phẩm lỗi không sáng toàn bộ dải</td>
+                        <td><span class="status return-status return-status--accepted">Đã chấp nhận</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="pending" data-shop="saoviet">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260918-131"></td>
+                        <td><strong>HT-260918-131</strong><small>18/09/2026 · 14:18</small></td>
+                        <td>VM-260918-0312</td>
+                        <td><strong>Mai Hoàng Long</strong><small>0962 441 930</small></td>
+                        <td>Linh Kiện<br>Sao Việt</td>
+                        <td>Kit Arduino Uno R3<br>kèm 30 cảm biến</td>
+                        <td><strong>1.290.000 ₫</strong></td>
+                        <td>Thiếu linh kiện trong bộ sản phẩm</td>
+                        <td><span class="status return-status return-status--pending">Chờ xử lý</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="rejected" data-shop="techzone">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260918-119"></td>
+                        <td><strong>HT-260918-119</strong><small>18/09/2026 · 11:06</small></td>
+                        <td>VM-260917-0241</td>
+                        <td><strong>Đặng Mỹ Duyên</strong><small>0905 223 817</small></td>
+                        <td>Linh Kiện<br>TechZone</td>
+                        <td>Module nguồn DC<br>5V</td>
+                        <td><strong>85.000 ₫</strong></td>
+                        <td>Không cung cấp đủ hình ảnh lỗi</td>
+                        <td><span class="status return-status return-status--rejected">Đã từ chối</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-status="accepted" data-shop="smartboard">
+                        <td class="return-check"><input class="return-row-check" type="checkbox"
+                                                        aria-label="Chọn HT-260917-104"></td>
+                        <td><strong>HT-260917-104</strong><small>17/09/2026 · 17:20</small></td>
+                        <td>VM-260917-0112</td>
+                        <td><strong>Nguyễn Gia Huy</strong><small>0931 550 228</small></td>
+                        <td>Board Mạch<br>Thông Minh</td>
+                        <td>Raspberry Pi Pico W chính<br>hãng</td>
+                        <td><strong>240.000 ₫</strong></td>
+                        <td>Sản phẩm không hoạt động khi nhận</td>
+                        <td><span class="status return-status return-status--accepted">Đã chấp nhận</span></td>
+                        <td>
+                            <button class="btn btn--secondary btn--small return-detail" type="button"><i class="fa-regular fa-eye"></i>Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="return-table-foot">
+                <span>Hiển thị <strong id="returnRangeStart">1</strong>–<strong
+                        id="returnRangeEnd">8</strong> trên <strong id="returnTotalRows">12</strong> bản ghi</span>
+                <div class="return-pagination" aria-label="Phân trang hoàn trả">
+                    <button class="return-page-btn" id="returnPrevPage" type="button" aria-label="Trang trước">‹
+                    </button>
+                    <button class="return-page-btn is-active" type="button">1</button>
+                    <button class="return-page-btn" type="button">2</button>
+                    <button class="return-page-btn" id="returnNextPage" type="button" aria-label="Trang sau">›</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

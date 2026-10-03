@@ -1,0 +1,273 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCMatch Admin - Quản lý shop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shop-admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shop-effects.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="shop-page">
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content shop-main" id="main">
+        <section class="page-heading">
+            <div>
+                <div class="breadcrumbs"><a href="{% url 'staff_dashboard' %}">Admin</a><span>/</span><span>Quản lý shop</span>
+                </div>
+                <h1>Quản lý shop</h1>
+                <p>Theo dõi shop tham gia sàn, xác nhận yêu cầu tham gia và quản lý phí sàn shop đang nợ hoặc đã thanh
+                    toán.</p>
+                <div class="pending-note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 7h10"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>3 hồ sơ shop mới đang chờ duyệt tham gia sàn</span>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button class="button button--secondary" type="button" data-time-filter>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/>
+                        <path d="M16 2v4M8 2v4M3 10h18"/>
+                    </svg>
+                    <span data-time-label>Hôm nay · 26/09/2026</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m19 9-7 7-7-7" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="button button--primary" type="button">
+                    <i class="fa-solid fa-file"></i>
+                    <span>Xuất danh sách</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="kpi-grid" aria-label="Số liệu quản lý shop">
+            <article class="kpi-card kpi-card--blue">
+                <div class="kpi-card__content"><h2>Shop trên sàn</h2>
+                    <div class="kpi-value"><strong>6</strong><span>shop</span><em class="trend trend--up">↗ +2 shop</em>
+                    </div>
+                </div>
+                <p>Shop linh kiện đang hoạt động và đã ký hợp đồng với sàn</p>
+            </article>
+            <article class="kpi-card kpi-card--amber">
+                <div class="kpi-card__content"><h2>Chờ duyệt tham gia</h2>
+                    <div class="kpi-value"><strong>3</strong><span>yêu cầu</span><em class="trend trend--up">↗ +1 hôm
+                        nay</em></div>
+                </div>
+                <p>Hồ sơ shop gửi yêu cầu tham gia cần admin xác nhận</p>
+            </article>
+            <article class="kpi-card kpi-card--rose">
+                <div class="kpi-card__content"><h2>Đang nợ phí sàn</h2>
+                    <div class="kpi-value"><strong>3</strong><span>shop</span><em class="trend trend--down">↓ 55,8 triệu
+                        đ</em></div>
+                </div>
+                <p>Tổng phí nền tảng chưa thanh toán cần thu hồi</p>
+            </article>
+            <article class="kpi-card kpi-card--green">
+                <div class="kpi-card__content"><h2>Đã thanh toán phí</h2>
+                    <div class="kpi-value"><strong>6</strong><span>shop</span><em class="trend trend--up">↗ +1 tuần
+                        này</em></div>
+                </div>
+                <p>Shop đã tất toán đầy đủ phí trong kỳ 09/2026</p>
+            </article>
+        </section>
+
+        <section class="shop-table-card" data-selection-container
+                 data-selection-actions="Duyệt tham gia sàn|Tạm ngưng shop|Gửi nhắc phí sàn">
+            <div class="table-toolbar">
+                <div class="table-filters">
+                    <label class="table-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" stroke-linecap="round"/>
+                        </svg>
+                        <input type="search" placeholder="Tìm theo tên shop, chủ shop, email hoặc mã...">
+                    </label>
+                    <button class="filter-button" type="button"><span>Tất cả tình trạng phí</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m19 9-7 7-7-7" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="result-count"><strong>12</strong> shop khớp bộ lọc</div>
+            </div>
+
+            <div class="filter-tabs" role="tablist" aria-label="Lọc trạng thái shop">
+                <button class="is-active" type="button" role="tab" aria-selected="true">Tất cả <span>12</span></button>
+                <button type="button" role="tab" aria-selected="false">Chờ duyệt tham gia <span>4</span></button>
+                <button type="button" role="tab" aria-selected="false">Đang hoạt động <span>7</span></button>
+                <button type="button" role="tab" aria-selected="false">Tạm ngưng <span>1</span></button>
+            </div>
+
+            <div class="table-scroll">
+                <table class="shop-table" data-selectable-table data-selection-noun="shop" data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" aria-label="Chọn tất cả shop"></th>
+                        <th>Shop</th>
+                        <th>Chủ shop</th>
+                        <th>Ngành hàng</th>
+                        <th class="center">Sản phẩm</th>
+                        <th>Doanh thu</th>
+                        <th class="center">Phí sàn</th>
+                        <th class="center">Trạng thái</th>
+                        <th class="center">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Linh Kiện Sao Việt"></td>
+                        <td><strong class="shop-name">Linh Kiện Sao Việt</strong><small>SH-100241</small></td>
+                        <td><strong>Trần Văn Hùng</strong><small>0903 118 224</small></td>
+                        <td>Vi điều khiển &amp; Board mạch</td>
+                        <td class="center products">128</td>
+                        <td class="revenue">1,42 tỷ đ</td>
+                        <td class="center"><span class="badge badge--paid">Đã thanh toán</span></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Linh Kiện TechZone"></td>
+                        <td><strong class="shop-name">Linh Kiện TechZone</strong><small>SH-100238</small></td>
+                        <td><strong>Nguyễn Mạnh Cường</strong><small>0912 664 118</small></td>
+                        <td>Module chức năng</td>
+                        <td class="center products">342</td>
+                        <td class="revenue">3,86 tỷ đ</td>
+                        <td class="center"><span class="badge badge--debt">Đang nợ phí</span><small class="debt-amount">Nợ
+                            12.400.000 đ</small></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Module &amp; Cảm Biến 24H">
+                        </td>
+                        <td><strong class="shop-name">Module &amp; Cảm Biến 24H</strong><small>SH-100233</small></td>
+                        <td><strong>Phạm Thu Hà</strong><small>0908 224 771</small></td>
+                        <td>Cảm biến</td>
+                        <td class="center products">512</td>
+                        <td class="revenue">2,74 tỷ đ</td>
+                        <td class="center"><span class="badge badge--paid">Đã thanh toán</span></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Chip Bán Dẫn Á Châu"></td>
+                        <td><strong class="shop-name">Chip Bán Dẫn Á Châu</strong><small>SH-100229</small></td>
+                        <td><strong>Lê Ngọc Diệp</strong><small>0938 447 902</small></td>
+                        <td>Linh kiện thụ động</td>
+                        <td class="center products">264</td>
+                        <td class="revenue">1,98 tỷ đ</td>
+                        <td class="center"><span class="badge badge--overdue">Quá hạn phí</span><small
+                                class="debt-amount debt-amount--overdue">Nợ 34.800.000 đ</small></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn PCB Express Việt"></td>
+                        <td><strong class="shop-name">PCB Express Việt</strong><small>SH-100224</small></td>
+                        <td><strong>Đỗ Quang An</strong><small>0977 330 118</small></td>
+                        <td>Linh kiện cơ khí</td>
+                        <td class="center products">96</td>
+                        <td class="revenue">1,62 tỷ đ</td>
+                        <td class="center"><span class="badge badge--debt">Đang nợ phí</span><small class="debt-amount">Nợ
+                            8.600.000 đ</small></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Nguồn &amp; Adapter Pro"></td>
+                        <td><strong class="shop-name">Nguồn &amp; Adapter Pro</strong><small>SH-100218</small></td>
+                        <td><strong>Vũ Đình Nam</strong><small>0915 776 224</small></td>
+                        <td>Nguồn &amp; Pin</td>
+                        <td class="center products">187</td>
+                        <td class="revenue">1,24 tỷ đ</td>
+                        <td class="center"><span class="badge badge--paid">Đã thanh toán</span></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Board Mạch Thông Minh"></td>
+                        <td><strong class="shop-name">Board Mạch Thông Minh</strong><small>SH-100205</small></td>
+                        <td><strong>Bùi Minh Trí</strong><small>0902 118 663</small></td>
+                        <td>Vi điều khiển &amp; Board mạch</td>
+                        <td class="center products">421</td>
+                        <td class="revenue">720,0 triệu đ</td>
+                        <td class="center"><span class="badge badge--paid">Đã thanh toán</span></td>
+                        <td class="center"><span class="status status--active">Đang hoạt động</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn IoT Maker Store"></td>
+                        <td><strong class="shop-name">IoT Maker Store</strong><small>SH-100312</small></td>
+                        <td><strong>Hoàng Thị Loan</strong><small>0967 220 449</small></td>
+                        <td>Kit phát triển</td>
+                        <td class="center products">233</td>
+                        <td class="revenue">1,15 tỷ đ</td>
+                        <td class="center"><span class="badge badge--paid">Đã thanh toán</span></td>
+                        <td class="center"><span class="status status--pending">Chờ duyệt tham gia</span></td>
+                        <td class="center">
+                            <button class="admin-detail-button detail-button" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <footer class="table-pagination">
+                <p>Hiển thị <strong>1 – 8</strong> trên <strong>12</strong> bản ghi</p>
+                <nav aria-label="Phân trang">
+                    <button type="button" disabled aria-label="Trang trước">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m15 18-6-6 6-6" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="is-active" type="button" aria-current="page">1</button>
+                    <button type="button">2</button>
+                    <button type="button" aria-label="Trang sau">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m9 18 6-6-6-6" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </nav>
+            </footer>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}"></script>
+<script src="{% static 'js/shop-effects.js' %}"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

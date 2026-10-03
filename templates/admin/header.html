@@ -1,0 +1,41 @@
+<div class="service-bar">
+  PCMatch Operations • Giám sát đơn hàng, shop và chất lượng nền tảng
+</div>
+
+<header class="topbar">
+  <div class="container topbar__inner" style="max-width: none;">
+    <button class="menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-label="Mở sidebar">
+      <span></span>
+    </button>
+    <a href="{% url 'staff_dashboard' %}" class="logo">
+      <i class="logo__mark"></i>
+      <span>PC Match Admin</span>
+    </a>
+    <label class="search">
+      <span class="sr-only">Tìm kiếm</span>
+      <input type="text" placeholder="Tìm đơn hàng, shop, sản phẩm, khách hàng hoặc mã giao dịch">
+      <i class="search__glyph"></i>
+    </label>
+    <nav class="nav-links">
+      <a href="{% url 'staff_support' %}">Trợ giúp</a>
+      <div class="user-dropdown">
+        <a href="#" class="admin-link">Platform Admin <i class="fa-solid fa-chevron-down" style="font-size:0.75rem;"></i></a>
+        <div class="user-dropdown-menu">
+          <div class="udm-header">
+            <div class="udm-name">Platform Admin</div>
+            <div class="udm-email">admin@pcmatch.vn</div>
+            <span class="udm-badge">Quản trị cấp cao</span>
+          </div>
+          <div class="udm-links">
+            <a href="{% url 'staff_profile' %}"><i class="fa-solid fa-user-gear"></i> Thông tin tài khoản</a>
+            <a href="{% url 'staff_password' %}"><i class="fa-solid fa-shield-halved"></i> Đổi mật khẩu</a>
+            <a href="{% url 'staff_activity_log' %}"><i class="fa-solid fa-user-clock"></i> Hoạt động của tôi</a>
+            <a href="{% url 'staff_policies' %}"><i class="fa-solid fa-book-open"></i> Chính sách nền tảng</a>
+            <hr />
+            <a href="#" class="logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </div>
+</header>

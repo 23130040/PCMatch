@@ -1,0 +1,252 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCMatch Admin - Phí &amp; Chính sách</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shop-admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/fee&policies.css' %}">
+    <link rel="stylesheet" href="{% static 'css/policy-effects.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="policies-page">
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content shop-main policies-main" id="main">
+        <nav class="breadcrumbs policy-breadcrumb" aria-label="Breadcrumb"><a
+                href="{% url 'staff_dashboard' %}">Admin</a><span>/</span><span>Phí &amp; Chính sách</span></nav>
+
+        <section class="policy-heading">
+            <div>
+                <h1>Phí &amp; Chính sách</h1>
+                <p>Điều chỉnh biểu phí sàn, hoa hồng và các điều khoản, chính sách hiển thị cho chủ shop cùng người
+                    mua.</p>
+                <div class="policy-change-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Mọi thay đổi biểu phí được ghi nhận vào nhật ký hoạt động và thông báo tới chủ shop</span>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button class="button button--secondary" type="button" data-time-filter>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                              stroke-linecap="round"/>
+                    </svg>
+                    <span data-time-label>Hôm nay · 26/09/2026</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m19 9-7 7-7-7" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="button button--primary" type="button">
+                    <i class="fa-solid fa-file"></i>
+                    <span>Xuất biểu phí</span></button>
+            </div>
+        </section>
+
+        <section class="policy-kpi-grid" aria-label="Số liệu phí và chính sách">
+            <article class="policy-kpi policy-kpi--blue"><h2>Hoa hồng bình quân</h2>
+                <div><strong>6,1%</strong><em class="policy-trend policy-trend--amber">↓ -0,3%</em></div>
+                <p>Mức hoa hồng trung bình sàn thu trên mỗi đơn hàng</p></article>
+            <article class="policy-kpi policy-kpi--blue"><h2>Phí đã thu kỳ này</h2>
+                <div><strong>76,2</strong><span>triệu đ</span><em class="policy-trend policy-trend--blue">↑ +5,4%</em>
+                </div>
+                <p>Tổng phí nền tảng thu được trong tháng 09/2026</p></article>
+            <article class="policy-kpi policy-kpi--orange"><h2>Phí chưa thu</h2>
+                <div><strong>55,8</strong><span>triệu đ</span><em class="policy-trend policy-trend--orange">↓ +3
+                    shop</em></div>
+                <p>Khoản phí shop còn nợ cần nhắc thanh toán</p></article>
+            <article class="policy-kpi policy-kpi--white"><h2>Nhóm phí đang áp dụng</h2>
+                <div><strong>8</strong><span>/ 10 nhóm</span><em class="policy-trend policy-trend--muted">↓ 2 tạm
+                    tắt</em></div>
+                <p>Số nhóm ngành hàng đang áp biểu phí và hoa hồng</p></article>
+        </section>
+
+        <section class="policy-panel shop-table-card" data-selection-container
+                 data-selection-actions="Áp dụng biểu phí|Tạm tắt">
+            <header class="policy-panel__header">
+                <h2>Biểu phí &amp; hoa hồng</h2>
+                <p>Áp dụng cho từng nhóm ngành hàng, hiển thị cho chủ shop khi đối soát doanh thu</p>
+                <div class="policy-toolbar">
+                    <label class="policy-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="m20 20-4-4" stroke-linecap="round"/>
+                        </svg>
+                        <input type="search" placeholder="Tìm theo nhóm ngành hàng"></label>
+                    <div class="policy-fee-tabs" role="tablist" aria-label="Lọc nhóm phí">
+                        <button class="is-active" type="button" role="tab" aria-selected="true">Tất cả <span>10</span>
+                        </button>
+                        <button type="button" role="tab" aria-selected="false">Đang áp dụng <span>8</span></button>
+                        <button type="button" role="tab" aria-selected="false">Tạm tắt <span>2</span></button>
+                        <strong>10 nhóm phí</strong>
+                    </div>
+                </div>
+            </header>
+            <div class="table-scroll">
+                <table class="policy-fee-table" data-selectable-table data-selection-noun="nhóm phí" data-selection-limit="10">
+                    <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" aria-label="Chọn tất cả nhóm phí"></th>
+                        <th>Nhóm ngành hàng</th>
+                        <th>Hoa hồng sàn</th>
+                        <th>Phí thanh toán</th>
+                        <th>Phí dịch vụ / đơn</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật</th>
+                        <th class="right">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Vi điều khiển và Board mạch">
+                        </td>
+                        <td><strong class="fee-group-name">Vi điều khiển &amp; Board mạch</strong><small>PB-01</small>
+                        </td>
+                        <td class="fee-rate">4%</td>
+                        <td>1.8%</td>
+                        <td>3.000 đ</td>
+                        <td><span class="fee-status fee-status--active">Đang áp dụng</span></td>
+                        <td class="fee-updated">18/09/2026 · 10:20</td>
+                        <td>
+                            <button class="fee-edit" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                </svg>
+                                <span>Chỉnh sửa</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Cảm biến"></td>
+                        <td><strong class="fee-group-name">Cảm biến</strong><small>PB-02</small></td>
+                        <td class="fee-rate">5%</td>
+                        <td>1.8%</td>
+                        <td>3.000 đ</td>
+                        <td><span class="fee-status fee-status--active">Đang áp dụng</span></td>
+                        <td class="fee-updated">15/09/2026 · 14:05</td>
+                        <td>
+                            <button class="fee-edit" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                </svg>
+                                <span>Chỉnh sửa</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn Linh kiện thụ động"></td>
+                        <td><strong class="fee-group-name">Linh kiện thụ động</strong><small>PB-03</small></td>
+                        <td class="fee-rate">6%</td>
+                        <td>1.5%</td>
+                        <td>5.000 đ</td>
+                        <td><span class="fee-status fee-status--active">Đang áp dụng</span></td>
+                        <td class="fee-updated">19/09/2026 · 09:40</td>
+                        <td>
+                            <button class="fee-edit" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16z"/>
+                                </svg>
+                                <span>Chỉnh sửa</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="platform-policies">
+            <header class="platform-policies__header">
+                <div><h2>Chính sách nền tảng</h2>
+                    <p>Điều khoản và chính sách công khai cho chủ shop cùng người mua trên sàn</p></div>
+                <span>5 chính sách đang hiển thị</span></header>
+            <div class="policy-card-grid">
+                <article class="policy-card">
+                    <div class="policy-card__body"><span class="policy-card__icon policy-card__icon--orange"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.6l5.4 5.4V19a2 2 0 0 1-2 2Z"
+                            stroke-linecap="round"/></svg></span>
+                        <div><h3>Điều khoản người bán</h3><small>CS-01</small></div>
+                    </div>
+                    <p>Quy định quyền và nghĩa vụ của shop khi tham gia sàn: xác minh hồ sơ, duy trì chất lượng dịch vụ,
+                        thời hạn xử lý đơn và trách nhiệm với người mua.</p>
+                    <footer><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
+                            cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cập nhật 18/09/2026 · 10:20</span>
+                        <button type="button">Chỉnh sửa</button>
+                    </footer>
+                </article>
+                <article class="policy-card">
+                    <div class="policy-card__body"><span class="policy-card__icon policy-card__icon--amber"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+                            d="M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-8c1 0 2 .4 3 1M12 8V7m0 1v8m0 0v1m0-1c-1 0-2-.4-3-1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                            stroke-linecap="round"/></svg></span>
+                        <div><h3>Chính sách đổi trả &amp; hoàn tiền</h3><small>CS-02</small></div>
+                    </div>
+                    <p>Người mua được yêu cầu đổi trả trong 7 ngày với sản phẩm lỗi hoặc sai mô tả. Admin xác minh và ra
+                        quyết định hoàn tiền trong 48 giờ.</p>
+                    <footer><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
+                            cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cập nhật 15/09/2026 · 09:00</span>
+                        <button type="button">Chỉnh sửa</button>
+                    </footer>
+                </article>
+                <article class="policy-card">
+                    <div class="policy-card__body"><span class="policy-card__icon policy-card__icon--orange"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+                            d="M7 7h.01M7 3h5l7 7-7 7-7-7V7a4 4 0 0 1 4-4Z" stroke-linecap="round"/></svg></span>
+                        <div><h3>Quy định đăng bán sản phẩm</h3><small>CS-03</small></div>
+                    </div>
+                    <p>Linh kiện phải có hình ảnh thật, thông tin xuất xứ, mã part number rõ ràng và không thuộc danh
+                        mục cấm. Linh kiện mới cần admin kiểm duyệt trước khi hiển thị.</p>
+                    <footer><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
+                            cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cập nhật 12/09/2026 · 15:40</span>
+                        <button type="button">Chỉnh sửa</button>
+                    </footer>
+                </article>
+                <article class="policy-card">
+                    <div class="policy-card__body"><span class="policy-card__icon policy-card__icon--amber"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+                            d="m9 12 2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round"/></svg></span>
+                        <div><h3>Chính sách bảo mật dữ liệu</h3><small>CS-04</small></div>
+                    </div>
+                    <p>Dữ liệu người mua và shop được mã hoá, chỉ dùng cho mục đích vận hành sàn. Mọi truy cập đều được
+                        ghi vào nhật ký hoạt động.</p>
+                    <footer><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
+                            cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cập nhật 08/09/2026 · 11:30</span>
+                        <button type="button">Chỉnh sửa</button>
+                    </footer>
+                </article>
+                <article class="policy-card">
+                    <div class="policy-card__body"><span class="policy-card__icon policy-card__icon--orange"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+                            d="M12 9v4m0 4h.01M4 20h16a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.3 17A2 2 0 0 0 4 20Z"
+                            stroke-linecap="round"/></svg></span>
+                        <div><h3>Chính sách xử lý vi phạm</h3><small>CS-05</small></div>
+                    </div>
+                    <p>Shop vi phạm sẽ bị nhắc nhở, tạm ngưng hoặc chấm dứt hợp tác tuỳ mức độ. Phí nền tảng chưa thanh
+                        toán sẽ được cấn trừ khi tất toán.</p>
+                    <footer><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
+                            cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cập nhật 05/09/2026 · 16:10</span>
+                        <button type="button">Chỉnh sửa</button>
+                    </footer>
+                </article>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}"></script>
+<script src="{% static 'js/policy-effects.js' %}"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

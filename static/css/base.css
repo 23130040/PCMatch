@@ -1,0 +1,90 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--color-cobalt); color: white; }
+
+* { scrollbar-color: var(--color-slate) var(--color-muted); scrollbar-width: thin; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--color-muted); }
+*::-webkit-scrollbar-thumb { background: var(--color-slate); border: 2px solid var(--color-muted); }
+
+a { color: inherit; text-decoration-color: var(--color-cobalt); text-underline-offset: 0.22em; }
+a:hover { color: var(--color-cobalt-deep); }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+img, svg { display: block; max-width: 100%; }
+
+:focus-visible {
+  outline: 3px solid rgba(19, 95, 210, 0.28);
+  outline-offset: 3px;
+}
+
+h1, h2, h3, h4, p { margin-top: 0; }
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; }
+h1 { max-width: 14ch; font-size: var(--text-display); line-height: 0.9; letter-spacing: -0.04em; }
+h2 { margin-bottom: var(--space-4); font-size: var(--text-3xl); line-height: 1; letter-spacing: -0.025em; }
+h3 { margin-bottom: var(--space-3); font-size: var(--text-xl); line-height: 1.15; }
+p { max-width: 72ch; }
+
+.container { width: min(calc(100% - 32px), var(--container)); margin-inline: auto; }
+.skip-link { position: fixed; left: var(--space-4); top: -80px; z-index: 1000; padding: 12px 16px; background: var(--color-ink); color: white; }
+.skip-link:focus { top: var(--space-4); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.measure { max-width: 70ch; }
+.muted { color: var(--color-slate); }
+.tabular { font-variant-numeric: tabular-nums; }
+.nowrap { white-space: nowrap; }
+.stack { display: grid; gap: var(--space-4); min-width: 0; }
+.cluster { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; min-width: 0; }
+.stack > *, .cluster > *, .panel, main, section, article, aside { min-width: 0; }
+.wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+.page-main { min-height: calc(100vh - 72px); padding: var(--space-8) 0 var(--space-18); }
+.section { padding-block: var(--space-18); }
+.section + .section { border-top: 1px solid var(--color-border); }
+
+@media (max-width: 767px) {
+  .container { width: min(calc(100% - 24px), var(--container)); }
+  .page-main { padding-top: var(--space-6); padding-bottom: 88px; }
+  .section { padding-block: var(--space-12); }
+  h1 { font-size: clamp(2.8rem, 16vw, 4.4rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Configurator canvas: a restrained measurement grid behind every surface. */
+body {
+  background-color: var(--color-canvas);
+  background-image:
+    linear-gradient(rgba(21, 32, 43, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 32, 43, 0.028) 1px, transparent 1px);
+  background-position: -1px -1px;
+  background-size: 32px 32px;
+}
+
+a { transition: color var(--ease-signal), background-color var(--ease-signal), border-color var(--ease-signal); }
+input::placeholder, textarea::placeholder { color: #74818c; opacity: 1; }
+
+@supports not (backdrop-filter: blur(1px)) {
+  .topbar { background: rgba(255, 255, 255, 0.99); }
+}
+
+@media (forced-colors: active) {
+  .status::before, .meter > span, .signal-rail::after { forced-color-adjust: none; }
+  .btn, .panel, .field input, .field select, .field textarea { border: 1px solid ButtonText; }
+}

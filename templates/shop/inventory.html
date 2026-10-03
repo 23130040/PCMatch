@@ -1,0 +1,16 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý kho — PCMatch</title>
+<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
+<link rel="stylesheet" href="{% static 'css/components.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages.css' %}">
+<link rel="stylesheet" href="{% static 'css/production.css' %}">
+<link rel="stylesheet" href="{% static 'css/shop.css' %}">
+{% include 'includes/frontend_config.html' %}</head>
+<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
+</html>

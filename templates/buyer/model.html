@@ -1,0 +1,28 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chi tiết sản phẩm — PCMatch</title>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
+{% include 'includes/frontend_config.html' %}</head>
+<body data-buyer-app>
+  <main id="main"><p role="status">Đang tải chi tiết sản phẩm…</p></main>
+  <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
+  <template data-page="model">
+<nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
+<header data-content="heading"></header>
+<section class="model-overview" aria-label="Chi tiết model"><figure class="product-figure" data-content="image"></figure><div class="stack" data-content="specs"></div></section>
+<section id="offers" aria-labelledby="offers-title"><div class="section-heading"><h2 id="offers-title">Offer từ các shop</h2><div data-content="region"></div></div><p data-content="offer-count"></p><div class="cluster"><button type="button" class="btn btn--secondary" data-action="offers-toggle" aria-expanded="false" aria-controls="offer-comparison">So sánh shop</button></div><section id="offer-comparison" hidden aria-label="Bảng so sánh shop" data-content="offer-table"></section><div class="offer-cards" data-content="offers"></div></section>
+<section id="questions" class="panel panel--padded" aria-labelledby="questions-title"><h2 id="questions-title">Hỏi đáp trước mua</h2><div data-content="questions"></div></section>
+<section id="reviews" class="panel panel--padded" aria-labelledby="reviews-title"><h2 id="reviews-title">Đánh giá sau mua</h2><div data-content="reviews"></div></section>
+<div data-content="compare-tray" class="compare-tray"></div><div data-content="report"></div>
+  </template>
+  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,378 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân quyền quản trị — PCMatch Admin</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="operations-page">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content" id="main">
+        <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Phân quyền</span>
+        </nav>
+
+        <div class="page-head" style="align-items: flex-start;">
+            <div>
+                <h1>Phân quyền quản trị</h1>
+                <p>Gán quyền cho người dùng và chủ shop: mỗi vai trò được phép xem, xử lý hoặc thay đổi những nghiệp vụ
+                    nào trên sàn.</p>
+                <div style="margin-top: 6px; font-size: 13px; color: var(--color-slate); font-weight: 600;">
+                    <i class="fa-solid fa-user-shield"></i> 6 vai trò · 12 tài khoản được phân quyền
+                </div>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--secondary" type="button">
+                    <span><i class="fa-solid fa-file"></i> Xuất ma trận</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-metrics" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="panel metric-panel">
+                <span class="metric-label">Vai trò quyền</span>
+                <div class="metric-value">
+                    6 <small>vai trò</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> Ổn định</span>
+                </div>
+                <p class="muted">Nhóm quyền đang áp dụng cho người dùng sàn</p>
+            </div>
+
+            <div class="panel metric-panel">
+                <span class="metric-label">Tài khoản quản trị</span>
+                <div class="metric-value">
+                    12 <small>tài khoản</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +2 tháng này</span>
+                </div>
+                <p class="muted">Admin, vận hành, tài chính và chủ shop</p>
+            </div>
+
+            <div class="panel metric-panel">
+                <span class="metric-label">Tổng quyền hệ thống</span>
+                <div class="metric-value">
+                    19 <small>quyền</small>
+                    <span class="status status--ok" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +3</span>
+                </div>
+                <p class="muted">Quyền chi tiết có thể bật/tắt cho từng vai trò</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--urgent">
+                <span class="metric-label">Tạm ngưng quyền</span>
+                <div class="metric-value">
+                    1 <small>tài khoản</small>
+                    <span class="status status--bad" style="margin-left: 6px;"><i class="fa-solid fa-arrow-down"></i> -1</span>
+                </div>
+                <p class="muted">Tài khoản đang bị tạm ngưng quyền truy cập</p>
+            </div>
+        </div>
+
+        <div class="panel panel--padded permission-matrix-panel"
+             style="padding-inline: var(--space-5); margin-bottom: var(--space-5);">
+            <div class="cluster"
+                 style="justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4);">
+                <div>
+                    <h2 style="font-size: 16px; margin: 0; font-weight: 700;">Ma trận phân quyền</h2>
+                    <p class="muted" style="margin: 2px 0 0; font-size: 13px;">Toàn quyền trên mọi phân hệ của sàn
+                        PCMatch</p>
+                </div>
+                <button class="btn btn--primary" type="button">
+                    <span><i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi</span>
+                </button>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Chọn vai trò cấu hình quyền"
+                 style="margin-bottom: var(--space-4);">
+                <button class="tab" type="button" role="tab" id="role-super-admin" aria-selected="true">Quản trị cấp cao
+                    <span class="sidebar__count">3</span></button>
+                <button class="tab" type="button" role="tab" id="role-ops" aria-selected="false">Vận hành sàn <span
+                        class="sidebar__count">6</span></button>
+                <button class="tab" type="button" role="tab" id="role-finance" aria-selected="false">Tài chính <span
+                        class="sidebar__count">4</span></button>
+                <button class="tab" type="button" role="tab" id="role-moderator" aria-selected="false">Kiểm duyệt nội
+                    dung <span class="sidebar__count">5</span></button>
+                <button class="tab" type="button" role="tab" id="role-cskh" aria-selected="false">Chăm sóc khách hàng
+                    <span class="sidebar__count">8</span></button>
+                <button class="tab" type="button" role="tab" id="role-shop" aria-selected="false">Chủ shop <span
+                        class="sidebar__count">12</span></button>
+            </div>
+
+            <div class="stack" style="gap: var(--space-3);">
+                <div class="panel"
+                     style="background: var(--color-background-soft, #f8fafc); border: 1px solid var(--color-border-subtle, #e2e8f0); border-radius: var(--radius-card, 8px); padding: 14px 18px;">
+                    <div class="cluster" style="justify-content: space-between; margin-bottom: 12px; font-weight: 600;">
+                        <span><i class="fa-solid fa-clipboard-list"></i> Đơn hàng &amp; vận hành</span>
+                        <span class="muted" style="font-size: 12px;">4/4 quyền</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 13px;">
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xem danh sách đơn hàng</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xác nhận và điều phối đơn</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Hủy đơn hàng</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Ghi nhận hoàn trả</span></label>
+                    </div>
+                </div>
+
+                <div class="panel"
+                     style="background: var(--color-background-soft, #f8fafc); border: 1px solid var(--color-border-subtle, #e2e8f0); border-radius: var(--radius-card, 8px); padding: 14px 18px;">
+                    <div class="cluster" style="justify-content: space-between; margin-bottom: 12px; font-weight: 600;">
+                        <span><i class="fa-solid fa-comment-dollar"></i> Giao dịch &amp; tài chính</span>
+                        <span class="muted" style="font-size: 12px;">4/4 quyền</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 13px;">
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xem giao dịch &amp; đối soát</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Thực hiện hoàn tiền</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Chỉnh sửa biểu phí nền tảng</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Chạy chi trả cho shop</span></label>
+                    </div>
+                </div>
+
+                <div class="panel"
+                     style="background: var(--color-background-soft, #f8fafc); border: 1px solid var(--color-border-subtle, #e2e8f0); border-radius: var(--radius-card, 8px); padding: 14px 18px;">
+                    <div class="cluster" style="justify-content: space-between; margin-bottom: 12px; font-weight: 600;">
+                        <span><i class="fa-solid fa-shop"></i> Shop &amp; sản phẩm</span>
+                        <span class="muted" style="font-size: 12px;">4/4 quyền</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 13px;">
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Duyệt shop tham gia sàn</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Tạm ngưng shop</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Kiểm duyệt sản phẩm</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Quản lý danh mục</span></label>
+                    </div>
+                </div>
+
+                <div class="panel"
+                     style="background: var(--color-background-soft, #f8fafc); border: 1px solid var(--color-border-subtle, #e2e8f0); border-radius: var(--radius-card, 8px); padding: 14px 18px;">
+                    <div class="cluster" style="justify-content: space-between; margin-bottom: 12px; font-weight: 600;">
+                        <span><i class="fa-regular fa-user"></i> Người dùng</span>
+                        <span class="muted" style="font-size: 12px;">4/4 quyền</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 13px;">
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xem thông tin khách hàng</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Khóa / mở tài khoản</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Kiểm duyệt đánh giá</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xử lý phản hồi &amp; khiếu nại</span></label>
+                    </div>
+                </div>
+
+                <div class="panel"
+                     style="background: var(--color-background-soft, #f8fafc); border: 1px solid var(--color-border-subtle, #e2e8f0); border-radius: var(--radius-card, 8px); padding: 14px 18px;">
+                    <div class="cluster" style="justify-content: space-between; margin-bottom: 12px; font-weight: 600;">
+                        <span><i class="fa-solid fa-user-shield"></i> Quản trị hệ thống</span>
+                        <span class="muted" style="font-size: 12px;">3/3 quyền</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 13px;">
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Phân quyền người dùng</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Xem nhật ký hoạt động</span></label>
+                        <label class="cluster" style="gap: 8px; cursor: pointer;"><input type="checkbox" checked> <span>Cấu hình hệ thống</span></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
+             data-selection-actions="Gán vai trò vận hành|Gán vai trò tài chính|Tạm ngưng quyền">
+            <div class="cluster"
+                 style="justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4);">
+                <div>
+                    <h2 style="font-size: 16px; margin: 0; font-weight: 700;">Tài khoản quản trị</h2>
+                    <p class="muted" style="margin: 2px 0 0; font-size: 13px;">Danh sách tài khoản được cấp quyền truy
+                        cập vào hệ thống quản trị PCMatch</p>
+                </div>
+                <div class="field authorization-time-filter" style="margin: 0;">
+                    <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                    <select aria-label="Lọc tài khoản theo thời gian"
+                            style="min-height: 38px; background: white; border-radius: var(--radius-control);">
+                        <option value="all">Tất cả thời gian</option>
+                        <option value="30-days">30 ngày gần nhất</option>
+                        <option value="7-days">7 ngày gần nhất</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table authorization-table" data-selectable-table data-selection-noun="tài khoản"
+                       data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                        <th style="min-width: 220px;">Tài khoản</th>
+                        <th style="min-width: 160px;">Vai trò</th>
+                        <th style="min-width: 120px;">Số quyền</th>
+                        <th style="min-width: 140px;">Trạng thái</th>
+                        <th style="min-width: 160px;">Hoạt động gần nhất</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Nguyễn Hoàng Long"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Nguyễn Hoàng Long</strong>
+                                <small class="muted">long.nguyen@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--warn" style="font-size: 11px;">Quản trị cấp cao</span></td>
+                        <td class="tabular">19/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">20/09/2026 · 09:12</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Trần Thu Trang"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Trần Thu Trang</strong>
+                                <small class="muted">trang.tran@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Vận hành sàn</span></td>
+                        <td class="tabular">9/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">20/09/2026 · 08:40</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Lê Quốc Khánh"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Lê Quốc Khánh</strong>
+                                <small class="muted">khanh.le@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Tài chính</span></td>
+                        <td class="tabular">6/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">19/09/2026 · 18:22</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Phạm Diệu Linh"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Phạm Diệu Linh</strong>
+                                <small class="muted">linh.pham@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--ok" style="font-size: 11px;">Kiểm duyệt nội dung</span></td>
+                        <td class="tabular">5/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">19/09/2026 · 16:05</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Đỗ Văn Sơn"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Đỗ Văn Sơn</strong>
+                                <small class="muted">son.do@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Vận hành sàn</span></td>
+                        <td class="tabular">9/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">19/09/2026 · 14:30</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Hoàng Mai Chi"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Hoàng Mai Chi</strong>
+                                <small class="muted">chi.hoang@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Chăm sóc khách hàng</span></td>
+                        <td class="tabular">3/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">20/09/2026 · 07:55</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Vũ Thanh Hà"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Vũ Thanh Hà</strong>
+                                <small class="muted">ha.vu@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Chăm sóc khách hàng</span></td>
+                        <td class="tabular">3/19 quyền</td>
+                        <td><span class="status status--bad">Tạm ngưng quyền</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">28/08/2026 · 11:10</td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn tài khoản Bùi Anh Khoa"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Bùi Anh Khoa</strong>
+                                <small class="muted">khoa.bui@pcmatch.vn</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--ok" style="font-size: 11px;">Kiểm duyệt nội dung</span></td>
+                        <td class="tabular">5/19 quyền</td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td class="tabular muted" style="font-size: 13px;">18/09/2026 · 20:14</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cluster"
+                 style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
+                <div>Hiển thị <strong>1–8</strong> trên <strong>12</strong> bản ghi</div>
+                <div class="cluster" style="gap: 4px;">
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;" disabled>
+                        ‹
+                    </button>
+                    <button class="btn btn--primary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">1
+                    </button>
+                    <button class="btn btn--secondary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">2
+                    </button>
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;">›</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+
+<script>
+    (function initRoleTabs() {
+        const tabs = document.querySelectorAll('.tabs[aria-label="Chọn vai trò cấu hình quyền"] .tab');
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
+                tab.setAttribute('aria-selected', 'true');
+            });
+        });
+    })();
+</script>
+</body>
+</html>

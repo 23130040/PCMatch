@@ -1,0 +1,317 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Quản lý đơn hàng — PCMatch Admin</title>
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="admin-dashboard order-page">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content admin-dashboard-content" id="main">
+        <div class="admin-page-head">
+            <div>
+                <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý đơn hàng</span></nav>
+                <h1>Quản lý đơn hàng</h1>
+                <p>Theo dõi toàn bộ đơn đặt hàng trên sàn, xác nhận đơn và chuyển thông tin về shop để xử lý.</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật: 20/09/2026 · 09:45</p>
+            </div>
+            <div class="cluster admin-page-actions">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            </div>
+        </div>
+
+        <section class="dashboard-metrics order-metrics admin-metrics" aria-label="Tổng quan đơn hàng">
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Tổng đơn hôm nay</span>
+                <strong class="metric-value">428 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +6,4%</em></strong>
+                <p>Toàn bộ đơn linh kiện phát sinh trong ngày trên sàn</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--amber">
+                <span class="metric-label">Chờ xác nhận</span>
+                <strong class="metric-value">36 <small>đơn</small> <em style="color:#a45c08"><i class="fa-solid fa-arrow-down"></i> -2,1%</em></strong>
+                <p>Admin cần xác nhận rồi chuyển về shop xử lý</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--plain">
+                <span class="metric-label">Đang giao</span>
+                <strong class="metric-value">154 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +3,8%</em></strong>
+                <p>Đã bàn giao cho đơn vị vận chuyển</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Hủy / Trả hàng</span>
+                <strong class="metric-value">22 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +1,2%</em></strong>
+                <p>Cần theo dõi để tránh phát sinh khiếu nại</p>
+            </article>
+        </section>
+
+        <section class="panel order-panel" aria-label="Danh sách đơn hàng" data-selection-container
+                 data-selection-actions="Xác nhận đơn|Bàn giao vận chuyển|Đánh dấu đã giao|Hủy đơn">
+            <div class="order-toolbar">
+                <div class="order-toolbar__top">
+                    <label class="order-toolbar__search">
+                        <span class="sr-only">Tìm đơn hàng</span>
+                        <input id="orderSearch" type="search"
+                               placeholder="Tìm theo mã đơn, người mua, shop hoặc sản phẩm">
+                    </label>
+                    <label class="order-toolbar__select">
+                        <span class="sr-only">Lọc theo shop</span>
+                        <select id="shopFilter">
+                            <option value="">Tất cả shop</option>
+                            <option>Linh Kiện Sao Việt</option>
+                            <option>Đèn LED &amp; Hiển Thị Pro</option>
+                            <option>Linh Kiện TechZone</option>
+                            <option>Module &amp; Cảm Biến 24H</option>
+                            <option>Board Mạch Thông Minh</option>
+                            <option>PCB Express Việt</option>
+                            <option>Nguồn &amp; Adapter Pro</option>
+                        </select>
+                    </label>
+                    <span class="order-result-count"><strong id="resultCount">12</strong> đơn khớp bộ lọc</span>
+                </div>
+            </div>
+
+            <div class="order-tabs" role="tablist" aria-label="Lọc đơn hàng theo trạng thái">
+                <button class="order-tab is-active" type="button" data-status="all">Tất cả <span
+                        class="tab-count">12</span></button>
+                <button class="order-tab" type="button" data-status="pending">Chờ xác nhận <span
+                        class="tab-count">2</span></button>
+                <button class="order-tab" type="button" data-status="confirmed">Đã xác nhận <span
+                        class="tab-count">2</span></button>
+                <button class="order-tab" type="button" data-status="shipping">Đang giao <span
+                        class="tab-count">2</span></button>
+                <button class="order-tab" type="button" data-status="delivered">Đã giao <span class="tab-count">3</span>
+                </button>
+                <button class="order-tab" type="button" data-status="cancelled">Đã hủy <span class="tab-count">1</span>
+                </button>
+                <button class="order-tab" type="button" data-status="return">Trả hàng <span class="tab-count">2</span>
+                </button>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="order-table" data-selectable-table data-selection-noun="đơn hàng" data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th><input id="selectAll" class="order-checkbox" type="checkbox" aria-label="Chọn tất cả"></th>
+                        <th>MÃ ĐƠN</th>
+                        <th>NGƯỜI MUA</th>
+                        <th>SHOP</th>
+                        <th>SẢN PHẨM</th>
+                        <th>GIÁ TRỊ</th>
+                        <th>ĐỊA CHỈ GIAO</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>THAO TÁC</th>
+                    </tr>
+                    </thead>
+                    <tbody id="orderBody">
+                    <tr data-status="pending" data-shop="Linh Kiện Sao Việt">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260920-0142">
+                        </td>
+                        <td class="order-code"><strong>VM-260920-0142</strong><small>20/09/2026 · 09:42</small></td>
+                        <td class="order-buyer"><strong>Nguyễn Thị Mai Anh</strong><small>0987 214 556</small></td>
+                        <td class="order-shop"><strong>Linh Kiện<br>Sao Việt</strong></td>
+                        <td class="order-product"><strong>Kit Arduino Uno R3 kèm 30 cảm biến</strong><small>SL:
+                            1</small></td>
+                        <td class="order-price">1.290.000 ₫</td>
+                        <td class="order-address"><small>72 Nguyễn Trãi,<br>Thanh Xuân, Hà Nội</small></td>
+                        <td><span class="status order-status order-status--pending">Chờ xác nhận</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="confirmed" data-shop="Đèn LED &amp; Hiển Thị Pro">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260920-0139">
+                        </td>
+                        <td class="order-code"><strong>VM-260920-0139</strong><small>20/09/2026 · 09:15</small></td>
+                        <td class="order-buyer"><strong>Trần Quốc Bảo</strong><small>0912 883 771</small></td>
+                        <td class="order-shop"><strong>Đèn LED &amp;<br>Hiển Thị Pro</strong></td>
+                        <td class="order-product"><strong>Đèn LED RGB WS2812B cuộn 5m</strong><small>SL: 2</small></td>
+                        <td class="order-price">420.000 ₫</td>
+                        <td class="order-address"><small>215 Lê Văn Việt,<br>Quận 9, TP. Hồ Chí Minh</small></td>
+                        <td><span class="status order-status order-status--confirmed">Đã xác nhận</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="shipping" data-shop="Module &amp; Cảm Biến 24H">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260920-0131">
+                        </td>
+                        <td class="order-code"><strong>VM-260920-0131</strong><small>20/09/2026 · 08:51</small></td>
+                        <td class="order-buyer"><strong>Lê Hoàng Yến</strong><small>0903 447 218</small></td>
+                        <td class="order-shop"><strong>Module &amp;<br>Cảm Biến 24H</strong></td>
+                        <td class="order-product"><strong>Cảm biến nhiệt độ độ ẩm DHT22</strong><small>SL: 1</small>
+                        </td>
+                        <td class="order-price">85.000 ₫</td>
+                        <td class="order-address"><small>18 Trần Phú, Hải Châu,<br>Đà Nẵng</small></td>
+                        <td><span class="status order-status order-status--shipping">Đang giao</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="delivered" data-shop="Linh Kiện TechZone">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260920-0124">
+                        </td>
+                        <td class="order-code"><strong>VM-260920-0124</strong><small>20/09/2026 · 08:20</small></td>
+                        <td class="order-buyer"><strong>Phạm Minh Tuấn</strong><small>0938 012 664</small></td>
+                        <td class="order-shop"><strong>Linh Kiện<br>TechZone</strong></td>
+                        <td class="order-product"><strong>ESP32 DevKit V1 WiFi Bluetooth</strong><small>SL: 1</small>
+                        </td>
+                        <td class="order-price">320.000 ₫</td>
+                        <td class="order-address"><small>99 Cách Mạng Tháng 8,<br>Ninh Kiều, Cần Thơ</small></td>
+                        <td><span class="status order-status order-status--delivered">Đã giao</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="return" data-shop="Linh Kiện TechZone">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260920-0118">
+                        </td>
+                        <td class="order-code"><strong>VM-260920-0118</strong><small>20/09/2026 · 07:58</small></td>
+                        <td class="order-buyer"><strong>Đỗ Thanh Hà</strong><small>0967 339 401</small></td>
+                        <td class="order-shop"><strong>Linh Kiện<br>TechZone</strong></td>
+                        <td class="order-product"><strong>Module Relay 5V 4 kênh chống nhiễu</strong><small>SL:
+                            1</small></td>
+                        <td class="order-price">145.000 ₫</td>
+                        <td class="order-address"><small>45 Lý Thường Kiệt,<br>Hoàn Kiếm, Hà Nội</small></td>
+                        <td><span class="status order-status order-status--return">Trả hàng</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="pending" data-shop="Board Mạch Thông Minh">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0987">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0987</strong><small>19/09/2026 · 21:12</small></td>
+                        <td class="order-buyer"><strong>Vũ Thị Ngọc Lan</strong><small>0905 776 210</small></td>
+                        <td class="order-shop"><strong>Board Mạch<br>Thông Minh</strong></td>
+                        <td class="order-product"><strong>Raspberry Pi Pico W chính hãng</strong><small>SL: 1</small>
+                        </td>
+                        <td class="order-price">240.000 ₫</td>
+                        <td class="order-address"><small>12 Võ Văn Ngân,<br>Thủ Đức, TP. Hồ Chí Minh</small></td>
+                        <td><span class="status order-status order-status--pending">Chờ xác nhận</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="cancelled" data-shop="Nguồn &amp; Adapter Pro">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0965">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0965</strong><small>19/09/2026 · 19:44</small></td>
+                        <td class="order-buyer"><strong>Hoàng Anh Khoa</strong><small>0918 220 553</small></td>
+                        <td class="order-shop"><strong>Nguồn &amp;<br>Adapter Pro</strong></td>
+                        <td class="order-product"><strong>Adapter 12V 5A đầu jack DC 5.5mm</strong><small>SL: 1</small>
+                        </td>
+                        <td class="order-price">130.000 ₫</td>
+                        <td class="order-address"><small>31 Nguyễn Văn Cừ,<br>TP. Huế</small></td>
+                        <td><span class="status order-status order-status--cancelled">Đã hủy</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="confirmed" data-shop="PCB Express Việt">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0941">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0941</strong><small>19/09/2026 · 17:30</small></td>
+                        <td class="order-buyer"><strong>Bùi Thu Trang</strong><small>0977 118 662</small></td>
+                        <td class="order-shop"><strong>PCB<br>Express Việt</strong></td>
+                        <td class="order-product"><strong>PCB chấm vuông 7x9cm (combo 10 tấm)</strong><small>SL:
+                            3</small></td>
+                        <td class="order-price">234.000 ₫</td>
+                        <td class="order-address"><small>58 Hai Bà Trưng,<br>TP. Biên Hòa, Đồng Nai</small></td>
+                        <td><span class="status order-status order-status--confirmed">Đã xác nhận</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="delivered" data-shop="Linh Kiện Sao Việt">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0933">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0933</strong><small>19/09/2026 · 16:52</small></td>
+                        <td class="order-buyer"><strong>Nguyễn Đức Long</strong><small>0981 448 201</small></td>
+                        <td class="order-shop"><strong>Linh Kiện<br>Sao Việt</strong></td>
+                        <td class="order-product"><strong>Arduino Mega 2560 R3</strong><small>SL: 1</small></td>
+                        <td class="order-price">385.000 ₫</td>
+                        <td class="order-address"><small>17 Nguyễn Huệ,<br>Quận 1, TP. Hồ Chí Minh</small></td>
+                        <td><span class="status order-status order-status--delivered">Đã giao</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="shipping" data-shop="Đèn LED &amp; Hiển Thị Pro">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0928">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0928</strong><small>19/09/2026 · 15:28</small></td>
+                        <td class="order-buyer"><strong>Trần Gia Huy</strong><small>0908 992 441</small></td>
+                        <td class="order-shop"><strong>Đèn LED &amp;<br>Hiển Thị Pro</strong></td>
+                        <td class="order-product"><strong>Màn hình OLED 0.96 inch I2C</strong><small>SL: 4</small></td>
+                        <td class="order-price">276.000 ₫</td>
+                        <td class="order-address"><small>28 Nguyễn Trãi,<br>Thanh Xuân, Hà Nội</small></td>
+                        <td><span class="status order-status order-status--shipping">Đang giao</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="return" data-shop="Module &amp; Cảm Biến 24H">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0912">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0912</strong><small>19/09/2026 · 13:06</small></td>
+                        <td class="order-buyer"><strong>Phan Minh Châu</strong><small>0916 700 311</small></td>
+                        <td class="order-shop"><strong>Module &amp;<br>Cảm Biến 24H</strong></td>
+                        <td class="order-product"><strong>Cảm biến khoảng cách HC-SR04</strong><small>SL: 2</small></td>
+                        <td class="order-price">90.000 ₫</td>
+                        <td class="order-address"><small>6 Nguyễn Đình Chiểu,<br>Đà Nẵng</small></td>
+                        <td><span class="status order-status order-status--return">Trả hàng</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="delivered" data-shop="Linh Kiện TechZone">
+                        <td><input class="order-checkbox row-check" type="checkbox" aria-label="Chọn VM-260919-0886">
+                        </td>
+                        <td class="order-code"><strong>VM-260919-0886</strong><small>19/09/2026 · 10:21</small></td>
+                        <td class="order-buyer"><strong>Đặng Quốc Việt</strong><small>0964 332 198</small></td>
+                        <td class="order-shop"><strong>Linh Kiện<br>TechZone</strong></td>
+                        <td class="order-product"><strong>Module Bluetooth HC-05</strong><small>SL: 2</small></td>
+                        <td class="order-price">180.000 ₫</td>
+                        <td class="order-address"><small>84 Phạm Văn Đồng,<br>Thủ Đức, TP. Hồ Chí Minh</small></td>
+                        <td><span class="status order-status order-status--delivered">Đã giao</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="order-pagination">
+                <span>Hiển thị <strong id="rangeStart">1</strong>–<strong id="rangeEnd">8</strong> trên <strong
+                        id="totalRows">12</strong> bản ghi</span>
+                <div class="order-pagination__buttons">
+                    <button class="order-page-btn" id="prevPage" type="button" disabled>‹</button>
+                    <button class="order-page-btn is-active" type="button">1</button>
+                    <button class="order-page-btn" type="button">2</button>
+                    <button class="order-page-btn" id="nextPage" type="button">›</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

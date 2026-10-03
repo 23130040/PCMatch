@@ -1,0 +1,188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description"
+          content="Chính sách nền tảng PCMatch - Quản lý các văn bản chính sách và điều khoản của sàn thương mại điện tử."/>
+    <title>Chính sách nền tảng · PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/components.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k"/>
+    <link rel="stylesheet" href="{% static 'css/policies.css' %}?v=20260926"/>
+{% include 'includes/frontend_config.html' %}</head>
+<body>
+
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content operations-page" id="main">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Chính sách nền tảng</span>
+        </nav>
+
+        <div class="page-header-row">
+            <div>
+                <h1 class="page-title">Chính sách nền tảng</h1>
+                <div class="page-subtitle-row">
+                    <i class="fa-solid fa-file-lines"></i>
+                    5 văn bản đang hiệu lực · cập nhật gần nhất 18/09/2026
+                </div>
+            </div>
+            <a href="#" class="btn-primary" id="btn-download-policies">
+                <i class="fa-solid fa-download"></i>
+                Tải bộ chính sách
+            </a>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-input-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="filter-input" id="policy-search" placeholder="Tìm kiếm chính sách..."/>
+            </div>
+            <div class="pills">
+                <button class="pill active" id="pill-all">Tất cả <strong>5</strong></button>
+                <button class="pill" id="pill-seller">Người bán <strong>2</strong></button>
+                <button class="pill" id="pill-buyer">Người mua <strong>1</strong></button>
+                <button class="pill" id="pill-data">Dữ liệu <strong>1</strong></button>
+                <button class="pill" id="pill-violation">Xử lý vi phạm <strong>1</strong></button>
+            </div>
+        </div>
+
+        <div class="policies-layout">
+            <div class="policy-list-panel">
+                <div class="policy-list-header">
+                    <div class="policy-list-header-title">Danh mục chính sách</div>
+                    <div class="policy-list-header-count">5 văn bản</div>
+                </div>
+                <ul class="policy-list" id="policy-list">
+                    <li class="policy-list-item active" data-policy="seller-terms" id="policy-item-1" tabindex="0"
+                        role="button" aria-pressed="true">
+                        <div class="policy-list-icon"><i class="fa-solid fa-store"></i></div>
+                        <div class="policy-list-info">
+                            <div class="policy-list-name">Điều khoản người bán</div>
+                            <div class="policy-list-meta">v3.2 · hiệu lực 01/08/2026</div>
+                        </div>
+                    </li>
+                    <li class="policy-list-item" data-policy="return-refund" id="policy-item-2" tabindex="0"
+                        role="button" aria-pressed="false">
+                        <div class="policy-list-icon"><i class="fa-solid fa-rotate-right"></i></div>
+                        <div class="policy-list-info">
+                            <div class="policy-list-name">Chính sách đổi trả & hoàn tiền</div>
+                            <div class="policy-list-meta">v2.8 · 15/07/2026</div>
+                        </div>
+                    </li>
+                    <li class="policy-list-item" data-policy="listing-rules" id="policy-item-3" tabindex="0"
+                        role="button" aria-pressed="false">
+                        <div class="policy-list-icon"><i class="fa-solid fa-box"></i></div>
+                        <div class="policy-list-info">
+                            <div class="policy-list-name">Quy định đăng bán sản phẩm</div>
+                            <div class="policy-list-meta">v2.1 · 01/06/2026</div>
+                        </div>
+                    </li>
+                    <li class="policy-list-item" data-policy="privacy" id="policy-item-4" tabindex="0" role="button"
+                        aria-pressed="false">
+                        <div class="policy-list-icon"><i class="fa-solid fa-shield"></i></div>
+                        <div class="policy-list-info">
+                            <div class="policy-list-name">Chính sách bảo mật dữ liệu</div>
+                            <div class="policy-list-meta">v1.9 · 10/06/2026</div>
+                        </div>
+                    </li>
+                    <li class="policy-list-item" data-policy="violation" id="policy-item-5" tabindex="0" role="button"
+                        aria-pressed="false">
+                        <div class="policy-list-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="policy-list-info">
+                            <div class="policy-list-name">Chính sách xử lý vi phạm</div>
+                            <div class="policy-list-meta">v2.0 · 20/05/2026</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="policy-content-panel" id="policy-content-panel">
+                <div class="policy-content-header">
+                    <div class="policy-content-icon">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div class="policy-content-title-group">
+                        <h2 class="policy-content-title">
+                            Điều khoản người bán
+                            <span class="version-badge">v3.2</span>
+                        </h2>
+                        <div class="policy-meta-row">
+                            <span class="policy-meta-item"><i class="fa-solid fa-user"></i> Người bán</span>
+                            <span class="policy-meta-item"><i
+                                    class="fa-solid fa-calendar"></i> Hiệu lực 01/08/2026</span>
+                            <span class="policy-meta-item"><i
+                                    class="fa-solid fa-clock"></i> Cập nhật 18/09/2026 10:20</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="policy-content-body">
+                    <div class="policy-summary-box">
+                        Quy định quyền và nghĩa vụ của shop khi tham gia sàn thương mại điện tử PCMatch. Tài liệu này áp
+                        dụng cho tất cả tài khoản người bán đã được xác minh và đang hoạt động trên nền tảng, bao gồm cá
+                        nhân kinh doanh, hộ kinh doanh và doanh nghiệp.
+                    </div>
+
+                    <div class="policy-section">
+                        <h3>1. Điều kiện tham gia sàn</h3>
+                        <p>Người bán phải hoàn tất quá trình đăng ký và xác minh danh tính theo quy trình của <strong>PCMatch</strong>,
+                            bao gồm cung cấp đầy đủ giấy tờ pháp lý hợp lệ. Tài khoản người bán chỉ được kích hoạt sau
+                            khi đội ngũ kiểm duyệt xác nhận thành công. PCMatch có quyền từ chối hoặc tạm khóa tài khoản
+                            nếu phát hiện thông tin không trung thực hoặc vi phạm các quy định hiện hành của pháp luật
+                            Việt Nam.</p>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3>2. Nghĩa vụ xử lý đơn hàng</h3>
+                        <p>Người bán có trách nhiệm xác nhận và xử lý đơn hàng trong vòng 24 giờ kể từ thời điểm đặt
+                            hàng thành công. Trong trường hợp sản phẩm hết hàng hoặc không thể giao, người bán phải
+                            thông báo ngay cho khách hàng và đề xuất phương án thay thế hoặc <strong>hoàn tiền</strong>.
+                            Tỷ lệ hủy đơn do lỗi người bán không được vượt quá 3% trong vòng 30 ngày liên tiếp; vi phạm
+                            ngưỡng này sẽ dẫn đến việc <strong>tạm ngưng hiển thị gian hàng</strong>.</p>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3>3. Chất lượng sản phẩm và mô tả</h3>
+                        <p>Tất cả sản phẩm đăng bán trên PCMatch phải là hàng chính hãng, có nguồn gốc xuất xứ rõ ràng
+                            và đáp ứng các tiêu chuẩn chất lượng quy định. Hình ảnh và mô tả sản phẩm phải trung thực,
+                            phản ánh chính xác tình trạng thực tế của hàng hóa. Nghiêm cấm đăng bán hàng giả, hàng nhái,
+                            hàng kém chất lượng hoặc các mặt hàng bị cấm theo quy định pháp luật.</p>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3>4. Phí và thanh toán</h3>
+                        <p>Người bán chịu <strong>phí hoa hồng</strong> theo mức phân loại danh mục sản phẩm, dao động
+                            từ 1% đến 8% trên giá trị đơn hàng hoàn tất. Ngoài ra, các khoản <strong>phí dịch
+                                vụ</strong> quảng cáo, phí vận chuyển ưu tiên và phí gói đăng ký nâng cao sẽ được tính
+                            riêng theo bảng giá hiện hành. Tiền <strong>thanh toán</strong> từ đơn hàng thành công sẽ
+                            được giải ngân vào tài khoản người bán trong chu kỳ 7 ngày sau khi khách hàng xác nhận nhận
+                            hàng.</p>
+                    </div>
+                </div>
+
+                <div class="policy-content-footer">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Văn bản này áp dụng cho toàn bộ người bán và người mua trên sàn PCMatch. Khi chính sách được cập nhật, hệ thống sẽ ghi nhận vào nhật ký hoạt động và thông báo tới các bên liên quan.</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script src="{% static 'js/policies.js' %}?v=20260926"></script>
+</body>
+</html>

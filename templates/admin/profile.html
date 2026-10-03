@@ -1,0 +1,288 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Thông tin tài khoản – PCMatch Admin</title>
+    <meta name="description" content="Trang thông tin tài khoản quản trị viên PCMatch."/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/components.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k"/>
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260926"/>
+{% include 'includes/frontend_config.html' %}</head>
+<body>
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+    <main class="shell__content operations-page" id="main">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span class="breadcrumb-current">Thông tin tài khoản</span>
+        </nav>
+        <div class="profile-page-header">
+            <h1 class="page-title">Thông tin tài khoản</h1>
+            <div class="profile-page-description">Xem và cập nhật hồ sơ
+                quản trị viên, quyền truy cập cùng các thiết bị đang giữ phiên đăng nhập
+            </div>
+            <div class="profile-page-meta"><i class="fa-solid fa-at"></i>
+                Tài khoản quản trị cấp cao · tham gia từ 02/04/2023
+            </div>
+        </div>
+
+        <div class="summary-cards quick-stats">
+            <div class="summary-card quick-stat-card">
+                <div class="sc-title">Vai trò truy cập</div>
+                <div class="sc-value">
+                    <strong>1</strong> <small>vai trò</small>
+                    <span class="quick-trend quick-trend--up"><i class="fa-solid fa-arrow-up"></i> Platform Admin</span>
+                </div>
+                <div class="sc-desc">Toàn quyền xử lý đơn, giao dịch, shop và phân quyền</div>
+            </div>
+            <div class="summary-card quick-stat-card">
+                <div class="sc-title">Phiên đăng nhập</div>
+                <div class="sc-value">
+                    <strong>4</strong> <small>thiết bị</small>
+                    <span class="quick-trend quick-trend--up"><i class="fa-solid fa-arrow-up"></i> 1 đang hoạt động</span>
+                </div>
+                <div class="sc-desc">Thiết bị đang giữ phiên truy cập hệ thống quản trị</div>
+            </div>
+            <div class="summary-card quick-stat-card highlight">
+                <div class="sc-title">Đổi mật khẩu gần nhất</div>
+                <div class="sc-value">
+                    <strong>88</strong> <small>ngày trước</small>
+                    <span class="quick-trend quick-trend--down"><i class="fa-solid fa-arrow-down"></i> Nên đổi định kỳ 90 ngày</span>
+                </div>
+                <div class="sc-desc">Cập nhật mật khẩu định kỳ để bảo vệ tài khoản quản trị</div>
+            </div>
+        </div>
+
+        <div class="profile-grid">
+            <div class="left-col">
+                <section class="panel" aria-label="Hồ sơ quản trị viên">
+                    <div class="panel-header">
+                        <div class="panel-icon-box"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="panel-header-content">
+                            <h2>Hồ sơ quản trị viên</h2>
+                            <p>Thông tin hiển thị trong hệ thống và nhật ký hoạt động</p>
+                        </div>
+                    </div>
+                    <div class="panel-body panel-body-padded">
+                        <div class="avatar-area">
+                            <img src="https://i.pravatar.cc/150?img=11" alt="Avatar" class="avatar-rect"/>
+                            <div class="avatar-info">
+                                <div class="avatar-name">Nguyễn Hoàng Long</div>
+                                <div class="avatar-role">Giám đốc vận hành · Ban vận hành sàn</div>
+                                <span class="avatar-badge">Quản trị cấp cao</span>
+                            </div>
+                            <a href="#" class="btn-change-avatar" id="btn-change-avatar">
+                                <i class="fa-regular fa-image"></i> Đổi ảnh
+                            </a>
+                        </div>
+                        <form id="profile-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="full-name">Họ và tên</label>
+                                    <input type="text" id="full-name" name="full-name" value="Nguyễn Hoàng Long"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="position">Chức danh</label>
+                                    <input type="text" id="position" name="position" value="Giám đốc vận hành"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email công việc</label>
+                                    <input type="email" id="email" name="email" value="admin@pcmatch.vn"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Số điện thoại</label>
+                                    <input type="tel" id="phone" name="phone" value="0912 338 776"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="department">Phòng ban</label>
+                                    <input type="text" id="department" name="department" value="Ban vận hành sàn"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="location">Khu vực làm việc</label>
+                                    <input type="text" id="location" name="location" value="Hà Nội, Việt Nam"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="timezone">Múi giờ</label>
+                                    <select id="timezone" name="timezone">
+                                        <option value="gmt7">GMT+7 (Hà Nội)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="language">Ngôn ngữ hiển thị</label>
+                                    <select id="language" name="language">
+                                        <option value="vi">Tiếng Việt</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="reset" class="btn-secondary" id="btn-cancel-profile">
+                                    Hoàn tác
+                                </button>
+                                <button type="submit" class="btn-primary" id="btn-save-profile">
+                                    Lưu thay đổi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <section class="panel" aria-label="Thiết bị và phiên đăng nhập">
+                    <div class="panel-header">
+                        <div class="panel-icon-box"><i class="fa-solid fa-laptop"></i></div>
+                        <div class="panel-header-content">
+                            <h2>Thiết bị & phiên đăng nhập</h2>
+                            <p>4 thiết bị đang giữ phiên truy cập hệ thống quản trị</p>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="device-list-new">
+                            <div class="device-item-new current" id="device-macbook">
+                                <div class="device-icon-new"><i class="fa-solid fa-desktop"></i></div>
+                                <div class="device-info-new">
+                                    <div class="device-name-new">
+                                        MacBook Pro 14"
+                                        <span class="device-current-badge-new">Thiết bị hiện tại</span>
+                                    </div>
+                                    <div class="device-meta-new">Chrome 128 · macOS · 203.113.44.10</div>
+                                    <div class="device-date-new">Hà Nội, Việt Nam · 20/09/2026 - 08:12</div>
+                                </div>
+                                <div class="device-action-new">
+                                    <span class="status-active">Đang hoạt động</span>
+                                </div>
+                            </div>
+                            <div class="device-item-new" id="device-iphone">
+                                <div class="device-icon-new"><i class="fa-solid fa-mobile-screen"></i></div>
+                                <div class="device-info-new">
+                                    <div class="device-name-new">iPhone 15 Pro</div>
+                                    <div class="device-meta-new">Safari · iOS 18 · 27.72.100.18</div>
+                                    <div class="device-date-new">Hà Nội, Việt Nam · 19/09/2026 - 21:40</div>
+                                </div>
+                                <div class="device-action-new">
+                                    <a href="#" class="btn-revoke" id="btn-revoke-iphone">
+                                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Thu hồi
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="device-item-new" id="device-dell">
+                                <div class="device-icon-new"><i class="fa-solid fa-laptop"></i></div>
+                                <div class="device-info-new">
+                                    <div class="device-name-new">Dell XPS 15</div>
+                                    <div class="device-meta-new">Edge 127 · Windows 11 · 113.161.74.9</div>
+                                    <div class="device-date-new">TP. Hồ Chí Minh, Việt Nam · 18/09/2026 - 14:05</div>
+                                </div>
+                                <div class="device-action-new">
+                                    <a href="#" class="btn-revoke" id="btn-revoke-dell">
+                                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Thu hồi
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="device-item-new" id="device-ipad">
+                                <div class="device-icon-new"><i class="fa-solid fa-tablet-screen-button"></i></div>
+                                <div class="device-info-new">
+                                    <div class="device-name-new">iPad Air</div>
+                                    <div class="device-meta-new">Safari · iPadOS 18 · 14.161.28.77</div>
+                                    <div class="device-date-new">Đà Nẵng, Việt Nam · 16/09/2026 - 09:22</div>
+                                </div>
+                                <div class="device-action-new">
+                                    <a href="#" class="btn-revoke" id="btn-revoke-ipad">
+                                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Thu hồi
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="right-col">
+                <section class="panel" aria-label="Bảo mật tài khoản">
+                    <div class="panel-header">
+                        <div class="panel-icon-box"><i class="fa-solid fa-lock"></i></div>
+                        <div class="panel-header-content">
+                            <h2>Bảo mật tài khoản</h2>
+                            <p>Mật khẩu và xác thực hai lớp</p>
+                        </div>
+                    </div>
+                    <div class="panel-body panel-body-padded">
+                        <div class="security-badge" id="security-2fa-badge">
+                            <i class="fa-solid fa-lock"></i> Đã bật xác thực hai lớp
+                        </div>
+
+                        <div class="security-list">
+                            <div class="security-item">
+                                <span class="security-item-label">Mật khẩu cập nhật</span>
+                                <span class="security-item-value">24/06/2026 - 14:30</span>
+                            </div>
+                            <div class="security-item">
+                                <span class="security-item-label">Phiên đăng nhập</span>
+                                <span class="security-item-value">4 thiết bị</span>
+                            </div>
+                            <div class="security-item">
+                                <span class="security-item-label">Lần đăng nhập cuối</span>
+                                <span class="security-item-value">20/09/2026 - 08:12</span>
+                            </div>
+                            <div class="security-item">
+                                <span class="security-item-label">Tham gia từ</span>
+                                <span class="security-item-value">02/04/2023 - 09:00</span>
+                            </div>
+                        </div>
+
+                        <div class="security-actions">
+                            <a href="{% url 'staff_password' %}" class="btn-outline-primary" id="btn-change-password">
+                                Đổi mật khẩu
+                            </a>
+                            <a href="#" class="btn-toggle-2fa">
+                                <i class="fa-solid fa-toggle-on"></i> Tắt xác thực hai lớp
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel" aria-label="Quyền truy cập">
+                    <div class="panel-header">
+                        <div class="panel-icon-box"><i class="fa-solid fa-key"></i></div>
+                        <div class="panel-header-content">
+                            <h2>Quyền truy cập</h2>
+                            <p>Phạm vi nghiệp vụ được phép thao tác</p>
+                        </div>
+                    </div>
+                    <div class="panel-body panel-body-padded">
+                        <div class="perm-list-new" id="permissions-list">
+                            <div class="perm-item"><i class="fa-regular fa-circle-check"></i> Xử lý và xác nhận đơn hàng
+                                toàn sàn
+                            </div>
+                            <div class="perm-item"><i class="fa-regular fa-circle-check"></i> Đối soát giao dịch và hoàn
+                                tiền
+                            </div>
+                            <div class="perm-item"><i class="fa-regular fa-circle-check"></i> Duyệt shop tham gia và
+                                kiểm duyệt sản phẩm
+                            </div>
+                            <div class="perm-item"><i class="fa-regular fa-circle-check"></i> Phân quyền tài khoản quản
+                                trị và chủ shop
+                            </div>
+                            <div class="perm-item"><i class="fa-regular fa-circle-check"></i> Cấu hình biểu phí và chính
+                                sách nền tảng
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script src="{% static 'js/profile.js' %}?v=20260926"></script>
+
+</body>
+</html>

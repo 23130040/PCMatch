@@ -1,0 +1,44 @@
+/* Shop-only fee menu and detail drawer. */
+.fee-filter { position: relative; }
+.fee-filter__menu { position: absolute; z-index: 70; top: calc(100% + 5px); left: 0; width: max-content; min-width: 100%; padding: 6px; border-radius: 8px; background: #475569; color: #fff; box-shadow: 0 12px 28px rgb(15 23 42 / .22); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px); transition: opacity .16s, transform .16s, visibility .16s; }
+.fee-filter.is-open .fee-filter__menu { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.fee-filter__menu button { display: block; width: 100%; padding: 7px 10px; border: 0; border-radius: 5px; background: transparent; color: #fff; font-size: 11px; font-weight: 500; text-align: left; white-space: nowrap; cursor: pointer; }
+.fee-filter__menu button:hover { background: rgb(255 255 255 / .12); }
+.shop-row-clickable { cursor: pointer; }
+
+.shop-drawer-backdrop { position: fixed; z-index: 90; inset: 0; background: rgb(15 23 42 / .48); opacity: 0; transition: opacity .25s ease; }
+.shop-drawer-backdrop[hidden] { display: none; }
+.shop-drawer-backdrop.is-open { opacity: 1; }
+.shop-detail-drawer { position: fixed; z-index: 100; top: 0; right: 0; bottom: 0; display: flex; width: min(440px, 100vw); flex-direction: column; border-left: 1px solid #e2e8f0; background: #fff; box-shadow: -20px 0 50px rgb(15 23 42 / .18); transform: translateX(100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
+.shop-detail-drawer[hidden] { display: none; }
+.shop-detail-drawer.is-open { transform: translateX(0); }
+.has-shop-drawer { overflow: hidden; }
+.shop-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px; border-bottom: 1px solid #f1f5f9; }
+.shop-drawer__header h2 { margin: 0; color: #0f172a; font-size: 20px; line-height: 1.3; }
+.shop-drawer__header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.shop-drawer__header button { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 1px solid #e2e8f0; border-radius: 7px; background: #fff; color: #94a3b8; font-size: 20px; line-height: 1; cursor: pointer; }
+.shop-drawer__header button:hover { background: #f8fafc; color: #475569; }
+.shop-drawer__body { flex: 1; overflow-y: auto; padding: 24px; }
+.shop-drawer__summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 22px; }
+.shop-drawer__summary > div:first-child span { display: block; color: #94a3b8; font-size: 11px; font-weight: 500; }
+.shop-drawer__summary strong { display: block; margin-top: 3px; color: #0f172a; font-size: 24px; }
+.shop-drawer__summary > div:last-child { display: flex; align-items: flex-end; flex-direction: column; gap: 6px; }
+.shop-drawer__summary > div:last-child span { display: inline-flex; padding: 3px 9px; border: 1px solid #dbeafe; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 600; }
+.shop-drawer__body section { padding: 20px 0; border-top: 1px solid #f1f5f9; }
+.shop-drawer__body section h3 { margin: 0 0 12px; color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.shop-drawer__body dl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px 16px; margin: 0; font-size: 12px; }
+.shop-drawer__body dt { color: #64748b; }
+.shop-drawer__body dd { margin: 0; color: #0f172a; font-weight: 500; text-align: right; }
+.shop-drawer__products { display: grid; gap: 9px; }
+.shop-drawer__products > div { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 9px; background: #f8fafc; }
+.shop-drawer__products strong { display: block; color: #0f172a; font-size: 12px; }
+.shop-drawer__products span { display: block; margin-top: 2px; color: #94a3b8; font-size: 11px; }
+.shop-detail-drawer > footer { padding: 18px 24px; border-top: 1px solid #f1f5f9; background: #fff; }
+.shop-detail-drawer > footer button { padding: 8px 13px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #475569; font-size: 12px; font-weight: 600; cursor: pointer; }
+.shop-detail-drawer > footer button:hover { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
+
+@media (max-width: 520px) {
+  .shop-drawer__header,
+  .shop-drawer__body { padding: 20px; }
+  .shop-drawer__body dl { grid-template-columns: 86px minmax(0, 1fr); }
+}

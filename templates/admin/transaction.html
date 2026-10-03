@@ -1,0 +1,326 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Quản lý giao dịch — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="admin-dashboard">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+    <main class="shell__content operations-page admin-dashboard-content transaction-page" id="main">
+        <div class="admin-page-head">
+            <div>
+                <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý giao dịch</span></nav>
+                <h1>Quản lý giao dịch</h1>
+                <p>Đối soát toàn bộ giao dịch giữa người mua và chủ shop, bao gồm thanh toán thành công và hoàn tiền.</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Đối soát tự động mỗi 15 phút · lần gần nhất 09:45</p>
+            </div>
+            <div class="cluster admin-page-actions">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất đối soát</button>
+            </div>
+        </div>
+
+        <section class="dashboard-metrics admin-metrics transaction-metrics" aria-label="Chỉ số giao dịch">
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Tổng giao dịch</span>
+                <strong class="metric-value">1.284 <small>lệnh</small> <em><i class="fa-solid fa-arrow-up"></i> +5,7%</em></strong>
+                <p>Bao gồm thanh toán, hoàn tiền và chi trả shop linh kiện</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Thanh toán thành công</span>
+                <strong class="metric-value">1.196 <small>lệnh</small> <em><i class="fa-solid fa-arrow-up"></i> +4,2%</em></strong>
+                <p>Giao dịch người mua trả tiền cho shop</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--amber">
+                <span class="metric-label">Hoàn tiền</span>
+                <strong class="metric-value">68 <small>lệnh</small> <em><i class="fa-solid fa-arrow-up"></i> +1,8%</em></strong>
+                <p>Đã hoàn về ví hoặc thẻ của người mua</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--plain">
+                <span class="metric-label">Giá trị ròng</span>
+                <strong class="metric-value">2,41 <small>tỷ ₫</small> <em><i class="fa-solid fa-arrow-up"></i> +7,9%</em></strong>
+                <p>Tổng tiền shop thực nhận sau khi trừ phí sàn</p>
+            </article>
+        </section>
+
+        <section class="panel transaction-panel" data-selection-container
+                 data-selection-actions="Đánh dấu thành công|Đánh dấu thất bại|Đưa về đang xử lý">
+            <div class="transaction-toolbar">
+                <div class="transaction-filters">
+                    <label class="transaction-search">
+                        <span class="sr-only">Tìm giao dịch</span>
+                        <i class="search__glyph"></i>
+                        <input id="transactionSearch" type="search"
+                               placeholder="Tìm theo mã giao dịch, mã đơn, người mua hoặc shop">
+                    </label>
+                    <label class="transaction-select">
+                        <span class="sr-only">Phương thức thanh toán</span>
+                        <select id="paymentMethodFilter">
+                            <option value="">Tất cả phương thức</option>
+                            <option value="card">Thẻ tín dụng</option>
+                            <option value="wallet">Ví điện tử</option>
+                            <option value="cod">Thanh toán khi nhận hàng</option>
+                            <option value="bank">Chuyển khoản</option>
+                            <option value="shop">Chi trả về ngân hàng shop</option>
+                        </select>
+                    </label>
+                </div>
+                <strong class="transaction-result"><span id="transactionResultCount">12</span> giao dịch khớp bộ
+                    lọc</strong>
+            </div>
+
+            <div class="transaction-tabs" role="tablist" aria-label="Trạng thái giao dịch">
+                <button class="transaction-tab is-active" type="button" data-transaction-status="all" role="tab"
+                        aria-selected="true">Tất cả <span>12</span></button>
+                <button class="transaction-tab" type="button" data-transaction-status="success" role="tab"
+                        aria-selected="false">Thành công <span>8</span></button>
+                <button class="transaction-tab" type="button" data-transaction-status="processing" role="tab"
+                        aria-selected="false">Đang xử lý <span>3</span></button>
+                <button class="transaction-tab" type="button" data-transaction-status="failed" role="tab"
+                        aria-selected="false">Thất bại <span>1</span></button>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="data-table transaction-table" data-selectable-table data-selection-noun="giao dịch"
+                       data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th class="transaction-check"><input id="selectAllTransactions" type="checkbox"
+                                                             aria-label="Chọn tất cả giao dịch"></th>
+                        <th>MÃ GIAO DỊCH</th>
+                        <th>ĐƠN HÀNG</th>
+                        <th>NGƯỜI MUA</th>
+                        <th>SHOP</th>
+                        <th>LOẠI</th>
+                        <th>SỐ TIỀN</th>
+                        <th>PHƯƠNG THỨC</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>THAO TÁC</th>
+                    </tr>
+                    </thead>
+                    <tbody id="transactionBody">
+                    <tr data-status="success" data-method="card">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260920-4412"></td>
+                        <td><strong>GD-260920-4412</strong><small>20/09/2026 · 09:43</small></td>
+                        <td>VM-260920-0142</td>
+                        <td><strong>Nguyễn Thị<br>Mai Anh</strong></td>
+                        <td>Linh Kiện<br>Sao Việt</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+1.290.000 ₫</strong></td>
+                        <td>Thẻ tín dụng</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="wallet">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260920-4408"></td>
+                        <td><strong>GD-260920-4408</strong><small>20/09/2026 · 09:16</small></td>
+                        <td>VM-260920-0139</td>
+                        <td><strong>Trần Quốc<br>Bảo</strong></td>
+                        <td>Đèn LED &amp;<br>Hiển Thị Pro</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+420.000 ₫</strong></td>
+                        <td>Ví điện tử</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="processing" data-method="cod">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260920-4401"></td>
+                        <td><strong>GD-260920-4401</strong><small>20/09/2026 · 08:52</small></td>
+                        <td>VM-260920-0131</td>
+                        <td><strong>Lê Hoàng<br>Yến</strong></td>
+                        <td>Module &amp;<br>Cảm Biến 24H</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+85.000 ₫</strong></td>
+                        <td>Thanh toán khi<br>nhận hàng</td>
+                        <td><span class="status transaction-status transaction-status--processing">Đang xử lý</span>
+                        </td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="card">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260920-4394"></td>
+                        <td><strong>GD-260920-4394</strong><small>20/09/2026 · 08:05</small></td>
+                        <td>VM-260920-0118</td>
+                        <td><strong>Đỗ Thanh<br>Hà</strong></td>
+                        <td>Linh Kiện<br>TechZone</td>
+                        <td><span class="transaction-type transaction-type--refund">↩ &nbsp;Hoàn tiền</span></td>
+                        <td><strong class="transaction-negative">-145.000 ₫</strong></td>
+                        <td>Thẻ tín dụng</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="processing" data-method="bank">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260920-4388"></td>
+                        <td><strong>GD-260920-4388</strong><small>20/09/2026 · 07:30</small></td>
+                        <td>VM-260919-0987</td>
+                        <td><strong>Vũ Thị Ngọc<br>Lan</strong></td>
+                        <td>Board Mạch<br>Thông Minh</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+240.000 ₫</strong></td>
+                        <td>Chuyển khoản</td>
+                        <td><span class="status transaction-status transaction-status--processing">Đang xử lý</span>
+                        </td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="shop">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4302"></td>
+                        <td><strong>GD-260919-4302</strong><small>19/09/2026 · 18:20</small></td>
+                        <td>VM-260919-0905</td>
+                        <td><strong>Đặng Mỹ<br>Duyên</strong></td>
+                        <td>Chip Bán<br>Dẫn Á Châu</td>
+                        <td><span class="transaction-type transaction-type--payout">▣ &nbsp;Chi trả shop</span></td>
+                        <td><strong>+468.000 ₫</strong></td>
+                        <td>Chi trả về ngân<br>hàng shop</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-method="wallet">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4295"></td>
+                        <td><strong>GD-260919-4295</strong><small>19/09/2026 · 16:02</small></td>
+                        <td>VM-260919-0965</td>
+                        <td><strong>Hoàng Anh<br>Khoa</strong></td>
+                        <td>Nguồn &amp;<br>Adapter Pro</td>
+                        <td><span class="transaction-type transaction-type--refund">↩ &nbsp;Hoàn tiền</span></td>
+                        <td><strong class="transaction-negative">-130.000 ₫</strong></td>
+                        <td>Ví điện tử</td>
+                        <td><span class="status transaction-status transaction-status--failed">Thất bại</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="wallet">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4281"></td>
+                        <td><strong>GD-260919-4281</strong><small>19/09/2026 · 15:44</small></td>
+                        <td>VM-260919-0941</td>
+                        <td><strong>Bùi Thu<br>Trang</strong></td>
+                        <td>PCB<br>Express Việt</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+234.000 ₫</strong></td>
+                        <td>Ví điện tử</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="card">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4276"></td>
+                        <td><strong>GD-260919-4276</strong><small>19/09/2026 · 14:38</small></td>
+                        <td>VM-260919-0910</td>
+                        <td><strong>Phạm Minh<br>Tuấn</strong></td>
+                        <td>Link Kiện<br>TechZone</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+320.000 ₫</strong></td>
+                        <td>Thẻ tín dụng</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="processing" data-method="bank">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4268"></td>
+                        <td><strong>GD-260919-4268</strong><small>19/09/2026 · 13:16</small></td>
+                        <td>VM-260919-0878</td>
+                        <td><strong>Nguyễn Văn<br>Hải</strong></td>
+                        <td>PC Build<br>Station</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+760.000 ₫</strong></td>
+                        <td>Chuyển khoản</td>
+                        <td><span class="status transaction-status transaction-status--processing">Đang xử lý</span>
+                        </td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="card">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4251"></td>
+                        <td><strong>GD-260919-4251</strong><small>19/09/2026 · 11:52</small></td>
+                        <td>VM-260919-0822</td>
+                        <td><strong>Nguyễn Gia<br>Huy</strong></td>
+                        <td>CPU Center<br>Hà Nội</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+2.140.000 ₫</strong></td>
+                        <td>Thẻ tín dụng</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr data-status="success" data-method="wallet">
+                        <td class="transaction-check"><input class="transaction-row-check" type="checkbox"
+                                                             aria-label="Chọn GD-260919-4238"></td>
+                        <td><strong>GD-260919-4238</strong><small>19/09/2026 · 10:40</small></td>
+                        <td>VM-260919-0781</td>
+                        <td><strong>Trần Ngọc<br>Minh</strong></td>
+                        <td>Gear &amp; RAM<br>Store</td>
+                        <td><span class="transaction-type transaction-type--payment">↓ &nbsp;Thanh toán</span></td>
+                        <td><strong>+510.000 ₫</strong></td>
+                        <td>Ví điện tử</td>
+                        <td><span class="status transaction-status transaction-status--success">Thành công</span></td>
+                        <td>
+                            <button class="admin-detail-button btn btn--secondary btn--small transaction-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="transaction-table-foot">
+                <span>Hiển thị <strong id="transactionRangeStart">1</strong>–<strong id="transactionRangeEnd">8</strong> trên <strong
+                        id="transactionTotalRows">12</strong> bản ghi</span>
+                <div class="transaction-pagination" aria-label="Phân trang giao dịch">
+                    <button class="transaction-page-btn" id="transactionPrevPage" type="button"
+                            aria-label="Trang trước">‹
+                    </button>
+                    <button class="transaction-page-btn is-active" type="button">1</button>
+                    <button class="transaction-page-btn" type="button">2</button>
+                    <button class="transaction-page-btn" id="transactionNextPage" type="button" aria-label="Trang sau">
+                        ›
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+</body>
+</html>

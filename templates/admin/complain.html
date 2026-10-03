@@ -1,0 +1,397 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phản hồi & Khiếu nại — PCMatch Admin</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="operations-page">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content" id="main">
+        <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Phản hồi & Khiếu nại</span>
+        </nav>
+
+        <div class="page-head" style="align-items: flex-start;">
+            <div>
+                <h1>Phản hồi &amp; Khiếu nại</h1>
+                <p>Tiếp nhận phản hồi ngoài luồng của người mua, xem thông tin người gửi và xử lý phản hồi trực tiếp
+                    trên sàn.</p>
+                <div class="pending-note">
+                    <i class="fa-regular fa-comment"></i> 12 phản hồi mới chưa được phản hồi
+                </div>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button">
+                    <span><i class="fa-solid fa-file"></i> Xuất danh sách</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-metrics" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="panel metric-panel">
+                <span class="metric-label">Tổng phản hồi</span>
+                <div class="metric-value">
+                    362 <small>phản hồi</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +24 tuần này</span>
+                </div>
+                <p class="muted">Phản hồi và khiếu nại người mua gửi về nền tảng</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--urgent">
+                <span class="metric-label">Chưa phản hồi</span>
+                <div class="metric-value">
+                    12 <small>phản hồi</small>
+                    <span class="status status--warn" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +5 hôm nay</span>
+                </div>
+                <p class="muted">Phản hồi mới cần admin tiếp nhận và trả lời người mua</p>
+            </div>
+
+            <div class="panel metric-panel">
+                <span class="metric-label">Đang xử lý</span>
+                <div class="metric-value">
+                    28 <small>phản hồi</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> Ổn định</span>
+                </div>
+                <p class="muted">Đang phối hợp với shop hoặc bộ phận tài chính để xử lý</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--stock">
+                <span class="metric-label">Đã phản hồi</span>
+                <div class="metric-value">
+                    322 <small>phản hồi</small>
+                    <span class="status status--ok" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +19 tuần này</span>
+                </div>
+                <p class="muted">Đã trả lời và đóng với người mua, tỷ lệ hài lòng 94%</p>
+            </div>
+        </div>
+
+        <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
+             data-selection-actions="Tiếp nhận xử lý|Đánh dấu đã phản hồi|Gửi nhắc nội bộ"
+             data-selection-primary-action="Đánh dấu đã phản hồi">
+            <div class="cluster" style="justify-content: space-between; margin-bottom: var(--space-4);">
+                <div class="cluster" style="flex: 1; max-width: 600px;">
+                    <label class="field" style="flex: 2;">
+                        <span class="sr-only">Tìm theo người gửi, tiêu đề hoặc nội dung phản hồi</span>
+                        <input type="text" placeholder="Tìm theo người gửi, tiêu đề hoặc nội dung phản hồi...">
+                    </label>
+                    <div class="field" style="flex: 1;">
+                        <select>
+                            <option>Tất cả nhóm vấn đề</option>
+                            <option>Đơn hàng</option>
+                            <option>Thanh toán</option>
+                            <option>Về shop</option>
+                            <option>Tài khoản</option>
+                            <option>Khác</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="muted" style="font-size: 13px;">
+                    <strong>10</strong> phản hồi khớp bộ lọc
+                </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Lọc phản hồi theo trạng thái"
+                 style="margin-bottom: var(--space-4);">
+                <button class="tab" type="button" role="tab" id="tab-all" aria-selected="true"
+                        aria-controls="panel-complaints">Tất cả <span class="sidebar__count">10</span></button>
+                <button class="tab" type="button" role="tab" id="tab-pending" aria-selected="false"
+                        aria-controls="panel-complaints">Chưa phản hồi <span class="sidebar__count">3</span></button>
+                <button class="tab" type="button" role="tab" id="tab-processing" aria-selected="false"
+                        aria-controls="panel-complaints">Đang xử lý <span class="sidebar__count">3</span></button>
+                <button class="tab" type="button" role="tab" id="tab-replied" aria-selected="false"
+                        aria-controls="panel-complaints">Đã phản hồi <span class="sidebar__count">4</span></button>
+            </div>
+
+            <div class="table-wrap" id="panel-complaints" role="tabpanel" aria-labelledby="tab-all">
+                <table class="data-table complaint-table" data-selectable-table data-selection-noun="phản hồi"
+                       data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                        <th style="min-width: 220px;">Phản hồi</th>
+                        <th style="min-width: 150px;">Người gửi</th>
+                        <th style="min-width: 120px;">Nhóm vấn đề</th>
+                        <th style="min-width: 110px;">Ưu tiên</th>
+                        <th style="min-width: 130px;">Người xử lý</th>
+                        <th style="min-width: 120px;">Trạng thái</th>
+                        <th style="text-align: right; min-width: 90px;">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30784"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Đơn hàng hiển thị sai trạng thái</strong>
+                                <small class="muted">PH-30784 · 20/09/2026 · 08:52</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Nguyễn Thị Mai Anh</strong>
+                                <small class="muted tabular">0903 118 224</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Đơn hàng</span></td>
+                        <td><span class="status status--bad"><i class="fa-solid fa-bell" aria-hidden="true"></i> Cao</span></td>
+                        <td><span class="muted">Chưa phân công</span></td>
+                        <td><span class="status status--warn">Chưa phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30781"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Trừ tiền 2 lần khi thanh toán</strong>
+                                <small class="muted">PH-30781 · 20/09/2026 · 07:20</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Phạm Minh Tuấn</strong>
+                                <small class="muted tabular">0977 330 118</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Thanh toán</span></td>
+                        <td><span class="status status--bad"><i class="fa-solid fa-bell" aria-hidden="true"></i> Cao</span></td>
+                        <td><span class="muted">Chưa phân công</span></td>
+                        <td><span class="status status--warn">Chưa phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30772"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Shop không phản hồi tin nhắn</strong>
+                                <small class="muted">PH-30772 · 19/09/2026 · 21:10</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Lê Ngọc Diệp</strong>
+                                <small class="muted tabular">0938 447 902</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--warn" style="font-size: 11px;">Về shop</span></td>
+                        <td><span class="status" style="font-size: 11px;">Bình thường</span></td>
+                        <td><span class="muted">Platform Admin</span></td>
+                        <td><span class="status status--info">Đang xử lý</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30768"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Không đổi được số điện thoại</strong>
+                                <small class="muted">PH-30768 · 19/09/2026 · 16:40</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Trần Quốc Bảo</strong>
+                                <small class="muted tabular">0912 664 118</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Tài khoản</span></td>
+                        <td><span class="status" style="font-size: 11px;">Bình thường</span></td>
+                        <td><span class="muted">Platform Admin</span></td>
+                        <td><span class="status status--info">Đang xử lý</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30755"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Đề xuất thêm hình thức thanh toán</strong>
+                                <small class="muted">PH-30755 · 18/09/2026 · 14:05</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Hoàng Thị Loan</strong>
+                                <small class="muted tabular">0967 220 449</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Khác</span></td>
+                        <td><span class="status" style="font-size: 11px;">Bình thường</span></td>
+                        <td><span class="muted">Platform Admin</span></td>
+                        <td><span class="status status--ok">Đã phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30749"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Khiếu nại bị khóa tài khoản oan</strong>
+                                <small class="muted">PH-30749 · 17/09/2026 · 19:30</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Vũ Đình Nam</strong>
+                                <small class="muted tabular">0915 776 224</small>
+                            </div>
+                        </td>
+                        <td><span class="status" style="font-size: 11px;">Tài khoản</span></td>
+                        <td><span class="status status--bad"><i class="fa-solid fa-bell" aria-hidden="true"></i> Cao</span></td>
+                        <td><span class="muted">Chưa phân công</span></td>
+                        <td><span class="status status--warn">Chưa phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30740"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Hóa đơn chưa nhận được qua email</strong>
+                                <small class="muted">PH-30740 · 17/09/2026 · 10:12</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Bùi Minh Trí</strong>
+                                <small class="muted tabular">0902 118 663</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Thanh toán</span></td>
+                        <td><span class="status" style="font-size: 11px;">Bình thường</span></td>
+                        <td><span class="muted">Platform Admin</span></td>
+                        <td><span class="status status--ok">Đã phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn phản hồi PH-30733"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Giao hàng chậm hơn cam kết</strong>
+                                <small class="muted">PH-30733 · 16/09/2026 · 08:45</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Lâm Thu Thảo</strong>
+                                <small class="muted tabular">0903 664 882</small>
+                            </div>
+                        </td>
+                        <td><span class="status status--info" style="font-size: 11px;">Đơn hàng</span></td>
+                        <td><span class="status" style="font-size: 11px;">Bình thường</span></td>
+                        <td><span class="muted">Platform Admin</span></td>
+                        <td><span class="status status--ok">Đã phản hồi</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button complaint-action-button" type="button"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Xử lý</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cluster"
+                 style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
+                <div data-table-info>Hiển thị <strong>1–8</strong> trên <strong>10</strong> bản ghi</div>
+                <div class="cluster" style="gap: 4px;">
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;" disabled>
+                        ‹
+                    </button>
+                    <button class="btn btn--primary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">1
+                    </button>
+                    <button class="btn btn--secondary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">2
+                    </button>
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;">›</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+
+<script>
+    (function initComplaintTabs() {
+        const tablist = document.querySelector('.tabs[role="tablist"]');
+        const panel = document.getElementById('panel-complaints');
+        if (!tablist || !panel) return;
+
+        const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+        const rows = [...panel.querySelectorAll('tbody tr')];
+        const info = document.querySelector('[data-table-info]');
+        const defaultInfo = info ? info.innerHTML : '';
+        const filters = {
+            'tab-all': null,
+            'tab-pending': 'Chưa phản hồi',
+            'tab-processing': 'Đang xử lý',
+            'tab-replied': 'Đã phản hồi'
+        };
+        const statusOf = (row) => (row.querySelectorAll('td')[6]?.textContent || '').trim();
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const wanted = filters[tab.id] ?? null;
+                let visible = 0;
+
+                rows.forEach((row) => {
+                    const show = !wanted || statusOf(row) === wanted;
+                    row.hidden = !show;
+                    if (show) visible += 1;
+                });
+
+                panel.setAttribute('aria-labelledby', tab.id);
+                if (info) {
+                    info.innerHTML = wanted
+                        ? `Hiển thị <strong>1–${visible}</strong> trên <strong>${visible}</strong> bản ghi đã lọc`
+                        : defaultInfo;
+                }
+            });
+        });
+    })();
+</script>
+</body>
+</html>

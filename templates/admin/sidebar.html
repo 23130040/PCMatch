@@ -1,0 +1,35 @@
+<aside class="sidebar">
+  <div class="sidebar__brand">
+    <strong>Vận hành sàn</strong>
+    <small class="muted">Quyền: Platform Admin</small>
+  </div>
+
+  <nav>
+    <p class="sidebar__group">Tổng quan</p>
+    <a href="{% url 'staff_dashboard' %}"><span>Dashboard</span></a>
+
+    <p class="sidebar__group">Vận hành</p>
+    <a href="{% url 'staff_order' %}"><span>Đơn hàng</span><span class="sidebar__count">428</span></a>
+    <a href="{% url 'staff_transaction' %}"><span>Giao dịch</span></a>
+    <a href="{% url 'staff_return' %}"><span>Hoàn trả</span><span class="sidebar__count">232</span></a>
+
+    <p class="sidebar__group">Hệ sinh thái</p>
+    <a href="{% url 'staff_shop' %}"><span>Shop</span><span class="sidebar__count">6</span></a>
+    <a href="{% url 'staff_products' %}"><span>Sản phẩm</span></a>
+    <a href="{% url 'staff_categories' %}"><span>Danh mục</span></a>
+    <a href="{% url 'staff_fee_policies' %}"><span>Phí &amp; Chính sách</span></a>
+
+    <p class="sidebar__group">Người dùng</p>
+    <a href="{% url 'staff_guest' %}"><span>Khách hàng</span></a>
+    <a href="{% url 'staff_review' %}"><span>Đánh giá</span></a>
+    <a href="{% url 'staff_complain' %}"><span>Phản hồi & Khiếu nại</span><span class="sidebar__count">12</span></a>
+
+    <p class="sidebar__group">Quản trị</p>
+    <a href="{% url 'staff_authorization' %}"><span>Phân quyền</span></a>
+    <a href="{% url 'staff_activityLog' %}"><span>Nhật ký hoạt động</span></a>
+  </nav>
+
+  <div style="padding: 16px 14px; margin-top: auto; font-size: 11px; color: var(--color-slate);">
+    PCMatch Platform • v1.4.0
+  </div>
+</aside>

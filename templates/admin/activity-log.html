@@ -1,0 +1,335 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lịch sử hoạt động cá nhân tài khoản quản trị viên PCMatch.">
+    <title>Hoạt động của tôi — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/activity-log.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body>
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content operations-page" id="main">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Hoạt động của tôi</span>
+        </nav>
+
+        <div class="page-header-row">
+            <div>
+                <h1 class="page-title">Hoạt động của tôi</h1>
+                <p class="page-desc">Lịch sử thao tác của tài khoản đang đăng nhập: xử lý đơn, đối soát, cấu hình và các
+                    thay đổi bảo mật.</p>
+                <div class="page-info">
+                    <i class="fa-solid fa-bolt"></i>
+                    14 thao tác của Nguyễn Hoàng Long trong 7 ngày gần nhất
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn-secondary" type="button" data-time-filter>
+                    <i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span>
+                    <i class="fa-solid fa-chevron-down chevron"></i>
+                </button>
+                <button class="btn-primary" type="button">
+                    <i class="fa-solid fa-file"></i>
+                    Xuất lịch sử
+                </button>
+            </div>
+        </div>
+
+
+        <div class="stat-grid">
+            <div class="stat-cell">
+                <div class="stat-label">Thao tác hôm nay</div>
+                <div class="stat-value">126 <small>lượt</small></div>
+                <div class="stat-sub"><span class="up"><i class="fa-solid fa-arrow-up"></i> +18</span></div>
+                <div class="stat-sub stat-description">55 hành động bạn đã thực hiện trên hệ thống hôm nay</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-label">Thao tác 7 ngày</div>
+                <div class="stat-value">842 <small>lượt</small></div>
+                <div class="stat-sub"><span class="up"><i class="fa-solid fa-arrow-up"></i> +8,2%</span></div>
+                <div class="stat-sub stat-description">Tổng thao tác trong 7 ngày gần nhất</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-label">Thao tác quan trọng</div>
+                <div class="stat-value">23 <small>lượt</small></div>
+                <div class="stat-sub"><span class="amber"><i class="fa-solid fa-arrow-up"></i> 4 duyệt hoàn tiền</span></div>
+                <div class="stat-sub stat-description">Hành động ảnh hưởng trực tiếp tới tiền và quyền hệ thống
+                </div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-label">Phiên đăng nhập</div>
+                <div class="stat-value">6 <small>phiên</small></div>
+                <div class="stat-sub"><span class="down"><i class="fa-solid fa-arrow-down"></i> 1 phiên lạ đã thu hồi</span></div>
+                <div class="stat-sub stat-description">Số lần đăng nhập trong / ngày gần nhất</div>
+            </div>
+        </div>
+
+        <div class="table-panel" data-selection-container
+             data-selection-actions="Xuất bản ghi|Gắn cờ theo dõi">
+            <div class="search-toolbar">
+                <div class="search-left">
+                    <div class="search-input-wrap">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="activity-search"
+                               placeholder="Tìm thao tác, hành động, đối tượng tác động hoặc mã">
+                    </div>
+                </div>
+                <div class="toolbar-info">
+                    <i class="fa-solid fa-user"></i>
+                    Chỉ hiển thị thao tác của tài khoản đang đăng nhập · <strong>14 bản ghi</strong>
+                </div>
+            </div>
+
+            <div class="filter-strip">
+                <div class="filter-pills">
+                    <button class="filter-pill is-active" type="button" data-filter="all">Tất cả <span
+                            class="pill-count">14</span></button>
+                    <button class="filter-pill" type="button" data-filter="don-hang">Đơn hàng <span
+                            class="pill-count">2</span></button>
+                    <button class="filter-pill" type="button" data-filter="thanh-toan">Thanh toán <span
+                            class="pill-count">2</span></button>
+                    <button class="filter-pill" type="button" data-filter="danh-muc">Danh mục <span
+                            class="pill-count">3</span></button>
+                    <button class="filter-pill" type="button" data-filter="cau-hinh">Cấu hình <span
+                            class="pill-count">3</span></button>
+                    <button class="filter-pill" type="button" data-filter="bao-mat">Bảo mật <span
+                            class="pill-count">2</span></button>
+                    <button class="filter-pill" type="button" data-filter="dang-nhap">Đăng nhập <span
+                            class="pill-count">2</span></button>
+                </div>
+            </div>
+
+            <table class="data-table activity-history-table" data-selectable-table data-selection-noun="thao tác"
+                   data-selection-limit="8">
+                <thead>
+                <tr>
+                    <th class="select-column"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                    <th>THỜI GIAN</th>
+                    <th>THAO TÁC</th>
+                    <th>LOẠI</th>
+                    <th>ĐỐI TƯỢNG TÁC ĐỘNG</th>
+                    <th>ĐỊA CHỈ IP</th>
+                    <th>THEO DÕI</th>
+                    <th class="action-column">THAO TÁC</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr data-type="danh-muc">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">20/09/2026</div>
+                            <div class="time">09:12</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Duyệt shop tham gia sàn<span class="imp-badge"><i
+                                class="fa-solid fa-star"></i> Quan trọng</span></span>
+                        <div class="action-code">MY-260920-01</div>
+                    </td>
+                    <td><span class="log-badge log-badge--blue">Danh mục</span></td>
+                    <td>
+                        <div class="obj-cell">SH-100312<small>IoT Maker Store</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="don-hang">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">20/09/2026</div>
+                            <div class="time">08:58</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Xác nhận đơn hàng hàng loạt</span>
+                        <div class="action-code">MY-260920-02</div>
+                    </td>
+                    <td><span class="log-badge log-badge--blue">Đơn hàng</span></td>
+                    <td>
+                        <div class="obj-cell">18 đơn<small>Linh Kiện TechZone</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="dang-nhap">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">20/09/2026</div>
+                            <div class="time">08:12</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Đăng nhập hệ thống</span>
+                        <div class="action-code">MY-260920-03</div>
+                    </td>
+                    <td><span class="log-badge log-badge--gray">Đăng nhập</span></td>
+                    <td>
+                        <div class="obj-cell">MacBook Pro 14"<small>Chrome</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="thanh-toan">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">19/09/2026</div>
+                            <div class="time">18:30</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Thực hiện hoàn tiền<span class="imp-badge"><i class="fa-solid fa-star"></i> Quan trọng</span></span>
+                        <div class="action-code">MY-260919-01</div>
+                    </td>
+                    <td><span class="log-badge log-badge--red">Thanh toán</span></td>
+                    <td>
+                        <div class="obj-cell">GD-770128<small>1.580.000₫</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="cau-hinh">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">19/09/2026</div>
+                            <div class="time">16:12</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Cập nhật biểu phí<span class="imp-badge"><i class="fa-solid fa-star"></i> Quan trọng</span></span>
+                        <div class="action-code">MY-260919-05</div>
+                    </td>
+                    <td><span class="log-badge log-badge--gray">Cấu hình</span></td>
+                    <td>
+                        <div class="obj-cell">PB-05<small>Nguồn &amp; Pin</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="bao-mat">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">19/09/2026</div>
+                            <div class="time">15:05</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Thu hồi phiên đăng nhập<span class="imp-badge"><i
+                                class="fa-solid fa-star"></i> Quan trọng</span></span>
+                        <div class="action-code">MY-260919-06</div>
+                    </td>
+                    <td><span class="log-badge log-badge--red">Bảo mật</span></td>
+                    <td>
+                        <div class="obj-cell">SS-2ef1<small>Thiết bị không xác định</small></div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="danh-muc">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">18/09/2026</div>
+                            <div class="time">14:20</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Kiểm duyệt sản phẩm</span>
+                        <div class="action-code">MY-260918-01</div>
+                    </td>
+                    <td><span class="log-badge log-badge--blue">Danh mục</span></td>
+                    <td>
+                        <div class="obj-cell">24 sản phẩm</div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                <tr data-type="thanh-toan">
+                    <td><input type="checkbox" aria-label="Chọn bản ghi"></td>
+                    <td>
+                        <div class="action-time">
+                            <div class="date">18/09/2026</div>
+                            <div class="time">11:02</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-name">Xử lý giao dịch lỗi<span class="imp-badge"><i class="fa-solid fa-star"></i> Quan trọng</span></span>
+                        <div class="action-code">MY-260918-02</div>
+                    </td>
+                    <td><span class="log-badge log-badge--red">Thanh toán</span></td>
+                    <td>
+                        <div class="obj-cell">GD-769980</div>
+                    </td>
+                    <td class="ip-cell">203.113.44.10</td>
+                    <td class="follow-cell">—</td>
+                    <td class="action-cell">
+                        <button class="admin-detail-button btn-detail" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="table-footer">
+                <div>Hiển thị <strong>1–8</strong> trên <strong>14</strong> bản ghi</div>
+                <div class="pagination">
+                    <button class="page-btn" disabled aria-label="Trang trước">‹</button>
+                    <button class="page-btn" aria-current="page" aria-label="Trang 1">1</button>
+                    <button class="page-btn" aria-label="Trang 2">2</button>
+                    <button class="page-btn" aria-label="Trang tiếp">›</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script src="{% static 'js/activity-log.js' %}?v=20260926"></script>
+</body>
+</html>

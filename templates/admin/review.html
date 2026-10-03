@@ -1,0 +1,406 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý đánh giá người dùng — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="operations-page">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content" id="main">
+        <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Quản lý đánh giá</span>
+        </nav>
+
+        <div class="page-head" style="align-items: flex-start;">
+            <div>
+                <h1>Quản lý đánh giá người dùng</h1>
+                <p>Theo dõi đánh giá sau khi mua thành công: người mua, sản phẩm, số sao, nội dung và phản hồi của người
+                    bán.</p>
+                <div class="pending-note">
+                    <i class="fa-regular fa-star"></i> 126 đánh giá 1–2 sao cần shop phản hồi và xử lý
+                </div>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button">
+                    <span><i class="fa-solid fa-file"></i> Xuất báo cáo</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-metrics" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="panel metric-panel">
+                <span class="metric-label">Tổng đánh giá</span>
+                <div class="metric-value">
+                    18.642 <small>đánh giá</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +312 tuần này</span>
+                </div>
+                <p class="muted">Đánh giá của người mua sau khi đơn linh kiện giao thành công</p>
+            </div>
+
+            <div class="panel metric-panel">
+                <span class="metric-label">Điểm trung bình</span>
+                <div class="metric-value">
+                    4,6 <small>/ 5 sao</small>
+                    <span class="status status--ok" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +0,1</span>
+                </div>
+                <p class="muted">Điểm hài lòng trung bình toàn sàn trong 30 ngày</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--urgent">
+                <span class="metric-label">Đánh giá tiêu cực</span>
+                <div class="metric-value">
+                    126 <small>đánh giá</small>
+                    <span class="status status--bad" style="margin-left: 6px;"><i class="fa-solid fa-arrow-down"></i> -8</span>
+                </div>
+                <p class="muted">Đánh giá 1–2 sao cần shop phản hồi và xử lý</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--stock">
+                <span class="metric-label">Chờ shop phản hồi</span>
+                <div class="metric-value">
+                    48 <small>đánh giá</small>
+                    <span class="status status--warn" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +6 hôm nay</span>
+                </div>
+                <p class="muted">Đánh giá người bán chưa trả lời lại người mua</p>
+            </div>
+        </div>
+
+        <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
+             data-selection-actions="Duyệt hiển thị|Ẩn đánh giá|Nhắc shop phản hồi">
+            <div class="cluster" style="justify-content: space-between; margin-bottom: var(--space-4);">
+                <div class="cluster" style="flex: 1; max-width: 720px;">
+                    <label class="field" style="flex: 2;">
+                        <span class="sr-only">Tìm theo người mua, sản phẩm, shop hoặc nội dung</span>
+                        <input type="text" placeholder="Tìm theo người mua, sản phẩm, shop hoặc nội dung...">
+                    </label>
+                    <div class="field" style="flex: 1;">
+                        <select>
+                            <option>Tất cả số sao</option>
+                            <option>5 sao</option>
+                            <option>4 sao</option>
+                            <option>3 sao</option>
+                            <option>1–2 sao (Tiêu cực)</option>
+                        </select>
+                    </div>
+                    <div class="field" style="flex: 1;">
+                        <select>
+                            <option>Tất cả shop</option>
+                            <option>Linh Kiện TechZone</option>
+                            <option>Module & Cảm Biến 24/7</option>
+                            <option>Chợ Linh Kiện A-Z Chợ Lớn</option>
+                            <option>Linh Kiện Sao Việt</option>
+                            <option>Đèn LED & Hiển Thị Pro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="muted" style="font-size: 13px;">
+                    <strong>11</strong> đánh giá khớp bộ lọc
+                </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Lọc đánh giá theo trạng thái hiển thị"
+                 style="margin-bottom: var(--space-4);">
+                <button class="tab" type="button" role="tab" id="tab-all" aria-selected="true"
+                        aria-controls="panel-reviews">Tất cả <span class="sidebar__count">11</span></button>
+                <button class="tab" type="button" role="tab" id="tab-visible" aria-selected="false"
+                        aria-controls="panel-reviews">Đang hiển thị <span class="sidebar__count">9</span></button>
+                <button class="tab" type="button" role="tab" id="tab-pending" aria-selected="false"
+                        aria-controls="panel-reviews">Chờ kiểm duyệt <span class="sidebar__count">1</span></button>
+                <button class="tab" type="button" role="tab" id="tab-hidden" aria-selected="false"
+                        aria-controls="panel-reviews">Đã ẩn <span class="sidebar__count">1</span></button>
+            </div>
+
+            <div class="table-wrap" id="panel-reviews" role="tabpanel" aria-labelledby="tab-all">
+                <table class="data-table" data-selectable-table data-selection-noun="đánh giá" data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                        <th style="min-width: 220px;">Sản phẩm & Shop</th>
+                        <th style="min-width: 140px;">Người mua</th>
+                        <th style="min-width: 110px;">Số sao</th>
+                        <th style="min-width: 260px;">Nội dung đánh giá</th>
+                        <th style="min-width: 130px;">Phản hồi Shop</th>
+                        <th style="min-width: 120px;">Trạng thái</th>
+                        <th style="text-align: right; min-width: 90px;">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá ESP32 DevKit V1"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>ESP32 DevKit V1 WiFi Bluetooth</strong>
+                                <small class="muted">Linh Kiện TechZone</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Nguyễn Thị Mai Anh</strong>
+                                <small class="muted">20/09/2026 · 09:10</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★★★★★</span> <span
+                                class="tabular">5.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">Board chạy ổn định, WiFi bắt khoẻ, hàn chân đẹp. Đóng
+                                gói cẩn thận và giao nhanh hơn dự kiến.</p>
+                        </td>
+                        <td>
+                            <span class="status status--info"><i class="fa-regular fa-message" aria-hidden="true"></i> Đã phản hồi</span>
+                        </td>
+                        <td><span class="status status--ok">Đang hiển thị</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá Cảm biến DHT22"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Cảm biến nhiệt độ độ ẩm DHT22</strong>
+                                <small class="muted">Module & Cảm Biến 24/7</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Trần Quốc Bảo</strong>
+                                <small class="muted">20/09/2026 · 07:42</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★★☆☆☆</span> <span
+                                class="tabular">2.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">Cảm biến đọc sai số khá lớn so với thông số, chân cắm
+                                hơi lỏng. Mình đã gửi yêu cầu đổi trả.</p>
+                        </td>
+                        <td>
+                            <span class="status status--warn"><i class="fa-regular fa-comment" aria-hidden="true"></i> Chưa phản hồi</span>
+                        </td>
+                        <td><span class="status status--ok">Đang hiển thị</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá MOSFET IRFZ44N"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>MOSFET IRFZ44N (combo 10 con)</strong>
+                                <small class="muted">Chợ Linh Kiện A-Z Chợ Lớn</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Lê Ngọc Diệp</strong>
+                                <small class="muted">19/09/2026 · 21:30</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★★★★★</span> <span
+                                class="tabular">5.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">Hàng chính hãng, chân thẳng, đóng gói chống tĩnh điện
+                                đầy đủ. Shop tư vấn nhiệt tình.</p>
+                        </td>
+                        <td>
+                            <span class="status status--info"><i class="fa-regular fa-message" aria-hidden="true"></i> Đã phản hồi</span>
+                        </td>
+                        <td><span class="status status--ok">Đang hiển thị</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá Kit Arduino Uno R3"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Kit Arduino Uno R3 kèm 30 cảm biến</strong>
+                                <small class="muted">Linh Kiện Sao Việt</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Phạm Minh Tuấn</strong>
+                                <small class="muted">19/09/2026 · 17:05</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★★★★☆</span> <span
+                                class="tabular">4.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">Kit đủ linh kiện, board chạy tốt. Trừ 1 sao vì hộp bì
+                                móp nhẹ khi giao hàng.</p>
+                        </td>
+                        <td>
+                            <span class="status status--info"><i class="fa-regular fa-message" aria-hidden="true"></i> Đã phản hồi</span>
+                        </td>
+                        <td><span class="status status--ok">Đang hiển thị</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá Đèn LED RGB WS2812B"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Đèn LED RGB WS2812B cuộn 5m</strong>
+                                <small class="muted">Đèn LED & Hiển Thị Pro</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Hoàng Thị Loan</strong>
+                                <small class="muted">19/09/2026 · 11:48</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★★★★★</span> <span
+                                class="tabular">5.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">LED sáng đều, màu chuẩn, keo dán chắc. Chạy hiệu ứng
+                                mượt với FastLED.</p>
+                        </td>
+                        <td>
+                            <span class="status status--info"><i class="fa-regular fa-message" aria-hidden="true"></i> Đã phản hồi</span>
+                        </td>
+                        <td><span class="status status--ok">Đang hiển thị</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn đánh giá Bộ dây jumper"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Bộ dây jumper đực-cái 40 sợi</strong>
+                                <small class="muted">Linh Kiện Sao Việt</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Vũ Đình Nam</strong>
+                                <small class="muted">18/09/2026 · 19:20</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: var(--color-amber-deep); font-weight: 700;">★☆☆☆☆</span> <span
+                                class="tabular">1.0</span>
+                        </td>
+                        <td>
+                            <p style="margin: 0; font-size: 13px;">Hàng không đúng mô tả, nhiều sợi đầu bị đứt chân. Yêu
+                                cầu hoàn tiền ngay.</p>
+                        </td>
+                        <td>
+                            <span class="status status--warn"><i class="fa-regular fa-comment" aria-hidden="true"></i> Chưa phản hồi</span>
+                        </td>
+                        <td><span class="status status--warn">Chờ kiểm duyệt</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cluster"
+                 style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
+                <div data-table-info>Hiển thị <strong>1–6</strong> trên <strong>11</strong> bản ghi</div>
+                <div class="cluster" style="gap: 4px;">
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;" disabled>
+                        ‹
+                    </button>
+                    <button class="btn btn--primary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">1
+                    </button>
+                    <button class="btn btn--secondary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">2
+                    </button>
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;">›</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+
+<script>
+    (function initReviewTabs() {
+        const tablist = document.querySelector('.tabs[role="tablist"]');
+        const panel = document.getElementById('panel-reviews');
+        if (!tablist || !panel) return;
+
+        const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+        const rows = [...panel.querySelectorAll('tbody tr')];
+        const info = document.querySelector('[data-table-info]');
+        const defaultInfo = info ? info.innerHTML : '';
+        const filters = {
+            'tab-all': null,
+            'tab-visible': 'Đang hiển thị',
+            'tab-pending': 'Chờ kiểm duyệt',
+            'tab-hidden': 'Đã ẩn'
+        };
+        const statusOf = (row) => (row.querySelectorAll('td')[6]?.textContent || '').trim();
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const wanted = filters[tab.id] ?? null;
+                let visible = 0;
+
+                rows.forEach((row) => {
+                    const show = !wanted || statusOf(row) === wanted;
+                    row.hidden = !show;
+                    if (show) visible += 1;
+                });
+
+                panel.setAttribute('aria-labelledby', tab.id);
+                if (info) {
+                    info.innerHTML = wanted
+                        ? `Hiển thị <strong>1–${visible}</strong> trên <strong>${visible}</strong> bản ghi đã lọc`
+                        : defaultInfo;
+                }
+            });
+        });
+    })();
+</script>
+</body>
+</html>

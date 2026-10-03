@@ -1,0 +1,353 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khách hàng — PCMatch Admin</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+    <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="operations-page">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content" id="main">
+        <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="{% url 'staff_dashboard' %}">Admin</a>
+            <span>Quản lý khách hàng</span>
+        </nav>
+
+        <div class="page-head" style="align-items: flex-start;">
+            <div>
+                <h1>Quản lý khách hàng</h1>
+                <p>Xem thông tin người mua, duyệt yêu cầu đổi số điện thoại và theo dõi lịch sử thay đổi tài khoản.</p>
+                <div class="pending-note">
+                    <i class="fa-regular fa-user"></i> 5 yêu cầu đổi số điện thoại đang chờ admin duyệt
+                </div>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button">
+                    <span><i class="fa-solid fa-file"></i> Xuất danh sách</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-metrics" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="panel metric-panel">
+                <span class="metric-label">Tổng khách hàng</span>
+                <div class="metric-value">
+                    2.418 <small>tài khoản</small>
+                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +64 tuần này</span>
+                </div>
+                <p class="muted">Tài khoản người mua đã đăng ký trên sàn PCMatch</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--urgent">
+                <span class="metric-label">Yêu cầu đổi SĐT</span>
+                <div class="metric-value">
+                    5 <small>yêu cầu</small>
+                    <span class="status status--warn" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +3 hôm nay</span>
+                </div>
+                <p class="muted">Yêu cầu đổi số điện thoại đang chờ admin duyệt</p>
+            </div>
+
+            <div class="panel metric-panel">
+                <span class="metric-label">Hoạt động 30 ngày</span>
+                <div class="metric-value">
+                    1.264 <small>khách hàng</small>
+                    <span class="status status--ok" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +5,2%</span>
+                </div>
+                <p class="muted">Khách hàng có phát sinh đơn trong 30 ngày gần nhất</p>
+            </div>
+
+            <div class="panel metric-panel metric-panel--stock">
+                <span class="metric-label">Tài khoản bị khóa</span>
+                <div class="metric-value">
+                    14 <small>tài khoản</small>
+                    <span class="status status--bad" style="margin-left: 6px;"><i class="fa-solid fa-arrow-down"></i> +1</span>
+                </div>
+                <p class="muted">Tài khoản tạm khóa do vi phạm hoặc dấu hiệu gian lận</p>
+            </div>
+        </div>
+
+        <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
+             data-selection-actions="Mở khóa tài khoản|Khóa tài khoản|Duyệt đổi SĐT">
+            <div class="cluster" style="justify-content: space-between; margin-bottom: var(--space-4);">
+                <div class="cluster" style="flex: 1; max-width: 600px;">
+                    <label class="field" style="flex: 1;">
+                        <span class="sr-only">Tìm kiếm khách hàng theo họ tên, email, số điện thoại hoặc mã</span>
+                        <input type="text" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
+                    </label>
+                    <div class="field">
+                        <select>
+                            <option>Tất cả yêu cầu</option>
+                            <option>Chờ đổi SĐT</option>
+                            <option>Tài khoản bị khóa</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="muted" style="font-size: 13px;">
+                    <strong>12</strong> khách hàng khớp bộ lọc
+                </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Lọc khách hàng theo trạng thái"
+                 style="margin-bottom: var(--space-4);">
+                <button class="tab" type="button" role="tab" id="tab-all" aria-selected="true"
+                        aria-controls="panel-customers">Tất cả <span class="sidebar__count">12</span></button>
+                <button class="tab" type="button" role="tab" id="tab-active" aria-selected="false"
+                        aria-controls="panel-customers">Đang hoạt động <span class="sidebar__count">10</span></button>
+                <button class="tab" type="button" role="tab" id="tab-locked" aria-selected="false"
+                        aria-controls="panel-customers">Đã khóa <span class="sidebar__count">2</span></button>
+            </div>
+
+            <div class="table-wrap" id="panel-customers" role="tabpanel" aria-labelledby="tab-all">
+                <table class="data-table" data-selectable-table data-selection-noun="khách hàng" data-selection-limit="8">
+                    <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                        <th>Khách hàng</th>
+                        <th>Liên hệ</th>
+                        <th>Đơn hàng</th>
+                        <th>Chi tiêu</th>
+                        <th>Trạng thái</th>
+                        <th style="text-align: right;">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Nguyễn Thị Mai Anh"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Nguyễn Thị Mai Anh</strong>
+                                <small class="muted">maianh.nguyen@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tabular">0903 118 224</span>
+                        </td>
+                        <td class="tabular">42 đơn</td>
+                        <td class="tabular"><strong>28,6 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Trần Quốc Bảo"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Trần Quốc Bảo</strong>
+                                <small class="muted">quocbao.tran@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 4px;">
+                                <span class="tabular">0912 664 118</span>
+                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
+                            </div>
+                        </td>
+                        <td class="tabular">28 đơn</td>
+                        <td class="tabular"><strong>34,9 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Lê Ngọc Diệp"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Lê Ngọc Diệp</strong>
+                                <small class="muted">ngocdiep.le@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tabular">0938 447 902</span>
+                        </td>
+                        <td class="tabular">55 đơn</td>
+                        <td class="tabular"><strong>62,3 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Phạm Minh Tuấn"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Phạm Minh Tuấn</strong>
+                                <small class="muted">minhtuan.pham@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 4px;">
+                                <span class="tabular">0977 330 118</span>
+                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
+                            </div>
+                        </td>
+                        <td class="tabular">12 đơn</td>
+                        <td class="tabular"><strong>8,9 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Hoàng Thị Loan"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Hoàng Thị Loan</strong>
+                                <small class="muted">thiloan.hoang@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tabular">0967 220 449</span>
+                        </td>
+                        <td class="tabular">87 đơn</td>
+                        <td class="tabular"><strong>104,2 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Vũ Đình Nam"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Vũ Đình Nam</strong>
+                                <small class="muted">dinhnam.vu@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tabular">0915 776 224</span>
+                        </td>
+                        <td class="tabular">6 đơn</td>
+                        <td class="tabular"><strong>3,1 triệu đ</strong></td>
+                        <td><span class="status status--bad">Đã khóa</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Bùi Minh Trí"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Bùi Minh Trí</strong>
+                                <small class="muted">minhtri.bui@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tabular">0902 118 663</span>
+                        </td>
+                        <td class="tabular">34 đơn</td>
+                        <td class="tabular"><strong>19,8 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Chọn khách hàng Đỗ Quang An"></td>
+                        <td>
+                            <div class="stack" style="gap: 2px;">
+                                <strong>Đỗ Quang An</strong>
+                                <small class="muted">quangan.do@gmail.com</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stack" style="gap: 4px;">
+                                <span class="tabular">0988 551 224</span>
+                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
+                            </div>
+                        </td>
+                        <td class="tabular">19 đơn</td>
+                        <td class="tabular"><strong>14,2 triệu đ</strong></td>
+                        <td><span class="status status--info">Đang hoạt động</span></td>
+                        <td style="text-align: right;">
+                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cluster"
+                 style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
+                <div data-table-info>Hiển thị <strong>1–8</strong> trên <strong>12</strong> bản ghi</div>
+                <div class="cluster" style="gap: 4px;">
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;" disabled>
+                        ‹
+                    </button>
+                    <button class="btn btn--primary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">1
+                    </button>
+                    <button class="btn btn--secondary"
+                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">2
+                    </button>
+                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;">›</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926e"></script>
+
+<script>
+    (function initCustomerTabs() {
+        const tablist = document.querySelector('.tabs[role="tablist"]');
+        const panel = document.getElementById('panel-customers');
+        if (!tablist || !panel) return;
+
+        const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+        const rows = [...panel.querySelectorAll('tbody tr')];
+        const info = document.querySelector('[data-table-info]');
+        const defaultInfo = info ? info.innerHTML : '';
+        const filters = {'tab-all': null, 'tab-active': 'Đang hoạt động', 'tab-locked': 'Đã khóa'};
+        const statusOf = (row) => (row.querySelector('.status')?.textContent || '').trim();
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const wanted = filters[tab.id] ?? null;
+                let visible = 0;
+
+                rows.forEach((row) => {
+                    const show = !wanted || statusOf(row) === wanted;
+                    row.hidden = !show;
+                    if (show) visible += 1;
+                });
+
+                panel.setAttribute('aria-labelledby', tab.id);
+                if (info) {
+                    info.innerHTML = wanted
+                        ? `Hiển thị <strong>1–${visible}</strong> trên <strong>${visible}</strong> bản ghi đã lọc`
+                        : defaultInfo;
+                }
+            });
+        });
+    })();
+</script>
+</body>
+</html>

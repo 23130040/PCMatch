@@ -1,0 +1,392 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Tổng quan vận hành — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
+{% include 'includes/frontend_config.html' %}</head>
+<body class="admin-dashboard">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+
+{% include 'admin/header.html' %}
+
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+
+    <main class="shell__content operations-page admin-dashboard-content" id="main">
+        <div class="admin-page-head">
+            <div>
+                <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Tổng quan vận hành</span></nav>
+                <h1>Tổng quan vận hành sàn</h1>
+                <p>Doanh thu sàn, phí nền tảng và hiệu quả kinh doanh của các shop được tách riêng để đối soát.</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lần cuối: 20/09/2026 · 08:44
+                    · Đang xem: Hôm nay · 26/09/2026</p>
+            </div>
+            <div class="cluster admin-page-actions">
+                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
+                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
+                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            </div>
+        </div>
+
+        <section class="dashboard-metrics admin-metrics" aria-label="Chỉ số tổng quan">
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Doanh thu sàn hôm nay</span>
+                <strong class="metric-value">1,84 <small>tỷ ₫</small> <em><i class="fa-solid fa-arrow-up"></i>
+                    +12,4%</em></strong>
+                <p>Tổng giá trị giao dịch linh kiện ghi nhận trong ngày</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--amber">
+                <span class="metric-label">Phí &amp; hoa hồng thu được</span>
+                <strong class="metric-value">76,2 <small>triệu ₫</small> <em><i class="fa-solid fa-arrow-up"></i> +5,1%</em></strong>
+                <p>Phí sàn và hoa hồng đã ghi nhận</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--plain">
+                <span class="metric-label">Đơn hàng phát sinh</span>
+                <strong class="metric-value">3.428 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i>
+                    +8,7%</em></strong>
+                <p>Đơn đã xác nhận trên toàn sàn</p>
+            </article>
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+                <span class="metric-label">Shop đang hoạt động</span>
+                <strong class="metric-value">1.286 <small>shop</small> <em><i class="fa-solid fa-arrow-up"></i> +24 shop</em></strong>
+                <p>Shop linh kiện có phát sinh đơn trong 24 giờ</p>
+            </article>
+        </section>
+
+        <section class="admin-dashboard-grid admin-dashboard-grid--top">
+            <article class="panel admin-chart-panel">
+                <div class="panel__head admin-panel-head">
+                    <div class="admin-section-title">
+                        <span class="admin-icon admin-icon--blue"><i class="fa-solid fa-chart-simple"></i></span>
+                        <div><h2>Doanh thu sàn &amp; phí thu được</h2>
+                            <p>Diễn biến theo ngày · Hôm nay · 22/09/2026</p></div>
+                    </div>
+                    <div class="admin-chart-legend">
+                        <span><i class="legend-dot legend-dot--blue"></i>Doanh thu</span>
+                        <span><i class="legend-dot legend-dot--amber"></i>Phí &amp; hoa hồng</span>
+                        <button class="btn btn--secondary btn--small"><i class="fa-solid fa-download"></i> Tải dữ liệu
+                        </button>
+                    </div>
+                </div>
+                <div class="admin-chart-summary">
+                    <div><span>Tổng doanh thu kỳ này</span><strong>11,7 tỷ ₫</strong></div>
+                    <div><span>Tổng phí &amp; hoa hồng</span><strong class="amber-text">0,485 tỷ ₫</strong></div>
+                    <div><span>Tỷ lệ thu phí bình quân</span><strong>4.15%</strong></div>
+                </div>
+                <div class="admin-chart-wrap" aria-label="Biểu đồ doanh thu và phí theo giờ">
+                    <svg class="admin-chart" viewBox="0 0 900 300" role="img" aria-labelledby="chart-title chart-desc">
+                        <title id="chart-title">Doanh thu sàn và phí thu được theo giờ</title>
+                        <desc id="chart-desc">Cột xanh thể hiện doanh thu và đường cam thể hiện phí và hoa hồng từ 00
+                            giờ đến 21 giờ.
+                        </desc>
+                        <g class="chart-grid-lines">
+                            <line x1="55" y1="25" x2="855" y2="25"></line>
+                            <line x1="55" y1="88" x2="855" y2="88"></line>
+                            <line x1="55" y1="151" x2="855" y2="151"></line>
+                            <line x1="55" y1="214" x2="855" y2="214"></line>
+                            <line x1="55" y1="260" x2="855" y2="260"></line>
+                        </g>
+                        <g class="chart-y-labels">
+                            <text x="28" y="29">3</text>
+                            <text x="20" y="92">2.25</text>
+                            <text x="28" y="155">1.5</text>
+                            <text x="28" y="218">0.75</text>
+                            <text x="36" y="264">0</text>
+                        </g>
+                        <g class="chart-bars">
+                            <rect x="76" y="234" width="29" height="26" rx="3"></rect>
+                            <rect x="170" y="249" width="29" height="11" rx="3"></rect>
+                            <rect x="264" y="226" width="29" height="34" rx="3"></rect>
+                            <rect x="358" y="151" width="29" height="109" rx="3"></rect>
+                            <rect x="452" y="90" width="29" height="170" rx="3"></rect>
+                            <rect x="546" y="106" width="29" height="154" rx="3"></rect>
+                            <rect x="640" y="33" width="29" height="227" rx="3"></rect>
+                            <rect x="734" y="115" width="29" height="145" rx="3"></rect>
+                        </g>
+                        <path class="chart-line" pathLength="1"
+                              d="M90 242 C125 248 157 252 184 250 S248 238 278 231 S340 188 372 153 S440 95 466 86 S533 105 560 99 S628 52 654 34 S720 78 748 112">
+                        </path>
+                        <g class="chart-points">
+                            <circle cx="90" cy="242" r="4" data-time="00h" data-revenue="0,30 tỷ ₫" data-fee="0,014 tỷ ₫"></circle>
+                            <circle cx="184" cy="250" r="4" data-time="03h" data-revenue="0,18 tỷ ₫" data-fee="0,008 tỷ ₫"></circle>
+                            <circle cx="278" cy="231" r="4" data-time="06h" data-revenue="0,46 tỷ ₫" data-fee="0,019 tỷ ₫"></circle>
+                            <circle cx="372" cy="153" r="4" data-time="09h" data-revenue="1,50 tỷ ₫" data-fee="0,061 tỷ ₫"></circle>
+                            <circle cx="466" cy="86" r="4" data-time="12h" data-revenue="2,32 tỷ ₫" data-fee="0,098 tỷ ₫"></circle>
+                            <circle cx="560" cy="99" r="4" data-time="15h" data-revenue="2,08 tỷ ₫" data-fee="0,085 tỷ ₫"></circle>
+                            <circle cx="654" cy="34" r="4" data-time="18h" data-revenue="2,85 tỷ ₫" data-fee="0,118 tỷ ₫"></circle>
+                            <circle cx="748" cy="112" r="4" data-time="21h" data-revenue="1,95 tỷ ₫" data-fee="0,082 tỷ ₫"></circle>
+                        </g>
+                        <g class="chart-x-labels">
+                            <text x="82" y="283">00h</text>
+                            <text x="176" y="283">03h</text>
+                            <text x="270" y="283">06h</text>
+                            <text x="364" y="283">09h</text>
+                            <text x="458" y="283">12h</text>
+                            <text x="552" y="283">15h</text>
+                            <text x="646" y="283">18h</text>
+                            <text x="740" y="283">21h</text>
+                        </g>
+                        <g class="chart-right-labels">
+                            <text x="867" y="29">0.12</text>
+                            <text x="867" y="92">0.09</text>
+                            <text x="867" y="155">0.06</text>
+                            <text x="867" y="218">0.03</text>
+                            <text x="867" y="264">0</text>
+                        </g>
+                    </svg>
+                    <div class="chart-tooltip" id="chartTooltip">
+                        <div class="tooltip-time" id="tooltipTime">06h</div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-dot revenue"></span>
+                            <span>Doanh thu:</span>
+                            <strong id="tooltipRevenue">0,46 tỷ ₫</strong>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-dot fee"></span>
+                            <span>Phí & hoa hồng:</span>
+                            <strong id="tooltipFee">0,019 tỷ ₫</strong>
+                        </div>
+                    </div>
+                </div>
+                <p class="admin-chart-note">Trục trái: doanh thu (tỷ ₫) · Trục phải: phí &amp; hoa hồng thu được (tỷ
+                    ₫)</p>
+            </article>
+
+            <div class="admin-side-stack">
+                <article class="panel admin-order-status">
+                    <div class="panel__head admin-panel-head">
+                        <div class="admin-section-title"><span class="admin-icon admin-icon--blue"><i
+                                class="fa-solid fa-bag-shopping"></i></span>
+                            <div><h3>Trạng thái đơn hàng hôm nay</h3>
+                                <p>Tổng 3.428 đơn phát sinh</p></div>
+                        </div>
+                    </div>
+                    <div class="order-status-visual">
+                        <div class="order-status-donut" role="img"
+                             aria-label="Biểu đồ trạng thái 3.428 đơn: chờ xác nhận 12,5%, đang giao 32,8%, đã giao 47,9%, hoàn trả 6,8%">
+                            <div class="order-status-donut__center"><strong>3.428</strong><span>Tổng đơn</span></div>
+                        </div>
+                        <div class="status-list">
+                            <div><span><i class="status-dot dot-amber"></i>Chờ xác nhận</span><strong>428
+                                <small>12.5%</small></strong></div>
+                            <div><span><i class="status-dot dot-blue"></i>Đang giao</span><strong>1.126 <small>32.8%</small></strong>
+                            </div>
+                            <div><span><i class="status-dot dot-slate"></i>Đã giao</span><strong>1.642 <small>47.9%</small></strong>
+                            </div>
+                            <div><span><i class="status-dot dot-orange"></i>Hoàn trả</span><strong>232
+                                <small>6.8%</small></strong></div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="panel admin-health-panel">
+                    <div class="panel__head admin-panel-head">
+                        <div class="admin-section-title"><span class="admin-icon admin-icon--blue"><i
+                                class="fa-solid fa-wave-square"></i></span>
+                            <div><h3>Sức khỏe vận hành sàn</h3>
+                                <p>Các chỉ số cốt lõi theo 7 ngày gần nhất</p></div>
+                        </div>
+                    </div>
+                    <div class="health-item">
+                        <div><span>Tỷ lệ đơn giao thành công</span><strong>97.8%</strong></div>
+                        <div class="health-track"><span style="width:97.8%"></span></div>
+                        <small>Không gồm đơn đang xử lý</small></div>
+                    <div class="health-item">
+                        <div><span>Tỷ lệ đơn hoàn trả</span><strong>4.2%</strong></div>
+                        <div class="health-track health-track--amber"><span style="width:4.2%"></span></div>
+                        <small>Tăng 0,3% so với tuần trước</small></div>
+                    <div class="health-item">
+                        <div><span>Shop nợ phí sàn quá hạn</span><strong>8.6%</strong></div>
+                        <div class="health-track health-track--slate"><span style="width:8.6%"></span></div>
+                        <small>36 shop cần nhắc thanh toán</small></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="admin-dashboard-grid admin-dashboard-grid--middle">
+            <article class="panel admin-ranking-panel">
+                <div class="panel__head admin-panel-head">
+                    <div class="admin-section-title"><span class="admin-icon admin-icon--blue"><i class="fa-solid fa-ranking-star"></i></span>
+                        <div><h3>Shop bán chạy nhất</h3>
+                            <p>Xếp hạng theo doanh thu và số đơn phát sinh trong kỳ</p></div>
+                    </div>
+                    <div class="segmented">
+                        <button class="is-active">Doanh thu</button>
+                        <button>Số đơn</button>
+                    </div>
+                </div>
+                <div class="ranking-list">
+                    <div class="ranking-row"><b class="rank rank-1">1</b>
+                        <div class="rank-shop"><strong>Linh Kiện TechZone <span>★ 4.9</span></strong><small>Module &amp;
+                            cảm biến</small></div>
+                        <div class="rank-number"><strong>486,2 triệu ₫</strong><small>1.284 đơn</small></div>
+                        <div class="rank-fee"><span>Phí đã trả</span><strong>21,8 triệu ₫</strong></div>
+                        <button class="row-arrow">›</button>
+                    </div>
+                    <div class="ranking-row"><b class="rank rank-2">2</b>
+                        <div class="rank-shop"><strong>Sao Việt Electronics <span>★ 4.8</span></strong><small>Vi điều
+                            khiển &amp; board mạch</small></div>
+                        <div class="rank-number"><strong>352,7 triệu ₫</strong><small>968 đơn</small></div>
+                        <div class="rank-fee"><span>Phí đã trả</span><strong>15,9 triệu ₫</strong></div>
+                        <button class="row-arrow">›</button>
+                    </div>
+                    <div class="ranking-row"><b class="rank rank-3">3</b>
+                        <div class="rank-shop"><strong>PCB Express <span>★ 4.7</span></strong><small>Linh kiện cơ khí
+                            &amp; PCB</small></div>
+                        <div class="rank-number"><strong>298,4 triệu ₫</strong><small>842 đơn</small></div>
+                        <div class="rank-fee"><span>Phí đã trả</span><strong>13,4 triệu ₫</strong></div>
+                        <button class="row-arrow">›</button>
+                    </div>
+                    <div class="ranking-row"><b class="rank">4</b>
+                        <div class="rank-shop"><strong>Nguồn &amp; Adapter Pro <span>★ 4.7</span></strong><small>Nguồn,
+                            pin &amp; adapter</small></div>
+                        <div class="rank-number"><strong>241,6 triệu ₫</strong><small>715 đơn</small></div>
+                        <div class="rank-fee"><span>Phí đã trả</span><strong>10,9 triệu ₫</strong></div>
+                        <button class="row-arrow">›</button>
+                    </div>
+                    <div class="ranking-row"><b class="rank">5</b>
+                        <div class="rank-shop"><strong>Chip Á Châu <span>★ 4.6</span></strong><small>Linh kiện thụ
+                            động</small></div>
+                        <div class="rank-number"><strong>208,9 triệu ₫</strong><small>634 đơn</small></div>
+                        <div class="rank-fee"><span>Phí đã trả</span><strong>9,4 triệu ₫</strong></div>
+                        <button class="row-arrow">›</button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel admin-newshops-panel">
+                <div class="panel__head admin-panel-head">
+                    <div class="admin-section-title"><span class="admin-icon admin-icon--blue"><i class="fa-solid fa-store"></i></span>
+                        <div><h3>Shop mới tham gia sàn</h3>
+                            <p>Hồ sơ đang chờ bạn quản trị xác nhận</p></div>
+                    </div>
+                    <span class="status status--warn">4 hồ sơ</span></div>
+                <div class="new-shop-list">
+                    <div class="new-shop">
+                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
+                        <div><strong>Board Mạch Maker</strong><small>Kit phát triển</small><span>◷ 20/09/2026 · 07:12 &nbsp;·&nbsp; 3 tài liệu</span>
+                        </div>
+                        <div class="new-shop-actions">
+                            <button class="btn btn--primary">✓ Duyệt</button>
+                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
+                        </div>
+                    </div>
+                    <div class="new-shop">
+                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
+                        <div><strong>Cảm Biến 24H</strong><small>Cảm biến &amp; module</small><span>◷ 19/09/2026 · 21:40 &nbsp;·&nbsp; 2 tài liệu</span>
+                        </div>
+                        <div class="new-shop-actions">
+                            <button class="btn btn--primary">✓ Duyệt</button>
+                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
+                        </div>
+                    </div>
+                    <div class="new-shop">
+                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
+                        <div><strong>Đèn LED Pro</strong><small>Đèn &amp; hiển thị</small><span>◷ 19/09/2026 · 16:05 &nbsp;·&nbsp; 4 tài liệu</span>
+                        </div>
+                        <div class="new-shop-actions">
+                            <button class="btn btn--primary">✓ Duyệt</button>
+                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
+                        </div>
+                    </div>
+                    <div class="new-shop">
+                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
+                        <div><strong>Hàn Điện Tử Việt</strong><small>Dụng cụ &amp; thiết bị đo</small><span>◷ 19/09/2026 · 09:38 &nbsp;·&nbsp; 3 tài liệu</span>
+                        </div>
+                        <div class="new-shop-actions">
+                            <button class="btn btn--primary">✓ Duyệt</button>
+                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
+                        </div>
+                    </div>
+                </div>
+                <a class="admin-see-all" href="#">Xem tất cả 19 hồ sơ chờ duyệt →</a>
+            </article>
+        </section>
+
+        <section class="panel admin-activity-panel">
+            <div class="panel__head admin-panel-head">
+                <div class="admin-section-title"><span class="admin-icon admin-icon--blue">◷</span>
+                    <div><h3>Nhật ký hoạt động gần đây</h3>
+                        <p>Ghi nhận hành động của người mua, người bán và quản trị viên — không thể xoá thủ công</p>
+                    </div>
+                </div>
+                <button class="btn btn--secondary">Xem toàn bộ nhật ký →</button>
+            </div>
+            <div class="table-wrap admin-activity-table-wrap">
+                <table class="data-table admin-activity-table">
+                    <thead>
+                    <tr>
+                        <th>THỜI GIAN</th>
+                        <th>NGƯỜI THỰC HIỆN</th>
+                        <th>HÀNH ĐỘNG</th>
+                        <th>ĐỐI TƯỢNG</th>
+                        <th>LÝ DO</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>16:21:04</td>
+                        <td><span class="actor"><b>A</b><span><strong>admin.finance</strong><small>Tài chính</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--amber">Duyệt hoàn tiền</span></td>
+                        <td>REF-260916-09</td>
+                        <td>Shop huỷ sau khi thanh toán</td>
+                    </tr>
+                    <tr>
+                        <td>16:18:42</td>
+                        <td><span class="actor"><b>C</b><span><strong>catalog.lan</strong><small>Danh mục</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--blue">Cập nhật danh mục</span></td>
+                        <td>CAT-MODULE-04</td>
+                        <td>Bổ sung 12 danh mục con</td>
+                    </tr>
+                    <tr>
+                        <td>16:12:10</td>
+                        <td><span class="actor"><b>S</b><span><strong>support.minh</strong><small>CSKH</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--slate">Phân loại khiếu nại</span></td>
+                        <td>FB-260916-102</td>
+                        <td>Thiếu chứng từ giao hàng</td>
+                    </tr>
+                    <tr>
+                        <td>15:58:37</td>
+                        <td><span class="actor"><b>O</b><span><strong>ops.duyen</strong><small>Vận hành</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--blue">Duyệt shop</span></td>
+                        <td>SHOP-2609-118</td>
+                        <td>Hồ sơ pháp lý hợp lệ</td>
+                    </tr>
+                    <tr>
+                        <td>15:41:22</td>
+                        <td><span class="actor"><b>A</b><span><strong>admin.hoang</strong><small>Quản trị</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--amber">Cấp quyền</span></td>
+                        <td>USER-4821</td>
+                        <td>Thêm quyền xem giao dịch</td>
+                    </tr>
+                    <tr>
+                        <td>15:26:05</td>
+                        <td><span class="actor"><b>O</b><span><strong>ops.duyen</strong><small>Vận hành</small></span></span></td>
+                        <td><span class="activity-tag activity-tag--slate">Xác nhận đơn hàng</span></td>
+                        <td>ORD-260916-7741</td>
+                        <td>Đơn hợp lệ, đẩy về shop</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-foot">
+                <span>Nhật ký được lưu tự động và chỉ xoá theo chính sách lưu trữ của sàn.</span><span>Hiển thị 6 / 12.480 bản ghi</span>
+            </div>
+        </section>
+    </main>
+</div>
+
+
+<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
+<script src="{% static 'js/app.js' %}?v=20260926f"></script>
+</body>
+</html>
