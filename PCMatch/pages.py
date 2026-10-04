@@ -2,13 +2,13 @@ BUYER_PAGES = (
     'home', 'search', 'model', 'shop', 'compare', 'cart', 'checkout',
     'payment', 'orders', 'order', 'builder', 'builds', 'consultation',
     'requests', 'proposals', 'account', 'addresses', 'notifications',
-    'cases', 'help',
+    'cases', 'help', 'chat',
 )
 
 SHOP_PAGES = (
     'dashboard', 'offers', 'inventory', 'build-requests',
     'build-request-detail', 'proposal-builder', 'proposal-list',
-    'proposal', 'orders', 'order', 'fulfillment',
+    'proposal', 'orders', 'order', 'fulfillment', 'aftersales', 'revenue',
 )
 
 STAFF_PAGES = (

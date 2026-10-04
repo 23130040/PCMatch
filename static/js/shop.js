@@ -1,7 +1,7 @@
 import {categories,models,model,shop,money,regions} from './data.js';
 import {db,tx,uid,currentOffer,clone} from './store.js';
 import {compatibility} from './builds.js';
-import {appendRefund} from './aftersale-data.js';
+import {appendRefund,refundsFor,discountForSerials} from './aftersale-data.js';
 import {pageName,pageUrl} from './routing.js';
 
 const SHOP_ID='BP';
@@ -80,6 +80,15 @@ const bpOffers=()=>models.map(m=>currentOffer(SHOP_ID+'-'+m.id)).filter(Boolean)
 const liveRequests=()=>db().requests.filter(r=>r.status==='open'&&new Date(r.deadline+'T23:59:59')>new Date());
 const proposals=()=>db().proposals.filter(p=>p.shopId===SHOP_ID);
 const suborders=()=>db().orders.flatMap(o=>o.suborders.filter(s=>s.shopId===SHOP_ID).map(s=>({order:o,sub:s})));
+const aftersalesCases=()=>db().cases.filter(c=>c.shopId===SHOP_ID&&['return','warranty','complaint'].includes(c.type));
+const caseTypeLabel=t=>({return:'Đổi/trả',warranty:'Bảo hành',complaint:'Khiếu nại giao dịch'}[t]||t);
+const caseClosed=c=>['Đã hoàn tiền','Đã nhận lại sản phẩm'].includes(c.status)||String(c.status||'').startsWith('Từ chối');
+const caseContext=c=>{
+ const order=db().orders.find(o=>o.id===c.orderId);
+ const sub=order?.suborders.find(s=>s.id===c.subId&&s.shopId===SHOP_ID);
+ const item=sub?.items.find(i=>i.id===c.itemId);
+ return {order,sub,item};
+};
 const buyerNameById=id=>db().users.find(u=>u.id===id)?.name||'Người mua';
 const buyerName=r=>buyerNameById(r.userId);
 const proposalTotal=p=>p.items.reduce((sum,i)=>sum+i.price*i.qty,0)+(p.fee||0)+(p.assembly||0);
@@ -111,7 +120,7 @@ function pushBuyerNotification(state,userId,title,path){state.notifications.unsh
 function sidebar(){
  const active=(file)=>file==='proposal-list'?['proposal-list','proposal','proposal-builder'].includes(page):file==='orders'?['orders','order'].includes(page):file==='fulfillment'?page==='fulfillment':page===file;
  const item=(file,label,count='')=>'<a href="'+link(file)+'" '+(active(file)?'aria-current="page"':'')+'>'+esc(label)+(count!==''?'<span class="sidebar__count">'+esc(count)+'</span>':'')+'</a>';
- return '<aside class="shop-sidebar"><div class="shop-sidebar__brand"><strong>'+esc(shopInfo.name)+'</strong><small>Shop đã xác minh · Chủ shop</small></div><nav><p class="sidebar__group">Vận hành</p>'+item('dashboard','Tổng quan')+item('offers','Tin bán',bpOffers().filter(o=>o.active).length)+item('inventory','Kho',bpOffers().filter(o=>o.active&&availableFor(o.id)<=2).length+' thấp')+'<p class="sidebar__group">Công việc</p>'+item('build-requests','Yêu cầu Build',liveRequests().length)+item('proposal-list','Proposal',proposals().filter(p=>['Cần sửa','Đã gửi'].includes(proposalState(p))).length)+item('orders','Đơn hàng',suborders().filter(x=>!closedOrderStates.includes(x.sub.status)).length)+item('fulfillment','Giao hàng')+'</nav></aside>';
+ return '<aside class="shop-sidebar"><div class="shop-sidebar__brand"><strong>'+esc(shopInfo.name)+'</strong><small>Shop đã xác minh · Chủ shop</small></div><nav><p class="sidebar__group">Vận hành</p>'+item('dashboard','Tổng quan')+item('offers','Tin bán',bpOffers().filter(o=>o.active).length)+item('inventory','Kho',bpOffers().filter(o=>o.active&&availableFor(o.id)<=2).length+' thấp')+'<p class="sidebar__group">Công việc</p>'+item('build-requests','Yêu cầu Build',liveRequests().length)+item('proposal-list','Proposal',proposals().filter(p=>['Cần sửa','Đã gửi'].includes(proposalState(p))).length)+item('orders','Đơn hàng',suborders().filter(x=>!closedOrderStates.includes(x.sub.status)).length)+item('fulfillment','Giao hàng')+item('aftersales','Hậu mãi',aftersalesCases().filter(c=>!caseClosed(c)).length)+'<p class="sidebar__group">Tài chính</p>'+item('revenue','Doanh thu')+'</nav></aside>';
 }
 
 function shell(content,title='Cổng Shop'){
@@ -125,10 +134,12 @@ function dashboard(){
  const openOrders=suborders().filter(x=>!closedOrderStates.includes(x.sub.status));
  const low=bpOffers().filter(o=>o.active&&availableFor(o.id)<=2);
  const waiting=proposals().filter(p=>proposalState(p)==='Cần sửa');
+ const openCases=aftersalesCases().filter(c=>!caseClosed(c));
  const tasks=[
   ...openOrders.filter(x=>x.sub.status==='Chờ shop xác nhận').slice(0,1).map(({sub})=>'<a class="task-row" href="'+link('order',{sub:sub.id})+'"><div><strong>Xác nhận '+esc(sub.id)+'</strong><small>'+sub.items.length+' item · chờ xử lý</small></div>'+badge(sub.status)+'</a>'),
   ...waiting.slice(0,1).map(p=>'<a class="task-row" href="'+link('proposal',{id:p.id})+'"><div><strong>'+esc(p.id)+' cần phản hồi</strong><small>'+(p.feedback?.at(-1)?.text?esc(p.feedback.at(-1).text):'Người mua yêu cầu cập nhật báo giá')+'</small></div>'+badge('Cần sửa')+'</a>'),
-  ...low.slice(0,1).map(o=>'<a class="task-row" href="'+link('inventory',{offer:o.id})+'#history"><div><strong>'+esc(o.id)+' còn '+availableFor(o.id)+' khả dụng</strong><small>Tồn '+o.stock+' · đang giữ '+reservedFor(o.id)+'</small></div>'+badge('Tồn thấp')+'</a>')
+  ...low.slice(0,1).map(o=>'<a class="task-row" href="'+link('inventory',{offer:o.id})+'#history"><div><strong>'+esc(o.id)+' còn '+availableFor(o.id)+' khả dụng</strong><small>Tồn '+o.stock+' · đang giữ '+reservedFor(o.id)+'</small></div>'+badge('Tồn thấp')+'</a>'),
+  ...openCases.slice(0,1).map(c=>'<a class="task-row" href="'+link('aftersales',{id:c.id})+'"><div><strong>'+esc(c.id)+' · '+esc(caseTypeLabel(c.type))+'</strong><small>'+esc(c.reason||'Hồ sơ hậu mãi cần xử lý')+'</small></div>'+badge(c.status)+'</a>')
  ].join('');
  shell(
   head('Hôm nay cần xử lý gì?','Theo dõi công việc đang chờ và các tín hiệu cần chú ý.','<a class="btn btn--secondary" href="'+link('proposal-list')+'">Xem Proposal</a><a class="btn btn--primary" href="'+link('build-requests')+'">Xem Build Request</a>')+
@@ -137,7 +148,7 @@ function dashboard(){
    '<article class="panel shop-kpi"><span class="metric-label">Proposal cần phản hồi</span><strong class="metric-value">'+waiting.length+'<small> bản</small></strong><p>Ưu tiên các yêu cầu khách vừa phản hồi.</p></article>'+
    '<article class="panel shop-kpi"><span class="metric-label">Tồn thấp</span><strong class="metric-value">'+low.length+'<small> offer</small></strong><p>Tính theo tồn thực tế và lượng đang giữ.</p></article>'+
    '<article class="panel shop-kpi"><span class="metric-label">Request đang mở</span><strong class="metric-value">'+liveRequests().length+'<small> nhu cầu</small></strong><p>Lọc theo ngân sách, khu vực và thời hạn.</p></article>'+
-  '</div><div class="shop-grid"><section class="panel panel--padded"><div class="panel__head"><div><h2 style="font-size:var(--text-xl)">Hàng chờ ưu tiên</h2><p>Các việc có thể xử lý ngay.</p></div></div><div class="task-list">'+(tasks||'<p>Không có việc cần ưu tiên.</p>')+'</div></section>'+panel('Thao tác nhanh','<div class="stack"><a class="btn btn--secondary" href="'+link('offers')+'">Tạo tin bán</a><a class="btn btn--secondary" href="'+link('inventory')+'">Điều chỉnh tồn kho</a><a class="btn btn--secondary" href="'+link('build-requests')+'">Mở yêu cầu Build</a><a class="btn btn--secondary" href="'+link('orders')+'">Mở hàng chờ đơn</a></div>')+'</div>',
+  '</div><div class="shop-grid"><section class="panel panel--padded"><div class="panel__head"><div><h2 style="font-size:var(--text-xl)">Hàng chờ ưu tiên</h2><p>Các việc có thể xử lý ngay.</p></div></div><div class="task-list">'+(tasks||'<p>Không có việc cần ưu tiên.</p>')+'</div></section>'+panel('Thao tác nhanh','<div class="stack"><a class="btn btn--secondary" href="'+link('offers')+'">Tạo tin bán</a><a class="btn btn--secondary" href="'+link('inventory')+'">Điều chỉnh tồn kho</a><a class="btn btn--secondary" href="'+link('build-requests')+'">Mở yêu cầu Build</a><a class="btn btn--secondary" href="'+link('orders')+'">Mở hàng chờ đơn</a><a class="btn btn--secondary" href="'+link('aftersales')+'">Mở hậu mãi</a><a class="btn btn--secondary" href="'+link('revenue')+'">Xem doanh thu</a></div>')+'</div>',
   'Tổng quan'
  );
 }
@@ -206,7 +217,7 @@ function offerOptions(category,selected=''){
  const opts=bpOffers().filter(o=>o.active&&model(o.modelId).category===category);
  return '<option value="">'+(category==='COOL'?'Không chọn tản rời':'Chọn tin bán')+'</option>'+opts.map(o=>'<option value="'+esc(o.id)+'" '+(selected===o.id?'selected':'')+'>'+esc(model(o.modelId).name)+' · '+money(o.price)+' · khả dụng '+availableFor(o.id)+'</option>').join('');
 }
-function builderSelection(form=document.querySelector('[data-form=proposal-carts]')){
+function builderSelection(form=document.querySelector('[data-form=proposal-builder]')){
  if(!form)return {};
  const slots={};
  for(const c of Object.keys(categories)){const id=form.elements['slot-'+c]?.value;if(id)slots[c]={offerId:id,qty:1};}
@@ -219,7 +230,7 @@ function proposalSummaryHTML(slots,r,fee,assembly){
  return '<div class="shop-proposal-lines">'+(items||'<p class="shop-mini">Chọn linh kiện để xem tóm tắt.</p>')+'</div><div class="shop-total"><span>Tiền linh kiện</span><strong>'+money(parts)+'</strong></div><div class="shop-total"><span>Phí giao</span><strong>'+money(fee)+'</strong></div><div class="shop-total"><span>Lắp ráp</span><strong>'+money(assembly)+'</strong></div><div class="shop-total shop-total--grand"><span>Tổng</span><strong>'+money(total)+'</strong></div><p class="'+(delta>0?'shop-negative':'shop-positive')+'">'+(delta>0?'Vượt ngân sách ':'Còn trong ngân sách ')+money(Math.abs(delta))+'</p><ul class="shop-compat">'+checks.map(c=>'<li>'+badge(c.state)+'<div><strong>'+esc(c.title)+'</strong><p>'+esc(c.reason)+'</p></div></li>').join('')+'</ul>';
 }
 function proposalPreview(){
- const form=document.querySelector('[data-form=proposal-carts]'),target=document.querySelector('[data-proposal-preview]');if(!form||!target)return;
+ const form=document.querySelector('[data-form=proposal-builder]'),target=document.querySelector('[data-proposal-preview]');if(!form||!target)return;
  const r=db().requests.find(x=>x.id===form.dataset.request),slots=builderSelection(form),fee=Number(form.elements.fee.value||0),assembly=Number(form.elements.assembly.value||0);
  target.innerHTML=proposalSummaryHTML(slots,r,fee,assembly);
 }
@@ -234,7 +245,7 @@ function proposalBuilderPage(){
  shell(
   head(title,r.id+' · '+r.purpose+' · ngân sách '+money(r.budget),'<a class="btn btn--secondary" href="'+link('build-request-detail',{id:r.id})+'">Về yêu cầu</a>')+
   (draft?'<div class="alert alert--info shop-state-banner"><i class="alert__signal"></i><div><strong>Có bản nháp đã lưu</strong><p>Cập nhật '+fmtDate(draft.at)+'</p></div></div>':'')+
-  '<form data-form="proposal-carts" data-request="'+esc(r.id)+'" data-from="'+esc(from?.id||'')+'"><div class="shop-grid"><section class="shop-slot-grid">'+Object.entries(categories).map(([c,label])=>'<div class="shop-slot"><div><span class="shop-slot__code">'+c+'</span><small>'+esc(label)+'</small></div><label class="field"><span>Tin bán của shop</span><select name="slot-'+c+'" '+(c==='COOL'?'':'required')+'>'+offerOptions(c,selected[c])+'</select></label><div class="shop-mini" data-slot-meta="'+c+'"></div></div>').join('')+'</section><aside class="stack shop-summary">'+panel('Tóm tắt','<div data-proposal-preview></div>')+panel('Chi phí và thời hạn','<label class="field"><span>Phí giao dự kiến</span><input name="fee" type="number" min="0" step="1000" value="'+fee+'"></label><label class="field"><span>Phí lắp ráp</span><input name="assembly" type="number" min="0" step="1000" value="'+assembly+'"></label><label class="field"><span>Hiệu lực (giờ)</span><input name="hours" type="number" min="1" max="72" value="'+hours+'" required></label><label class="field"><span>Ghi chú cho người mua</span><textarea name="note" maxlength="500">'+esc(note)+'</textarea></label><div class="shop-carts-actions"><button class="btn btn--secondary" type="button" data-action="proposal-save-draft">Lưu nháp</button><button class="btn btn--secondary" type="button" data-action="proposal-preview-open">Xem trước</button><button class="btn btn--primary" type="submit">Gửi proposal</button></div>')+'</aside></div></form><dialog class="modal shop-dialog shop-dialog--wide" id="proposal-preview-dialog"><div class="modal__head"><div><h2>Xem trước Proposal</h2><p class="shop-mini">'+esc(r.id)+' · '+esc(r.purpose)+'</p></div><button type="button" class="icon-button" data-dialog-close aria-label="Đóng"><span class="close-glyph"></span></button></div><div class="modal__body" data-proposal-preview-dialog></div><div class="modal__foot"><button type="button" class="btn btn--primary" data-dialog-close>Đóng</button></div></dialog>',
+  '<form data-form="proposal-builder" data-request="'+esc(r.id)+'" data-from="'+esc(from?.id||'')+'"><div class="shop-grid"><section class="shop-slot-grid">'+Object.entries(categories).map(([c,label])=>'<div class="shop-slot"><div><span class="shop-slot__code">'+c+'</span><small>'+esc(label)+'</small></div><label class="field"><span>Tin bán của shop</span><select name="slot-'+c+'" '+(c==='COOL'?'':'required')+'>'+offerOptions(c,selected[c])+'</select></label><div class="shop-mini" data-slot-meta="'+c+'"></div></div>').join('')+'</section><aside class="stack shop-summary">'+panel('Tóm tắt','<div data-proposal-preview></div>')+panel('Chi phí và thời hạn','<label class="field"><span>Phí giao dự kiến</span><input name="fee" type="number" min="0" step="1000" value="'+fee+'"></label><label class="field"><span>Phí lắp ráp</span><input name="assembly" type="number" min="0" step="1000" value="'+assembly+'"></label><label class="field"><span>Hiệu lực (giờ)</span><input name="hours" type="number" min="1" max="72" value="'+hours+'" required></label><label class="field"><span>Ghi chú cho người mua</span><textarea name="note" maxlength="500">'+esc(note)+'</textarea></label><div class="shop-builder-actions"><button class="btn btn--secondary" type="button" data-action="proposal-save-draft">Lưu nháp</button><button class="btn btn--secondary" type="button" data-action="proposal-preview-open">Xem trước</button><button class="btn btn--primary" type="submit">Gửi proposal</button></div>')+'</aside></div></form><dialog class="modal shop-dialog shop-dialog--wide" id="proposal-preview-dialog"><div class="modal__head"><div><h2>Xem trước Proposal</h2><p class="shop-mini">'+esc(r.id)+' · '+esc(r.purpose)+'</p></div><button type="button" class="icon-button" data-dialog-close aria-label="Đóng"><span class="close-glyph"></span></button></div><div class="modal__body" data-proposal-preview-dialog></div><div class="modal__foot"><button type="button" class="btn btn--primary" data-dialog-close>Đóng</button></div></dialog>',
   'Tạo Proposal'
  );
  proposalPreview();
@@ -307,6 +318,138 @@ function orderPage(){
 }
 
 function serialComplete(sub){return sub.items.every(i=>Array.isArray(i.serials)&&i.serials.length===i.qty&&i.serials.every(Boolean));}
+
+const localDateValue=d=>{const x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,10);};
+const startDay=value=>new Date(value+'T00:00:00').getTime();
+const endDay=value=>new Date(value+'T23:59:59.999').getTime();
+const completedRefundTotal=sub=>refundsFor(sub).filter(r=>r.status==='Hoàn thành').reduce((sum,r)=>sum+(r.amount||0),0);
+const revenueEntry=({order,sub})=>{
+ const gross=sub.subtotal||0,discount=sub.discount||0,assembly=sub.assembly||0,refund=completedRefundTotal(sub);
+ return {order,sub,gross,discount,assembly,refund,net:Math.max(0,gross-discount+assembly-refund)};
+};
+const settlementLabel=e=>{
+ if(e.sub.status==='Đã hủy'&&e.refund>0)return 'Đã hoàn';
+ if(['Đã giao','Hoàn tất'].includes(e.sub.status))return 'Chờ đối soát';
+ return 'Chưa đủ điều kiện';
+};
+function revenueRange(){
+ const today=new Date(),fallbackTo=localDateValue(today),fromDate=new Date(today);fromDate.setDate(fromDate.getDate()-6);const fallbackFrom=localDateValue(fromDate);
+ const from=qs.get('from')||fallbackFrom,to=qs.get('to')||fallbackTo;
+ return startDay(from)<=endDay(to)?{from,to,start:startDay(from),end:endDay(to)}:{from:to,to:from,start:startDay(to),end:endDay(from)};
+}
+function revenueDays(from,to){
+ const out=[],cursor=new Date(from+'T00:00:00'),last=new Date(to+'T00:00:00');
+ for(let n=0;cursor<=last&&n<92;n++,cursor.setDate(cursor.getDate()+1))out.push(localDateValue(cursor));
+ return out;
+}
+function revenuePage(){
+ const range=revenueRange();
+ const entries=suborders().filter(({order})=>order.payment==='paid'&&order.at>=range.start&&order.at<=range.end).map(revenueEntry).sort((a,b)=>b.order.at-a.order.at);
+ const totals=entries.reduce((a,e)=>({gross:a.gross+e.gross,discount:a.discount+e.discount,assembly:a.assembly+e.assembly,refund:a.refund+e.refund,net:a.net+e.net}),{gross:0,discount:0,assembly:0,refund:0,net:0});
+ const days=revenueDays(range.from,range.to),daily=Object.fromEntries(days.map(d=>[d,0]));
+ for(const e of entries){const k=localDateValue(e.order.at);if(k in daily)daily[k]+=e.net;}
+ const max=Math.max(1,...Object.values(daily));
+ const bars=days.map(d=>{const value=daily[d]||0,pct=Math.max(value?4:0,Math.round(value/max*100));return '<div class="shop-revenue-bar" title="'+esc(new Date(d+'T00:00:00').toLocaleDateString('vi-VN'))+' · '+esc(money(value))+'"><div class="shop-revenue-bar__value">'+(value?money(value):'0 ₫')+'</div><div class="shop-revenue-bar__track"><i style="--bar:'+pct+'%"></i></div><small>'+esc(new Date(d+'T00:00:00').toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}))+'</small></div>';}).join('');
+ const catTotals={};
+ for(const e of entries)for(const i of e.sub.items){const m=model(i.modelId||currentOffer(i.offerId)?.modelId);const label=m?categories[m.category]:'Khác';catTotals[label]=(catTotals[label]||0)+i.price*i.qty;}
+ const catRows=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,6),catSum=catRows.reduce((a,[,v])=>a+v,0);
+ let running=0;const palette=['#135fd2','#05877e','#c87500','#566370','#8b5cf6','#c63b4b'];
+ const stops=catRows.map(([name,value],i)=>{const from=catSum?running/catSum*100:0;running+=value;const to=catSum?running/catSum*100:0;return palette[i]+' '+from.toFixed(2)+'% '+to.toFixed(2)+'%';});
+ const donut=catRows.length?'<div class="shop-revenue-donut" style="--donut:'+stops.join(',')+'"><div><strong>'+money(catSum)+'</strong><span>Tiền hàng</span></div></div><div class="shop-revenue-legend">'+catRows.map(([name,value],i)=>'<div><i style="background:'+palette[i]+'"></i><span>'+esc(name)+'</span><strong>'+money(value)+'</strong><small>'+(catSum?Math.round(value/catSum*100):0)+'%</small></div>').join('')+'</div>':'<div class="shop-empty"><p>Chưa có dữ liệu sản phẩm trong khoảng đã chọn.</p></div>';
+ const rows=entries.map(e=>'<tr><td><strong><a href="'+link('order',{sub:e.sub.id})+'">'+esc(e.sub.id)+'</a></strong><small>'+esc(e.order.id)+' · '+fmtDate(e.order.at)+'</small></td><td>'+badge(e.sub.status)+'</td><td>'+money(e.gross)+'</td><td>− '+money(e.discount)+'</td><td>'+(e.refund?'− '+money(e.refund):'0 ₫')+'</td><td><strong>'+money(e.net)+'</strong></td><td>'+badge(settlementLabel(e))+'</td></tr>').join('');
+ shell(
+  head('Doanh thu','Theo dõi doanh số của shop, khoản giảm giá, hoàn tiền và thực nhận dự kiến.','<a class="btn btn--secondary" href="'+link('orders')+'">Mở đơn hàng</a>')+
+  '<form class="shop-revenue-filter" data-form="revenue-filter"><label class="field"><span>Từ ngày</span><input type="date" name="from" value="'+esc(range.from)+'" required></label><label class="field"><span>Đến ngày</span><input type="date" name="to" value="'+esc(range.to)+'" required></label><button class="btn btn--secondary">Áp dụng</button></form>'+
+  '<div class="shop-kpis">'+
+   '<article class="panel shop-kpi"><span class="metric-label">Doanh số hàng hóa</span><strong class="metric-value">'+money(totals.gross)+'</strong><p>'+entries.length+' đơn con đã thanh toán trong khoảng chọn.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Giảm giá của shop</span><strong class="metric-value">'+money(totals.discount)+'</strong><p>Khoản ưu đãi do shop tài trợ.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Hoàn tiền hoàn tất</span><strong class="metric-value">'+money(totals.refund)+'</strong><p>Chỉ tính các khoản đã hoàn thành.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Thực nhận dự kiến</span><strong class="metric-value">'+money(totals.net)+'</strong><p>Tiền hàng − giảm giá + lắp ráp − hoàn tiền.</p></article>'+
+  '</div>'+
+  '<div class="shop-grid shop-grid--equal"><section class="panel panel--padded"><div class="panel__head"><div><h2 style="font-size:var(--text-xl)">Doanh thu theo ngày</h2><p>Giá trị thực nhận dự kiến theo ngày đặt đơn.</p></div></div><div class="shop-revenue-bars" style="--days:'+Math.max(7,days.length)+'">'+bars+'</div></section><section class="panel panel--padded"><div class="panel__head"><div><h2 style="font-size:var(--text-xl)">Cơ cấu tiền hàng</h2><p>Phân bổ theo nhóm linh kiện trong các đơn đã thanh toán.</p></div></div><div class="shop-revenue-pie">'+donut+'</div></section></div>'+
+  '<section class="panel panel--padded shop-section"><div class="panel__head"><div><h2 style="font-size:var(--text-xl)">Đối soát theo đơn</h2><p>Phí giao không cộng vào thực nhận của shop trong bảng này.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Đơn con</th><th>Trạng thái</th><th>Tiền hàng</th><th>Giảm giá</th><th>Hoàn tiền</th><th>Thực nhận dự kiến</th><th>Đối soát</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7"><div class="shop-empty">Chưa có giao dịch trong khoảng thời gian này.</div></td></tr>')+'</tbody></table></div></section>',
+  'Doanh thu'
+ );
+}
+
+
+function aftersalesEvidenceHTML(c){
+ const files=[c.evidence,...(c.attachments||[])].filter(Boolean);
+ return files.length?'<div class="shop-evidence-list">'+files.map(f=>'<a class="shop-evidence" download="'+esc(f.name||'bang-chung')+'" href="'+esc(f.data||'#')+'"><strong>'+esc(f.name||'Bằng chứng')+'</strong><small>Mở / tải tệp khách đã gửi</small></a>').join('')+'</div>':'<p class="shop-mini">Chưa có tệp bằng chứng.</p>';
+}
+function aftersalesTimelineHTML(c){
+ return '<ul class="shop-timeline">'+(c.timeline||[]).map(t=>'<li><strong>'+fmtDate(t.at)+'</strong><span>'+esc(t.text)+'</span></li>').join('')+'</ul>';
+}
+function aftersalesActionsHTML(c,ctx){
+ if(caseClosed(c))return '<p class="shop-mini">Hồ sơ đã có kết quả. Có thể tiếp tục trao đổi trong tiến trình nếu cần.</p>';
+ const common='<div class="shop-aftersales-actions">'+
+  (['Đã gửi — chờ tiếp nhận','Cần bổ sung bằng chứng'].includes(c.status)?button('Tiếp nhận & hướng dẫn gửi hàng','case-inspect',c.id,'primary'):'')+
+  (['Đã gửi — chờ tiếp nhận','Cần bổ sung bằng chứng'].includes(c.status)?'<form data-form="case-more" data-case="'+esc(c.id)+'" class="shop-action-form"><label class="field"><span>Yêu cầu bổ sung</span><textarea name="text" rows="2" placeholder="Ví dụ: bổ sung ảnh tem serial và tình trạng hộp" required></textarea></label><button class="btn btn--secondary">Gửi yêu cầu</button></form>':'')+
+  (['Đã gửi — chờ tiếp nhận','Cần bổ sung bằng chứng','Đang kiểm tra hồ sơ','Đã nhận — kiểm tra bảo hành'].includes(c.status)?'<form data-form="case-reject" data-case="'+esc(c.id)+'" class="shop-action-form"><label class="field"><span>Lý do từ chối</span><textarea name="reason" rows="2" placeholder="Nêu rõ lý do" required></textarea></label><button class="btn btn--secondary">Từ chối hồ sơ</button></form>':'')+
+ '</div>';
+ if(c.type==='return'){
+  const canRefund=['Đang kiểm tra hồ sơ','Đang gửi hàng cho shop'].includes(c.status);
+  const refund=ctx.sub?refundsFor(ctx.sub).find(r=>r.caseId===c.id):null;
+  return common+(refund?'<div class="shop-case-result"><strong>Khoản hoàn '+esc(refund.id)+'</strong><span>'+badge(refund.status)+'</span><p>'+money(refund.amount||0)+'</p></div>':canRefund?'<div class="shop-case-result"><strong>Đổi/trả đủ điều kiện xử lý</strong><p>Khoản hoàn được tính theo đúng serial và phần giảm giá đã phân bổ của dòng hàng.</p>'+button('Duyệt hoàn tiền','case-refund',c.id,'primary')+'</div>':'');
+ }
+ if(c.type==='warranty'){
+  const canResolve=['Đang gửi hàng cho shop','Đã nhận — kiểm tra bảo hành'].includes(c.status);
+  return common+(canResolve?'<div class="shop-aftersales-resolution"><div>'+button('Sửa xong, gửi lại','case-repair',c.id,'secondary')+'</div><form data-form="case-replace" data-case="'+esc(c.id)+'"><label class="field"><span>Serial sản phẩm thay thế</span><input name="serial" placeholder="Nhập serial mới" required></label><button class="btn btn--primary">Đổi sản phẩm</button></form></div>':'');
+ }
+ if(c.type==='complaint'){
+  return '<div class="shop-case-result"><strong>Phản hồi khiếu nại</strong><p>Shop cung cấp giải trình; kết luận cuối cùng thuộc luồng xử lý của nền tảng.</p>'+(!String(c.status||'').startsWith('Shop đã phản hồi')?button('Đánh dấu đã phản hồi','case-complaint-replied',c.id,'primary'):'')+'</div>';
+ }
+ return common;
+}
+function aftersalesDetailPage(c){
+ const ctx=caseContext(c),{order:o,sub:s,item:i}=ctx;
+ if(!o||!s){shell(head('Hồ sơ '+c.id,'Không tìm thấy đơn con tương ứng của shop.','<a class="btn btn--secondary" href="'+link('aftersales')+'">Về danh sách</a>')+panel('Thông tin hồ sơ','<p>'+esc(c.reason||'')+'</p>'+badge(c.status)),'Hậu mãi');return;}
+ const serials=(c.serials?.length?c.serials:[c.serial]).filter(Boolean);
+ const buyer=buyerNameById(c.userId);
+ const related='<div class="shop-detail-list"><div><span>Khách hàng</span><strong>'+esc(buyer)+'</strong></div><div><span>Đơn con</span><strong><a href="'+link('order',{sub:s.id})+'">'+esc(s.id)+'</a></strong></div><div><span>Sản phẩm</span><strong>'+esc(i?.name||c.itemId||'Không xác định')+'</strong></div><div><span>Số lượng</span><strong>'+esc(c.qty||1)+'</strong></div><div><span>Serial</span><strong>'+esc(serials.join(', ')||'Không có')+'</strong></div><div><span>Chính sách lúc mua</span><strong>'+esc(c.policy||i?.policy||'—')+'</strong></div></div>';
+ const logistics=(c.type==='return'||c.type==='warranty')?panel('Gửi / nhận lại hàng','<p>'+esc(c.logistics||'Chưa có hướng dẫn gửi hàng.')+'</p>'+(c.replacementSerial?'<p><strong>Serial thay thế:</strong> '+esc(c.replacementSerial)+'</p>':'')+(s?'<p class="shop-mini">Đơn gốc: '+esc(s.id)+' · Trạng thái giao: '+esc(s.shippingStatus)+'</p>':'')):'';
+ shell(
+  head(c.id,caseTypeLabel(c.type)+' · '+c.status,'<a class="btn btn--secondary" href="'+link('aftersales')+'">Danh sách hậu mãi</a><a class="btn btn--secondary" href="'+link('order',{sub:s.id})+'">Xem đơn</a>')+
+  '<div class="shop-grid"><div class="stack">'+
+   panel('Nội dung hồ sơ',related+'<div class="shop-case-copy"><p><strong>Lý do:</strong> '+esc(c.reason||'—')+'</p><p>'+esc(c.text||'')+'</p></div>')+
+   panel('Bằng chứng',aftersalesEvidenceHTML(c))+
+   panel('Tiến trình',aftersalesTimelineHTML(c))+
+  '</div><div class="stack">'+
+   panel('Trạng thái','<div class="shop-badge-row">'+badge(caseTypeLabel(c.type))+badge(c.status)+'</div>')+
+   logistics+
+   panel('Trao đổi với khách','<form data-form="case-message" data-case="'+esc(c.id)+'"><label class="field"><span>Nội dung phản hồi</span><textarea name="text" rows="4" placeholder="Nhập phản hồi của shop" required></textarea></label><button class="btn btn--secondary">Gửi phản hồi</button></form>')+
+   panel('Xử lý hồ sơ',aftersalesActionsHTML(c,ctx))+
+  '</div></div>',
+  'Hậu mãi'
+ );
+}
+function aftersalesPage(){
+ const id=qs.get('id'),c=id?aftersalesCases().find(x=>x.id===id):null;
+ if(id&&!c){shell(head('Không tìm thấy hồ sơ','Hồ sơ không thuộc BuildPro Sài Gòn hoặc không còn tồn tại.','<a class="btn btn--primary" href="'+link('aftersales')+'">Mở danh sách</a>'),'Hậu mãi');return;}
+ if(c){aftersalesDetailPage(c);return;}
+ const q=(qs.get('q')||'').toLowerCase(),type=qs.get('type')||'',status=qs.get('status')||'';
+ const all=aftersalesCases().slice().sort((a,b)=>(b.timeline?.at(-1)?.at||0)-(a.timeline?.at(-1)?.at||0));
+ const rows=all.filter(c=>{
+  const ctx=caseContext(c),hay=[c.id,c.reason,c.status,c.serial,(c.serials||[]).join(' '),ctx.item?.name,buyerNameById(c.userId),c.orderId,c.subId].join(' ').toLowerCase();
+  return (!q||hay.includes(q))&&(!type||c.type===type)&&(!status||(status==='open'?!caseClosed(c):status==='closed'?caseClosed(c):c.status===status));
+ });
+ const counts={all:all.length,return:all.filter(c=>c.type==='return').length,warranty:all.filter(c=>c.type==='warranty').length,complaint:all.filter(c=>c.type==='complaint').length,open:all.filter(c=>!caseClosed(c)).length};
+ const tabs='<div class="shop-status-tabs"><a href="'+link('aftersales')+'" '+(!type?'aria-current="page"':'')+'>Tất cả <strong>'+counts.all+'</strong></a><a href="'+link('aftersales',{type:'return'})+'" '+(type==='return'?'aria-current="page"':'')+'>Đổi/trả <strong>'+counts.return+'</strong></a><a href="'+link('aftersales',{type:'warranty'})+'" '+(type==='warranty'?'aria-current="page"':'')+'>Bảo hành <strong>'+counts.warranty+'</strong></a><a href="'+link('aftersales',{type:'complaint'})+'" '+(type==='complaint'?'aria-current="page"':'')+'>Khiếu nại <strong>'+counts.complaint+'</strong></a></div>';
+ const cards=rows.map(c=>{const ctx=caseContext(c),serials=(c.serials?.length?c.serials:[c.serial]).filter(Boolean).join(', ');return '<article class="shop-card shop-case-card"><div><div class="shop-badge-row">'+badge(caseTypeLabel(c.type))+badge(c.status)+'</div><h2><a href="'+link('aftersales',{id:c.id})+'">'+esc(c.id)+'</a></h2><p><strong>'+esc(ctx.item?.name||c.itemId||'Hồ sơ giao dịch')+'</strong> · '+esc(buyerNameById(c.userId))+'</p><p>'+esc(c.reason||'')+'</p><div class="shop-card__meta"><span class="shop-signal">'+esc(c.subId||c.orderId||'Không có đơn')+'</span>'+(serials?'<span class="shop-signal">Serial '+esc(serials)+'</span>':'')+'<span class="shop-signal">'+fmtDate(c.timeline?.at(-1)?.at)+'</span></div></div><div><a class="btn btn--secondary" href="'+link('aftersales',{id:c.id})+'">Xử lý</a></div></article>';}).join('');
+ shell(
+  head('Hậu mãi','Tiếp nhận đổi/trả, bảo hành và phản hồi khiếu nại thuộc đơn của '+shopInfo.name+'.','<a class="btn btn--secondary" href="'+link('orders')+'">Mở đơn hàng</a>')+
+  '<div class="shop-kpis">'+
+   '<article class="panel shop-kpi"><span class="metric-label">Hồ sơ đang mở</span><strong class="metric-value">'+counts.open+'<small> hồ sơ</small></strong><p>Cần tiếp nhận hoặc đang xử lý.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Đổi/trả</span><strong class="metric-value">'+counts.return+'<small> hồ sơ</small></strong><p>Theo từng item và serial.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Bảo hành</span><strong class="metric-value">'+counts.warranty+'<small> hồ sơ</small></strong><p>Sửa hoặc đổi sản phẩm.</p></article>'+
+   '<article class="panel shop-kpi"><span class="metric-label">Khiếu nại</span><strong class="metric-value">'+counts.complaint+'<small> hồ sơ</small></strong><p>Shop cung cấp phản hồi cho nền tảng.</p></article>'+
+  '</div>'+tabs+
+  '<form class="shop-toolbar--compact shop-toolbar" data-form="case-filter"><label class="field"><span>Tìm hồ sơ</span><input name="q" value="'+esc(q)+'" placeholder="CASE, đơn, serial, khách hàng"></label><label class="field"><span>Loại</span><select name="type"><option value="">Tất cả</option><option value="return" '+(type==='return'?'selected':'')+'>Đổi/trả</option><option value="warranty" '+(type==='warranty'?'selected':'')+'>Bảo hành</option><option value="complaint" '+(type==='complaint'?'selected':'')+'>Khiếu nại</option></select></label><label class="field"><span>Trạng thái</span><select name="status"><option value="">Tất cả</option><option value="open" '+(status==='open'?'selected':'')+'>Đang mở</option><option value="closed" '+(status==='closed'?'selected':'')+'>Đã có kết quả</option></select></label><button class="btn btn--secondary">Lọc</button></form>'+
+  (cards||'<div class="panel shop-empty"><h2>Chưa có hồ sơ hậu mãi</h2><p></p></div>'),
+  'Hậu mãi'
+ );
+}
+
 function fulfillmentPage(){
  const entry=suborders().find(x=>x.sub.id===(qs.get('sub')||suborders().find(x=>!['Chờ shop xác nhận','Đã hủy','Đã giao'].includes(x.sub.status))?.sub.id));
  if(!entry){shell(head('Chưa có đơn cần giao','Xác nhận một đơn hàng trước khi xử lý giao nhận.','<a class="btn btn--primary" href="'+link('orders')+'">Mở đơn hàng</a>'),'Giao hàng');return;}
@@ -321,7 +464,7 @@ function fulfillmentPage(){
  );
 }
 
-const renderers={dashboard,offers:offersPage,inventory:inventoryPage,'build-requests':buildRequestsPage,'build-request-detail':requestDetailPage,'proposal-builder':proposalBuilderPage,'proposal-list':proposalListPage,proposal:proposalDetailPage,orders:orderListPage,order:orderPage,fulfillment:fulfillmentPage};
+const renderers={dashboard,offers:offersPage,inventory:inventoryPage,'build-requests':buildRequestsPage,'build-request-detail':requestDetailPage,'proposal-builder':proposalBuilderPage,'proposal-list':proposalListPage,proposal:proposalDetailPage,orders:orderListPage,order:orderPage,fulfillment:fulfillmentPage,aftersales:aftersalesPage,revenue:revenuePage};
 (renderers[page]||dashboard)();
 function rerender(){(renderers[page]||dashboard)();}
 function findProposal(id){return proposals().find(p=>p.id===id);}
@@ -355,13 +498,31 @@ document.addEventListener('click',e=>{
    const o=currentOffer(id),dlg=document.querySelector('#stock-dialog'),f=dlg.querySelector('form'),reserved=reservedFor(id);f.elements.offerId.value=id;f.elements.stock.min=reserved;f.elements.stock.value=o.stock;dlg.querySelector('[data-stock-caption]').textContent=id+' · '+model(o.modelId).name;dlg.querySelector('[data-stock-current]').textContent=o.stock;dlg.querySelector('[data-stock-reserved]').textContent=reserved;dlg.querySelector('[data-stock-available]').textContent=availableFor(id);dlg.querySelector('[data-stock-result]').textContent=o.stock;dlg.showModal();return;
   }
   if(act==='proposal-save-draft'){
-   const form=document.querySelector('[data-form=proposal-carts]'),data=proposalFormData(form),rid=form.dataset.request;tx(s=>s.shopMeta.proposalDrafts[rid]={...clone(data),from:form.dataset.from||'',at:Date.now()});toast('Đã lưu bản nháp.');return;
+   const form=document.querySelector('[data-form=proposal-builder]'),data=proposalFormData(form),rid=form.dataset.request;tx(s=>s.shopMeta.proposalDrafts[rid]={...clone(data),from:form.dataset.from||'',at:Date.now()});toast('Đã lưu bản nháp.');return;
   }
   if(act==='proposal-preview-open'){
-   const form=document.querySelector('[data-form=proposal-carts]'),data=validateProposal(form),dlg=document.querySelector('#proposal-preview-dialog');dlg.querySelector('[data-proposal-preview-dialog]').innerHTML=proposalSummaryHTML(data.slots,data.r,data.fee,data.assembly);dlg.showModal();return;
+   const form=document.querySelector('[data-form=proposal-builder]'),data=validateProposal(form),dlg=document.querySelector('#proposal-preview-dialog');dlg.querySelector('[data-proposal-preview-dialog]').innerHTML=proposalSummaryHTML(data.slots,data.r,data.fee,data.assembly);dlg.showModal();return;
   }
   if(act==='proposal-withdraw-open'){document.querySelector('#proposal-withdraw-dialog')?.showModal();return;}
   if(act==='order-reject-open'){document.querySelector('#order-reject-dialog')?.showModal();return;}
+  if(act==='case-inspect'){
+   const c=aftersalesCases().find(x=>x.id===id);if(!c)throw Error('Không tìm thấy hồ sơ.');
+   if(!['Đã gửi — chờ tiếp nhận','Cần bổ sung bằng chứng'].includes(c.status))throw Error('Hồ sơ đã được tiếp nhận.');
+   tx(s=>{c.status=c.type==='warranty'?'Đã nhận — kiểm tra bảo hành':'Đang kiểm tra hồ sơ';c.logistics='Nơi tiếp nhận: '+shopInfo.name+'; chờ vận đơn gửi hàng demo.';c.timeline.push({at:Date.now(),text:'Shop: '+c.status});pushBuyerNotification(s,c.userId,'Shop đã tiếp nhận hồ sơ '+c.id,'cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã tiếp nhận hồ sơ.');return;
+  }
+  if(act==='case-refund'){
+   const c=aftersalesCases().find(x=>x.id===id);if(!c||c.type!=='return')throw Error('Không phải hồ sơ đổi/trả.');const {sub,item}=caseContext(c);if(!sub||!item)throw Error('Không tìm thấy dòng hàng gốc.');if(!['Đang kiểm tra hồ sơ','Đang gửi hàng cho shop'].includes(c.status))throw Error('Cần tiếp nhận hồ sơ trước khi duyệt hoàn.');if(refundsFor(sub).some(r=>r.caseId===c.id))throw Error('Hồ sơ đã có khoản hoàn.');
+   const serials=c.serials?.length?c.serials:[c.serial],allocated=discountForSerials(sub,item,serials),amount=item.price*c.qty-allocated;
+   tx(s=>{appendRefund(sub,{id:uid('RF'),caseId:c.id,amount,requested:amount,approved:amount,status:'Đang xử lý',itemId:item.id,qty:c.qty,discount:allocated,fee:0});c.status='Đã duyệt đổi/trả — chờ hoàn tiền';c.timeline.push({at:Date.now(),text:'Shop: Đã duyệt đổi/trả, tạo khoản hoàn '+money(amount)});pushBuyerNotification(s,c.userId,'Đổi/trả '+c.id+' đã được duyệt','cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã tạo khoản hoàn.');return;
+  }
+  if(act==='case-repair'){
+   const c=aftersalesCases().find(x=>x.id===id);if(!c||c.type!=='warranty')throw Error('Không phải hồ sơ bảo hành.');if(!['Đang gửi hàng cho shop','Đã nhận — kiểm tra bảo hành'].includes(c.status))throw Error('Cần tiếp nhận kiểm tra trước khi kết luận.');
+   tx(s=>{c.status='Đã sửa — chờ gửi lại hàng';c.logistics='Vận đơn gửi lại demo: '+uid('REDELIVERY');c.timeline.push({at:Date.now(),text:'Shop: Đã sửa xong, chờ gửi lại sản phẩm'});pushBuyerNotification(s,c.userId,'Bảo hành '+c.id+': đã sửa xong','cases.html?id='+encodeURIComponent(c.id));});rerender();return;
+  }
+  if(act==='case-complaint-replied'){
+   const c=aftersalesCases().find(x=>x.id===id);if(!c||c.type!=='complaint')throw Error('Không phải hồ sơ khiếu nại.');
+   tx(s=>{c.status='Shop đã phản hồi — chờ nền tảng xem xét';c.timeline.push({at:Date.now(),text:'Shop: Đã gửi phản hồi khiếu nại; chờ nền tảng xem xét'});pushBuyerNotification(s,c.userId,'Shop đã phản hồi khiếu nại '+c.id,'cases.html?id='+encodeURIComponent(c.id));});rerender();return;
+  }
   if(act==='order-confirm'){
    const entry=suborders().find(x=>x.sub.id===id);if(!entry)throw Error('Không tìm thấy đơn.');if(entry.order.payment!=='paid')throw Error('Đơn chưa thanh toán.');
    for(const i of entry.sub.items){const o=currentOffer(i.offerId);if(!o||o.stock<reservedFor(i.offerId))throw Error('Tồn kho không đủ để xác nhận đơn.');}
@@ -377,14 +538,14 @@ document.addEventListener('click',e=>{
 });
 
 document.addEventListener('change',e=>{
- if(e.target.closest('[data-form=proposal-carts]'))proposalPreview();
+ if(e.target.closest('[data-form=proposal-builder]'))proposalPreview();
  if(e.target.closest('[data-form=offer-editor]')&&e.target.name==='modelId'){
   const f=e.target.form,o=currentOffer(SHOP_ID+'-'+e.target.value);if(o){f.elements.price.value=o.price;f.elements.warranty.value=o.warranty;f.elements.stock.value=o.stock;f.elements.active.value=o.active?'1':'0';}
  }
  if(e.target.closest('[data-form=stock-adjust]')&&e.target.name==='stock'){document.querySelector('[data-stock-result]').textContent=e.target.value||'0';}
 });
 document.addEventListener('input',e=>{
- if(e.target.closest('[data-form=proposal-carts]')&&['fee','assembly'].includes(e.target.name))proposalPreview();
+ if(e.target.closest('[data-form=proposal-builder]')&&['fee','assembly'].includes(e.target.name))proposalPreview();
  if(e.target.closest('[data-form=stock-adjust]')&&e.target.name==='stock'){document.querySelector('[data-stock-result]').textContent=e.target.value||'0';}
 });
 
@@ -394,7 +555,7 @@ document.addEventListener('submit',e=>{
  if(!form.reportValidity())return;
  const d=Object.fromEntries(new FormData(form));
  try{
-  if(['offer-filter','request-filter','proposal-filter','order-filter'].includes(name)){
+  if(['offer-filter','request-filter','proposal-filter','order-filter','revenue-filter','case-filter'].includes(name)){
    const p=new URLSearchParams();for(const [k,v] of Object.entries(d))if(v)p.set(k,v);location.search=p;return;
   }
   if(name==='offer-editor'){
@@ -407,16 +568,32 @@ document.addEventListener('submit',e=>{
    tx(s=>{s.overrides[id]={...s.overrides[id],stock};s.shopMeta.inventoryLog.unshift({offerId:id,before,after:stock,delta:stock-before,reason:d.reason,at:Date.now()});});rerender();toast('Đã cập nhật tồn kho.');return;
   }
   if(name==='chat'){
-   const text=String(d.text||'').trim(),rid=form.dataset.request;if(!text)throw Error('Nhập nội dung tin nhắn.');tx(s=>{const r=s.requests.find(x=>x.id===rid);if(!r)throw Error('Không tìm thấy request.');r.messages||=[];r.messages.push({author:shopInfo.name,role:'shop',shopId:SHOP_ID,text,at:Date.now()});pushBuyerNotification(s,r.userId,'Shop phản hồi '+r.id,pageUrl('buyer','requests',{id:r.id}));});rerender();toast('Đã gửi tin nhắn.');return;
+   const text=String(d.text||'').trim(),rid=form.dataset.request;if(!text)throw Error('Nhập nội dung tin nhắn.');tx(s=>{const r=s.requests.find(x=>x.id===rid);if(!r)throw Error('Không tìm thấy request.');r.messages||=[];r.messages.push({author:shopInfo.name,role:'shop',shopId:SHOP_ID,text,at:Date.now()});pushBuyerNotification(s,r.userId,'Shop phản hồi '+r.id,'requests.html?id='+encodeURIComponent(r.id));});rerender();toast('Đã gửi tin nhắn.');return;
+  }
+  if(name==='case-message'){
+   const c=aftersalesCases().find(x=>x.id===form.dataset.case),text=String(d.text||'').trim();if(!c)throw Error('Không tìm thấy hồ sơ.');if(!text)throw Error('Nhập nội dung phản hồi.');
+   tx(s=>{c.timeline.push({at:Date.now(),text:'Shop: '+text});pushBuyerNotification(s,c.userId,'Shop phản hồi hồ sơ '+c.id,'cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã gửi phản hồi.');return;
+  }
+  if(name==='case-more'){
+   const c=aftersalesCases().find(x=>x.id===form.dataset.case),text=String(d.text||'').trim();if(!c)throw Error('Không tìm thấy hồ sơ.');if(!text)throw Error('Nhập nội dung cần bổ sung.');
+   tx(s=>{c.status='Cần bổ sung bằng chứng';c.timeline.push({at:Date.now(),text:'Shop yêu cầu bổ sung: '+text});pushBuyerNotification(s,c.userId,'Hồ sơ '+c.id+' cần bổ sung','cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã gửi yêu cầu bổ sung.');return;
+  }
+  if(name==='case-reject'){
+   const c=aftersalesCases().find(x=>x.id===form.dataset.case),reason=String(d.reason||'').trim();if(!c)throw Error('Không tìm thấy hồ sơ.');if(!reason)throw Error('Nhập lý do từ chối.');
+   tx(s=>{c.status='Từ chối: '+reason;c.timeline.push({at:Date.now(),text:'Shop: '+c.status});pushBuyerNotification(s,c.userId,'Hồ sơ '+c.id+' đã được phản hồi','cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã cập nhật kết quả hồ sơ.');return;
+  }
+  if(name==='case-replace'){
+   const c=aftersalesCases().find(x=>x.id===form.dataset.case),serial=String(d.serial||'').trim();if(!c||c.type!=='warranty')throw Error('Không phải hồ sơ bảo hành.');if(!serial)throw Error('Nhập serial sản phẩm thay thế.');if(!['Đang gửi hàng cho shop','Đã nhận — kiểm tra bảo hành'].includes(c.status))throw Error('Cần tiếp nhận kiểm tra trước khi đổi sản phẩm.');
+   tx(s=>{c.status='Đã đổi sản phẩm — chờ gửi lại hàng';c.replacementSerial=serial;c.logistics='Vận đơn gửi lại demo: '+uid('REDELIVERY');c.timeline.push({at:Date.now(),text:'Shop: Đổi sản phẩm, serial mới '+serial});pushBuyerNotification(s,c.userId,'Bảo hành '+c.id+': shop đã đổi sản phẩm','cases.html?id='+encodeURIComponent(c.id));});rerender();toast('Đã cập nhật sản phẩm thay thế.');return;
   }
   if(name==='proposal-builder'){
    const data=validateProposal(form),previous=findProposal(form.dataset.from),versions=proposals().filter(p=>p.requestId===data.r.id),version=previous?previous.version+1:Math.max(0,...versions.map(p=>p.version))+1;
    const items=Object.values(data.slots).map(x=>{const o=currentOffer(x.offerId);return {offerId:o.id,qty:1,price:o.price,warranty:o.warranty};});
    const p={id:uid('PR'),userId:data.r.userId,requestId:data.r.id,requestVersion:data.r.version,version,shopId:SHOP_ID,status:'Đã gửi',sentAt:Date.now(),expires:Date.now()+data.hours*3600000,items,fee:data.fee,assembly:data.assembly,feedback:[],note:data.note,previousId:previous?.id||undefined};
-   tx(s=>{if(previous&&['Đã gửi','Cần sửa','Hết hạn'].includes(proposalState(previous)))previous.status='Đã thay thế';s.proposals.push(p);delete s.shopMeta.proposalDrafts[data.r.id];pushBuyerNotification(s,p.userId,'Có proposal mới từ '+shopInfo.name,pageUrl('buyer','proposals',{id:p.id}));});location.href=link('proposal',{id:p.id});return;
+   tx(s=>{if(previous&&['Đã gửi','Cần sửa','Hết hạn'].includes(proposalState(previous)))previous.status='Đã thay thế';s.proposals.push(p);delete s.shopMeta.proposalDrafts[data.r.id];pushBuyerNotification(s,p.userId,'Có proposal mới từ '+shopInfo.name,'proposals.html?id='+encodeURIComponent(p.id));});location.href=link('proposal',{id:p.id});return;
   }
   if(name==='proposal-withdraw'){
-   const p=findProposal(d.proposalId);if(!p||!['Đã gửi','Cần sửa'].includes(proposalState(p)))throw Error('Proposal không còn có thể rút.');tx(s=>{p.status='Đã rút';p.withdrawReason=d.reason;pushBuyerNotification(s,p.userId,'Proposal '+p.id+' đã được rút',pageUrl('buyer','requests',{id:p.requestId}));});location.href=link('proposal',{id:p.id});return;
+   const p=findProposal(d.proposalId);if(!p||!['Đã gửi','Cần sửa'].includes(proposalState(p)))throw Error('Proposal không còn có thể rút.');tx(s=>{p.status='Đã rút';p.withdrawReason=d.reason;pushBuyerNotification(s,p.userId,'Proposal '+p.id+' đã được rút','requests.html?id='+encodeURIComponent(p.requestId));});location.href=link('proposal',{id:p.id});return;
   }
   if(name==='order-reject'){
    const entry=suborders().find(x=>x.sub.id===d.subId);if(!entry||entry.sub.status!=='Chờ shop xác nhận')throw Error('Đơn không còn chờ xác nhận.');const reason=d.reason+(d.note?.trim()?': '+d.note.trim():'');
@@ -439,5 +616,5 @@ document.addEventListener('submit',e=>{
 
 document.addEventListener('keydown',e=>{
  if(e.key!=='Enter'||e.target?.id!=='shop-global-search')return;e.preventDefault();const q=e.target.value.trim(),u=q.toUpperCase();
- location.href=u.startsWith('BR-')||u.startsWith('REQ-')?link('build-requests',{q}):u.startsWith('PR-')?link('proposal',{id:q}):u.startsWith('SUB-')?link('order',{sub:q}):u.startsWith('PCM-')?link('orders',{q}):link('offers',{q});
+ location.href=u.startsWith('BR-')||u.startsWith('REQ-')?link('build-requests',{q}):u.startsWith('PR-')?link('proposal',{id:q}):u.startsWith('CASE-')?link('aftersales',{id:q}):u.startsWith('SUB-')?link('order',{sub:q}):u.startsWith('PCM-')?link('orders',{q}):link('offers',{q});
 });

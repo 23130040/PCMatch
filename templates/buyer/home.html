@@ -1,3 +1,14 @@
 {% load static %}
 <!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mua linh kiện — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mua linh kiện — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch...</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><template data-page="home">
+  <section class="home-banners" aria-label="Khám phá mua sắm" data-content="banners"></section>
+  <nav class="category-strip" aria-label="Danh mục linh kiện" data-content="categories"></nav>
+  <section class="home-newest" role="region" aria-roledescription="banner luân phiên" tabindex="0" aria-labelledby="newest-title" data-content="newest"></section>
+  <section aria-labelledby="bestsellers-title">
+    <div class="section-heading"><h2 id="bestsellers-title">Sản phẩm bán chạy</h2><a class="btn btn--secondary" href="{% url 'buyer_search' %}?sort=sold" data-bestsellers-all>Xem tất cả</a></div>
+    <p class="muted">Xếp theo số lượng bán trong dữ liệu demo, không phải thống kê giao dịch thật của sàn.</p>
+    <div class="catalog-grid" data-content="bestsellers"></div>
+  </section>
+  <section class="build-entry" data-content="build"></section>
+  <section aria-labelledby="shops-title"><div class="section-heading"><h2 id="shops-title">Gian hàng trên PCMatch</h2></div><div class="shop-strip" data-content="shops"></div></section>
+</template><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>

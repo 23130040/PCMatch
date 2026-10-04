@@ -1,4 +1,5 @@
 // Commercial values and technical checks are synthetic fixtures, never live data.
+import {merchandising} from './merchandising-data.js';
 export const categories={CPU:'Bộ xử lý',MB:'Mainboard',RAM:'Bộ nhớ',GPU:'Card đồ họa',SSD:'Lưu trữ',PSU:'Bộ nguồn',CASE:'Vỏ máy',COOL:'Tản nhiệt'};
 export const shops=[{id:'BP',name:'BuildPro Sài Gòn',region:'HCM',consult:true,assembly:true,active:true},{id:'TZ',name:'TechZone Hà Nội',region:'HN',consult:true,assembly:true,active:true},{id:'NV',name:'NovaPC Đà Nẵng',region:'DN',consult:false,assembly:false,active:false}];
 const rows=[
@@ -19,7 +20,7 @@ const rows=[
 ['CASE-MINI','CASE','Case Mini demo','PCMatch',790000,{Form:'mATX','GPU tối đa':'200mm','Tản tối đa':'150mm'},'Mẫu dữ liệu để thử cảnh báo card đồ họa quá dài.'],
 ['COOL-AK','COOL','DeepCool AK400','DeepCool',690000,{Socket:'AM5 / LGA1700','Chiều cao':'155mm'},'Tản khí rời. Kiểm tra ngàm và chiều cao cho phép của case.']
 ];
-export const models=rows.map(([id,category,name,brand,price,specs,description])=>({id,category,name,brand,price,specs,description}));
+export const models=rows.map(([id,category,name,brand,price,specs,description])=>({id,category,name,brand,price,specs,description,...(merchandising[id]||{})}));
 export const offers=models.flatMap((m,i)=>shops.map((s,j)=>({id:s.id+'-'+m.id,modelId:m.id,shopId:s.id,price:m.price+(j===1?-100000:0),stock:j===2||(j===1&&m.id==='COOL-AK')?0:8+i%5,warranty:m.category==='SSD'?60:m.category==='CASE'?12:36,accessories:m.category==='CPU'?'Hộp và tản box (fixture demo)':'Phụ kiện theo hộp; xác nhận với shop',active:s.active})));
 export const regions={HCM:'TP. Hồ Chí Minh',HN:'Hà Nội',DN:'Đà Nẵng',OTHER:'Ngoài vùng giao demo'};
 export const model=id=>models.find(x=>x.id===id);

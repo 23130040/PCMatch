@@ -30,7 +30,7 @@
   <p class="muted filter-hint">Chỉ hiện offer có hỗ trợ giao đến khu vực đã chọn. Giá lọc chưa gồm phí giao.</p>
   <label class="field"><span>Tình trạng hàng</span><select name="availability"><option value="">Tất cả</option><option value="in">Còn hàng</option><option value="out">Hết hàng</option><option value="paused">Tạm ngừng bán</option></select></label>
   <fieldset class="technical-fields"><legend>Thông số theo danh mục</legend><div data-technical class="stack"></div></fieldset>
-  <label class="field"><span>Sắp xếp</span><select name="sort"><option value="">Theo danh mục</option><option value="price">Giá tăng dần</option><option value="desc">Giá giảm dần</option><option value="name">Tên A–Z</option></select></label>
+  <label class="field"><span>Sắp xếp</span><select name="sort"><option value="">Theo danh mục</option><option value="price">Giá tăng dần</option><option value="desc">Giá giảm dần</option><option value="sold">Bán chạy (demo)</option><option value="name">Tên A–Z</option></select></label>
   <div class="filter-submit"><button class="btn btn--primary" type="submit">Áp dụng bộ lọc</button><a class="btn btn--secondary" data-clear-filters href="{% url 'buyer_search' %}">Xóa bộ lọc</a></div>
   <p class="form-error" role="alert"></p>
 </form></aside><section aria-label="Kết quả tìm kiếm"><div class="cluster filter-chips" data-content="chips"></div><div class="catalog-grid results" data-content="results"></div><div data-content="pagination"></div></section></div>

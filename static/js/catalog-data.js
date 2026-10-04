@@ -1,3 +1,4 @@
+import {bySold} from './merchandising-data.js';
 // Catalogue queries are isolated from rendering. A backend adapter can replace these reads.
 import {models,offers,categories,regions,shop,shipping} from './data.js';
 import {assetUrl} from './routing.js';
@@ -17,7 +18,7 @@ export function queryCatalog(p,lockedShop=''){
   const matches=modelOffers(m.id).filter(o=>(!seller||o.shopId===seller)&&(!region||shipping(o.shopId,region)!==null)&&o.price>=min&&o.price<=max&&(availability==='in'?sellable(o)&&o.stock>0:availability==='out'?sellable(o)&&o.stock===0:availability==='paused'?!sellable(o):true));
   return {model:m,offers:matches,price:matches.length?Math.min(...matches.map(o=>o.price)):Infinity};
  }).filter(row=>row.offers.length);
- if(p.get('sort')==='price')rows.sort((a,b)=>a.price-b.price);else if(p.get('sort')==='desc')rows.sort((a,b)=>b.price-a.price);else if(p.get('sort')==='name')rows.sort((a,b)=>a.model.name.localeCompare(b.model.name,'vi'));
+ if(p.get('sort')==='sold')rows.sort((a,b)=>bySold(a.model,b.model));else if(p.get('sort')==='price')rows.sort((a,b)=>a.price-b.price);else if(p.get('sort')==='desc')rows.sort((a,b)=>b.price-a.price);else if(p.get('sort')==='name')rows.sort((a,b)=>a.model.name.localeCompare(b.model.name,'vi'));
  return rows;
 }
 export const regionName=id=>regions[id]||'Chưa chọn khu vực';
