@@ -4,7 +4,7 @@ from urllib.parse import unquote, urlsplit
 
 from django.conf import settings
 from django.contrib.staticfiles import finders
-from django.test import SimpleTestCase
+from django.test import TestCase
 from django.urls import resolve, reverse
 
 from .pages import PAGE_GROUPS, route_name
@@ -48,8 +48,7 @@ class PageParser(HTMLParser):
         if tag == 'script':
             self.in_config = False
 
-
-class FrontendPagesTests(SimpleTestCase):
+class FrontendPagesTests(TestCase):
     def test_all_pages_render_with_resolvable_links_and_assets(self):
         pages = [('index', 'sitemap', 'index')]
         pages += [

@@ -1,5 +1,4 @@
-```html
-{% load static %}
+{% load static i18n tz %}
 <!DOCTYPE html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
 
@@ -42,11 +41,8 @@
 
     <main class="shell__content shop-main product-main" id="main">
 
-     
         <section class="page-heading product-heading">
-
             <div>
-
                 <div class="breadcrumbs">
                     <a href="{% url 'staff_dashboard' %}">Admin</a>
                     <span>/</span>
@@ -56,24 +52,21 @@
                 <h1>Quản lý sản phẩm</h1>
 
                 <p>
-                    Kiểm duyệt sản phẩm shop đăng bán, theo dõi tồn kho,
-                    sản phẩm bán chạy và các sản phẩm bị từ chối.
+                    Theo dõi sản phẩm shop đăng bán, tồn kho và tình trạng bán hàng.
                 </p>
 
                 <div class="pending-note">
                     <i class="fa-solid fa-tag"></i>
                     <span>
-                        37 sản phẩm mới đang chờ kiểm duyệt trước khi hiển thị
+                        {{ stats.total }} sản phẩm trong danh mục hiện tại
                     </span>
                 </div>
-
             </div>
 
             <div class="page-actions">
-
                 <button class="button button--secondary"
                         type="button"
-                        data-time-filter>
+                        disabled>
 
                     <svg viewBox="0 0 24 24"
                          fill="none"
@@ -83,11 +76,10 @@
 
                         <rect x="3" y="4" width="18" height="18" rx="2"/>
                         <path d="M16 2v4M8 2v4M3 10h18"/>
-
                     </svg>
 
                     <span data-time-label>
-                        Hôm nay · 26/09/2026
+                        Tất cả thời gian
                     </span>
 
                     <svg class="chevron"
@@ -99,135 +91,73 @@
 
                         <path d="m19 9-7 7-7-7"
                               stroke-linecap="round"/>
-
                     </svg>
-
                 </button>
-
-
                 <button class="button button--primary"
                         type="button">
-
                     <i class="fa-solid fa-file"></i>
                     <span>Xuất danh mục</span>
-
                 </button>
-
             </div>
-
         </section>
 
-
-   
         <section class="kpi-grid product-kpi-grid"
                  aria-label="Số liệu quản lý sản phẩm">
-
             <article class="kpi-card product-kpi product-kpi--blue">
-
                 <h2>Tổng sản phẩm</h2>
-
                 <div class="kpi-value">
-
-                    <strong>2.741</strong>
+                    <strong>{{ stats.total }}</strong>
                     <span>sản phẩm</span>
-
-                    <em class="product-trend product-trend--green">
-                        ↑ +48 hôm nay
-                    </em>
-
                 </div>
-
                 <p>
                     Toàn bộ linh kiện và module đang được đăng bán trên sàn
                 </p>
-
             </article>
-
 
             <article class="kpi-card product-kpi product-kpi--amber">
-
-                <h2>Chờ kiểm duyệt</h2>
-
+                <h2>Hết hàng</h2>
                 <div class="kpi-value">
-
-                    <strong>37</strong>
+                    <strong>{{ stats.out_of_stock }}</strong>
                     <span>sản phẩm</span>
-
-                    <em class="product-trend product-trend--blue">
-                        ↑ +6 hôm nay
-                    </em>
-
                 </div>
-
                 <p>
-                    Linh kiện mới do shop gửi, cần admin duyệt để hiển thị
+                    Sản phẩm hết tồn kho hoặc được đánh dấu hết hàng
                 </p>
-
             </article>
-
 
             <article class="kpi-card product-kpi product-kpi--sky">
-
                 <h2>Đang bán</h2>
-
                 <div class="kpi-value">
-
-                    <strong>2.612</strong>
+                    <strong>{{ stats.selling }}</strong>
                     <span>sản phẩm</span>
-
-                    <em class="product-trend product-trend--blue">
-                        ↑ +1,9%
-                    </em>
-
                 </div>
-
                 <p>
-                    Linh kiện đã duyệt và đang hiển thị với người mua
+                    Sản phẩm đang hoạt động và còn hàng trong kho
                 </p>
-
             </article>
-
 
             <article class="kpi-card product-kpi product-kpi--rose">
-
-                <h2>Từ chối / Ẩn</h2>
-
+                <h2>Tạm ẩn</h2>
                 <div class="kpi-value">
-
-                    <strong>92</strong>
+                    <strong>{{ stats.hidden }}</strong>
                     <span>sản phẩm</span>
-
-                    <em class="product-trend product-trend--amber">
-                        ↓ +3
-                    </em>
-
                 </div>
-
                 <p>
-                    Vi phạm quy định đăng bán hoặc tạm ẩn chờ bổ sung
+                    Sản phẩm đang được đặt ở trạng thái tạm ẩn
                 </p>
-
             </article>
-
         </section>
-
 
         <section class="shop-table-card product-table-card"
                  data-selection-container
                  data-selection-actions="Duyệt đăng bán|Tạm ẩn|Từ chối">
 
-
-   
             <div class="product-filter-panel">
-
                 <div class="product-toolbar">
-
                     <div class="product-filters">
-
-
-                
                         <form method="GET"
-                              action="{% url 'load_products' %}"
+                              action="{% url 'staff_products' %}"
+                              id="admin-product-filters"
                               class="table-search product-search">
 
                             <svg viewBox="0 0 24 24"
@@ -235,39 +165,23 @@
                                  stroke="currentColor"
                                  stroke-width="2"
                                  aria-hidden="true">
-
                                 <circle cx="11"
                                         cy="11"
                                         r="7"/>
 
                                 <path d="m20 20-4-4"
                                       stroke-linecap="round"/>
-
                             </svg>
-
-                            <input type="text"
-                                   name="search"
-                                   value="{{ searchName }}"
-                                   placeholder="Tìm theo tên sản phẩm, shop hoặc mã...">
-
+                            {{ filter_form.search }}
+                            {{ filter_form.status.as_hidden }}
+                            <button type="submit" class="sr-only">Tìm kiếm</button>
                         </form>
 
-
                         <label class="product-select">
-
                             <span class="sr-only">
                                 Lọc theo shop
                             </span>
-
-                            <select>
-
-                                <option>Tất cả shop</option>
-                                <option>Linh Kiện Sao Việt</option>
-                                <option>Linh Kiện TechZone</option>
-                                <option>Module &amp; Cảm Biến 24H</option>
-
-                            </select>
-
+                            {{ filter_form.shop }}
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
@@ -276,108 +190,43 @@
 
                                 <path d="m19 9-7 7-7-7"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </label>
 
-
                         <label class="product-select">
-
                             <span class="sr-only">
                                 Lọc theo danh mục
                             </span>
-
-                            <select>
-
-                                <option>Tất cả danh mục</option>
-                                <option>Kit phát triển</option>
-                                <option>Vi điều khiển &amp; Board mạch</option>
-                                <option>Cảm biến</option>
-                                <option>Module chức năng</option>
-
-                            </select>
-
+                            {{ filter_form.category }}
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
                                  stroke-width="2"
                                  aria-hidden="true">
-
                                 <path d="m19 9-7 7-7-7"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </label>
-
                     </div>
-
-
                     <div class="result-count">
-
                         <strong>
                             {{ showProduct.paginator.count|default:0 }}
                         </strong>
-
                         sản phẩm khớp bộ lọc
-
                     </div>
-
                 </div>
 
-
-
-                <div class="filter-tabs product-tabs"
-                     role="tablist"
-                     aria-label="Lọc trạng thái sản phẩm">
-
-                    <button class="is-active"
-                            type="button"
-                            role="tab"
-                            aria-selected="true">
-
-                        Tất cả
-                        <span>{{ showProduct.paginator.count|default:0 }}</span>
-
-                    </button>
-
-                    <button type="button"
-                            role="tab"
-                            aria-selected="false">
-
-                        Chờ kiểm duyệt
-                        <span>3</span>
-
-                    </button>
-
-                    <button type="button"
-                            role="tab"
-                            aria-selected="false">
-
-                        Đang bán
-                        <span>7</span>
-
-                    </button>
-
-                    <button type="button"
-                            role="tab"
-                            aria-selected="false">
-
-                        Tạm ẩn
-                        <span>1</span>
-
-                    </button>
-
-                    <button type="button"
-                            role="tab"
-                            aria-selected="false">
-
-                        Bị từ chối
-                        <span>1</span>
-
-                    </button>
-
+                {% if filter_form.errors %}
+                    <div class="form-error" role="alert">{{ filter_form.errors }}</div>
+                {% endif %}
+                <div class="filter-tabs product-tabs" role="group" aria-label="Lọc trạng thái sản phẩm">
+                    {% for tab in status_tabs %}
+                        <button type="submit" form="admin-product-filters" name="status" value="{{ tab.value }}"
+                                class="{% if locStatus == tab.value %}is-active{% endif %}"
+                                aria-pressed="{% if locStatus == tab.value %}true{% else %}false{% endif %}">
+                            {{ tab.label }} <span>{{ tab.count }}</span>
+                        </button>
+                    {% endfor %}
                 </div>
 
             </div>
@@ -391,384 +240,202 @@
                        data-selection-limit="8">
 
 
-             
                     <thead>
-
                     <tr>
-
                         <th class="checkbox-cell">
-
                             <input type="checkbox"
                                    aria-label="Chọn tất cả sản phẩm">
-
                         </th>
 
                         <th>Sản phẩm</th>
-
                         <th>Shop</th>
-
                         <th>Danh mục</th>
-
                         <th>Giá bán</th>
-
                         <th class="center">
                             Tồn kho
                         </th>
-
                         <th class="center">
                             Đã bán
                         </th>
-
                         <th class="center">
                             Trạng thái
                         </th>
-
                         <th class="center">
                             Thao tác
                         </th>
-
                     </tr>
-
                     </thead>
 
-
                     <tbody>
-
                     {% for p in showProduct %}
-
-                        <tr>
-
-
+                        <tr data-product-id="{{ p.product_id }}"
+                            data-created-at="{{ p.created_at|timezone:'Asia/Ho_Chi_Minh'|date:'d/m/Y H:i' }}"
+                            data-price="{{ p.price|floatformat:'2u' }}" data-sold="{{ p.sold_quantity }}">
                             <td class="checkbox-cell">
-
                                 <input type="checkbox"
                                        name="product_ids"
                                        value="{{ p.product_id }}"
                                        aria-label="Chọn {{ p.product_name }}">
-
                             </td>
 
-
                             <td>
-
                                 <div class="product-cell">
-
-
-                                    {% if p.thumbnail %}
-
-                                        <img src="{{ p.thumbnail.url }}"
-                                             alt="{{ p.product_name }}"
-                                             style="
-                                                width: 44px;
-                                                height: 44px;
-                                                object-fit: cover;
-                                                border-radius: 6px;
-                                             ">
-
-                                    {% else %}
-
-                                        <div style="
-                                            width: 44px;
-                                            height: 44px;
-                                            background: #e5e7eb;
-                                            border-radius: 6px;
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: center;
-                                            font-size: 11px;
-                                            color: #6b7280;
-                                        ">
-                                            No img
-                                        </div>
-
-                                    {% endif %}
-
-
+                                    <div class="product-icon">
+                                        {% if p.thumbnail %}
+                                            <img src="{{ p.thumbnail.url }}" alt="{{ p.product_name }}" width="44"
+                                                 height="44" style="object-fit: cover; border-radius: 6px;">
+                                        {% else %}
+                                            <span aria-label="Chưa có ảnh">—</span>
+                                        {% endif %}
+                                    </div>
                                     <div>
-
                                         <strong>
                                             {{ p.product_name }}
                                         </strong>
-
                                         <small>
                                             Mã SP: #{{ p.product_id }}
                                         </small>
-
                                     </div>
-
                                 </div>
-
                             </td>
 
-
-                      
                             <td>
-
                                 <span class="cell-primary">
-
                                     {{ p.shop.shop_name|default:"PCMatch" }}
-
                                 </span>
-
                             </td>
-
-
-                    
                             <td>
-
                                 {{ p.category.category_name|default:"--" }}
-
                             </td>
-
-
                             <td class="product-price">
-
                                 <strong>
-                                    {{ p.price|floatformat:0 }} đ
+                                    {% language 'vi' %}{{ p.price|floatformat:"0g" }} đ{% endlanguage %}
                                 </strong>
-
                             </td>
-
-
-                          
                             <td class="center product-number">
-
                                 {{ p.stock_quantity }}
-
                             </td>
-
-
-                         
                             <td class="center product-number">
-
                                 {{ p.sold_quantity|default:0 }}
-
                             </td>
-
-
-                          
                             <td class="center">
-
-                                {% if p.status == 'ACTIVE' %}
-
+                                {% if p.status == 'ACTIVE' and p.stock_quantity > 0 %}
                                     <span class="product-status product-status--selling">
                                         Đang bán
                                     </span>
-
-                                {% elif p.status == 'OUT_OF_STOCK' %}
-
+                                {% elif p.status == 'OUT_OF_STOCK' or p.status == 'ACTIVE' %}
                                     <span class="product-status product-status--pending">
                                         Hết hàng
                                     </span>
-
                                 {% else %}
-
                                     <span class="product-status product-status--hidden">
                                         Đã ẩn
                                     </span>
-
                                 {% endif %}
-
                             </td>
-
-
-                            <!--THAO TÁC showORhide_Product -->
                             <td class="center">
-
-                                <a href="{% url 'showORhide_Product' p.product_id %}"
-                                   onclick="return confirm('Bạn có chắc muốn đổi trạng thái sản phẩm {{ p.product_name }}?');"
-                                   class="admin-detail-button detail-button product-detail"
-                                   style="text-decoration: none;">
-
-                                    {% if p.status == 'ACTIVE' %}
-
-                                        <i class="fa-solid fa-eye-slash"></i>
-
-                                        <span>
-                                            Ẩn
-                                        </span>
-
-                                    {% else %}
-
-                                        <i class="fa-solid fa-eye"></i>
-
-                                        <span>
-                                            Mở bán
-                                        </span>
-
-                                    {% endif %}
-
-                                </a>
-
+                                <button type="button" class="admin-detail-button detail-button product-detail"
+                                        aria-label="Xem chi tiết {{ p.product_name }}">
+                                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                    <span>Chi tiết</span>
+                                </button>
                             </td>
-
-
                         </tr>
-
-
                     {% empty %}
-
-                      
                         <tr>
-
                             <td colspan="9"
                                 style="
                                     text-align: center;
                                     padding: 30px;
                                     color: #6b7280;
                                 ">
-
-                                Chưa có sản phẩm nào.
-
+                                {% if request.GET %}Không có sản phẩm phù hợp.{% else %}Chưa có sản phẩm nào.{% endif %}
                             </td>
-
                         </tr>
-
                     {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
 
-
-            <!-- PHÂN TRANG -->
-                
             <footer class="table-pagination">
-
-
                 <p>
-
                     Hiển thị
-
                     <strong>
                         {{ showProduct.start_index|default:0 }}
                         –
                         {{ showProduct.end_index|default:0 }}
                     </strong>
-
                     trên
-
                     <strong>
                         {{ showProduct.paginator.count|default:0 }}
                     </strong>
-
                     bản ghi
-
                 </p>
-
-
                 <nav aria-label="Phân trang">
-
-
-                   
                     {% if showProduct.has_previous %}
 
-                        <a href="?page={{ showProduct.previous_page_number }}{% if searchName %}&search={{ searchName }}{% endif %}{% if locStatus %}&status={{ locStatus }}{% endif %}"
+                        <a href="{% url 'staff_products' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.previous_page_number }}"
                            aria-label="Trang trước">
 
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
                                  stroke-width="2">
-
                                 <path d="m15 18-6-6 6-6"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </a>
-
                     {% else %}
-
                         <button type="button"
                                 disabled
                                 aria-label="Trang trước">
-
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
                                  stroke-width="2">
-
                                 <path d="m15 18-6-6 6-6"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </button>
-
                     {% endif %}
-
-
-                  
                     <span style="font-size: 13px; color: #6b7280;">
-
                         Trang
                         {{ showProduct.number }}
                         /
                         {{ showProduct.paginator.num_pages|default:1 }}
-
                     </span>
-
-
                     {% if showProduct.has_next %}
-
-                        <a href="?page={{ showProduct.next_page_number }}{% if searchName %}&search={{ searchName }}{% endif %}{% if locStatus %}&status={{ locStatus }}{% endif %}"
+                        <a href="{% url 'staff_products' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.next_page_number }}"
                            aria-label="Trang sau">
-
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
                                  stroke-width="2">
-
                                 <path d="m9 18 6-6-6-6"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </a>
-
                     {% else %}
-
                         <button type="button"
                                 disabled
                                 aria-label="Trang sau">
-
                             <svg viewBox="0 0 24 24"
                                  fill="none"
                                  stroke="currentColor"
                                  stroke-width="2">
-
                                 <path d="m9 18 6-6-6-6"
                                       stroke-linecap="round"/>
-
                             </svg>
-
                         </button>
-
                     {% endif %}
-
-
                 </nav>
-
             </footer>
-
         </section>
-
     </main>
-
 </div>
 
-
-
-
 <script src="{% static 'js/reusable-controls.js' %}"></script>
-
-<script src="{% static 'js/product-effects.js' %}"></script>
-
+<script src="{% static 'js/product-effects.js' %}?v=admin-products-db-1"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
-
 </body>
 </html>
-```
