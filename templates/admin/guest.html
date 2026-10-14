@@ -34,6 +34,20 @@
             <span>Quản lý khách hàng</span>
         </nav>
 
+        # KHỐI HIỂN THỊ THÔNG BÁO TỪ BACKEND
+
+        {% if messages %}
+            <div style="margin-bottom: var(--space-4);">
+                {% for message in messages %}
+                    <div style="padding: 10px 16px; border-radius: var(--radius-control); margin-bottom: 8px; font-size: 14px;
+                                background-color: {% if message.tags == 'error' %}#fee2e2; color: #dc2626; border: 1px solid #fca5a5;{% elif message.tags == 'warning' %}#fef3c7; color: #d97706; border: 1px solid #fcd34d;{% else %}#dcfce7; color: #16a34a; border: 1px solid #86efac;{% endif %}">
+                        <i class="fa-solid {% if message.tags == 'error' %}fa-circle-xmark{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}" style="margin-right: 6px;"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div class="page-head" style="align-items: flex-start;">
             <div>
                 <h1>Quản lý khách hàng</h1>
@@ -92,11 +106,15 @@
         <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
              data-selection-actions="Mở khóa tài khoản|Khóa tài khoản|Duyệt đổi SĐT">
             <div class="cluster" style="justify-content: space-between; margin-bottom: var(--space-4);">
+                
+              
                 <div class="cluster" style="flex: 1; max-width: 600px;">
-                    <label class="field" style="flex: 1;">
-                        <span class="sr-only">Tìm kiếm khách hàng theo họ tên, email, số điện thoại hoặc mã</span>
-                        <input type="text" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
-                    </label>
+                    <form method="GET" action="{% url 'load_web' %}" style="flex: 1; display: flex;">
+                        <label class="field" style="flex: 1;">
+                            <span class="sr-only">Tìm kiếm khách hàng theo họ tên, email, số điện thoại hoặc mã</span>
+                            <input type="text" name="search" value="{{ search }}" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
+                        </label>
+                    </form>
                     <div class="field">
                         <select>
                             <option>Tất cả yêu cầu</option>
@@ -105,19 +123,20 @@
                         </select>
                     </div>
                 </div>
+                
                 <div class="muted" style="font-size: 13px;">
-                    <strong>12</strong> khách hàng khớp bộ lọc
+                    <strong>{{ showUser.paginator.count|default:"0" }}</strong> khách hàng khớp bộ lọc
                 </div>
             </div>
 
             <div class="tabs" role="tablist" aria-label="Lọc khách hàng theo trạng thái"
                  style="margin-bottom: var(--space-4);">
                 <button class="tab" type="button" role="tab" id="tab-all" aria-selected="true"
-                        aria-controls="panel-customers">Tất cả <span class="sidebar__count">12</span></button>
+                        aria-controls="panel-customers">Tất cả <span class="sidebar__count">{{ showUser.paginator.count|default:"0" }}</span></button>
                 <button class="tab" type="button" role="tab" id="tab-active" aria-selected="false"
-                        aria-controls="panel-customers">Đang hoạt động <span class="sidebar__count">10</span></button>
+                        aria-controls="panel-customers">Đang hoạt động</button>
                 <button class="tab" type="button" role="tab" id="tab-locked" aria-selected="false"
-                        aria-controls="panel-customers">Đã khóa <span class="sidebar__count">2</span></button>
+                        aria-controls="panel-customers">Đã khóa</button>
             </div>
 
             <div class="table-wrap" id="panel-customers" role="tabpanel" aria-labelledby="tab-all">
@@ -133,184 +152,81 @@
                         <th style="text-align: right;">Thao tác</th>
                     </tr>
                     </thead>
+                    
+                
                     <tbody>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Nguyễn Thị Mai Anh"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Nguyễn Thị Mai Anh</strong>
-                                <small class="muted">maianh.nguyen@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tabular">0903 118 224</span>
-                        </td>
-                        <td class="tabular">42 đơn</td>
-                        <td class="tabular"><strong>28,6 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Trần Quốc Bảo"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Trần Quốc Bảo</strong>
-                                <small class="muted">quocbao.tran@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="stack" style="gap: 4px;">
-                                <span class="tabular">0912 664 118</span>
-                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
-                            </div>
-                        </td>
-                        <td class="tabular">28 đơn</td>
-                        <td class="tabular"><strong>34,9 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Lê Ngọc Diệp"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Lê Ngọc Diệp</strong>
-                                <small class="muted">ngocdiep.le@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tabular">0938 447 902</span>
-                        </td>
-                        <td class="tabular">55 đơn</td>
-                        <td class="tabular"><strong>62,3 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Phạm Minh Tuấn"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Phạm Minh Tuấn</strong>
-                                <small class="muted">minhtuan.pham@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="stack" style="gap: 4px;">
-                                <span class="tabular">0977 330 118</span>
-                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
-                            </div>
-                        </td>
-                        <td class="tabular">12 đơn</td>
-                        <td class="tabular"><strong>8,9 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Hoàng Thị Loan"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Hoàng Thị Loan</strong>
-                                <small class="muted">thiloan.hoang@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tabular">0967 220 449</span>
-                        </td>
-                        <td class="tabular">87 đơn</td>
-                        <td class="tabular"><strong>104,2 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Vũ Đình Nam"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Vũ Đình Nam</strong>
-                                <small class="muted">dinhnam.vu@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tabular">0915 776 224</span>
-                        </td>
-                        <td class="tabular">6 đơn</td>
-                        <td class="tabular"><strong>3,1 triệu đ</strong></td>
-                        <td><span class="status status--bad">Đã khóa</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Bùi Minh Trí"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Bùi Minh Trí</strong>
-                                <small class="muted">minhtri.bui@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tabular">0902 118 663</span>
-                        </td>
-                        <td class="tabular">34 đơn</td>
-                        <td class="tabular"><strong>19,8 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" aria-label="Chọn khách hàng Đỗ Quang An"></td>
-                        <td>
-                            <div class="stack" style="gap: 2px;">
-                                <strong>Đỗ Quang An</strong>
-                                <small class="muted">quangan.do@gmail.com</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="stack" style="gap: 4px;">
-                                <span class="tabular">0988 551 224</span>
-                                <span class="status status--warn"><i class="fa-solid fa-phone" aria-hidden="true"></i> Chờ đổi SĐT</span>
-                            </div>
-                        </td>
-                        <td class="tabular">19 đơn</td>
-                        <td class="tabular"><strong>14,2 triệu đ</strong></td>
-                        <td><span class="status status--info">Đang hoạt động</span></td>
-                        <td style="text-align: right;">
-                            <button class="admin-detail-button btn btn--secondary btn--quiet" type="button"><i class="fa-regular fa-eye"></i><span>Chi tiết</span></button>
-                        </td>
-                    </tr>
+                        {% for u in showUser %}
+                        <tr>
+                            <td><input type="checkbox" aria-label="Chọn khách hàng {{ u.full_name|default:u.username }}"></td>
+                            <td>
+                                <div class="stack" style="gap: 2px;">
+                                    <strong>{{ u.full_name|default:u.username }}</strong>
+                                    <small class="muted">{{ u.email }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="tabular">{{ u.phone|default:"Chưa cập nhật" }}</span>
+                            </td>
+                            <td class="tabular">0 đơn</td>
+                            <td class="tabular"><strong>0 đ</strong></td>
+                            <td>
+                                {% if u.is_active %}
+                                    <span class="status status--info">Đang hoạt động</span>
+                                {% else %}
+                                    <span class="status status--bad">Đã khóa</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <!-- Nút Khóa / Mở khóa gọi vào hàm lockUser -->
+                                <a href="{% url 'lockUser' u.id %}"
+                                   onclick="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản {{ u.username }}?');"
+                                   class="btn btn--secondary btn--quiet"
+                                   style="text-decoration: none; padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                    {% if u.is_active %}
+                                        <i class="fa-solid fa-lock" style="color: #ef4444;"></i> <span style="color: #ef4444;">Khóa</span>
+                                    {% else %}
+                                        <i class="fa-solid fa-lock-open" style="color: #10b981;"></i> <span style="color: #10b981;">Mở</span>
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 30px; color: var(--color-slate);">
+                                Không tìm thấy khách hàng nào.
+                            </td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
 
             <div class="cluster"
                  style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
-                <div data-table-info>Hiển thị <strong>1–8</strong> trên <strong>12</strong> bản ghi</div>
-                <div class="cluster" style="gap: 4px;">
-                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;" disabled>
-                        ‹
-                    </button>
-                    <button class="btn btn--primary"
-                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">1
-                    </button>
-                    <button class="btn btn--secondary"
-                            style="min-height: 34px; padding: 0 12px; border-radius: var(--radius-control);">2
-                    </button>
-                    <button class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px;">›</button>
+                <div data-table-info>
+                    Hiển thị trang <strong>{{ showUser.number }}</strong> trên <strong>{{ showUser.paginator.num_pages|default:1 }}</strong> trang
+                </div>
+                
+             # Phân trang hiển thị danh sách khách hàng
+                <div class="cluster" style="gap: 6px; align-items: center;">
+                    {% if showUser.has_previous %}
+                        <a href="?page={{ showUser.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
+                           class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px; text-decoration: none;">‹</a>
+                    {% endif %}
+
+                    <span style="font-size: 13px; color: var(--color-slate); padding: 0 8px;">
+                        Trang {{ showUser.number }} / {{ showUser.paginator.num_pages|default:1 }}
+                    </span>
+
+                    {% if showUser.has_next %}
+                        <a href="?page={{ showUser.next_page_number }}{% if search %}&search={{ search }}{% endif %}"
+                           class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px; text-decoration: none;">›</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </main>
 </div>
-
 
 <script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
