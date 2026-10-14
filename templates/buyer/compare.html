@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}" data-catalog-source="{{ catalog_source|default:'demo' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,14 +9,56 @@
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/components.css' %}">
   <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
+  <link rel="stylesheet" href="{% static 'css/buyer.css' %}?v=product-card-info-1">
 {% include 'includes/frontend_config.html' %}</head>
 <body data-buyer-app>
   <main id="main"><p role="status">Đang tải so sánh linh kiện…</p></main>
   <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
   <template data-page="compare">
+{% if catalog_source == 'database' %}
+    {{ compare_items|json_script:'product-compare-items' }}
+    <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
+      <a href="{% url 'buyer_home' %}">Trang chủ</a><span aria-hidden="true">/</span>
+      <a href="{% url 'buyer_search' %}">Tất cả sản phẩm</a><span aria-hidden="true">/</span>
+      <span aria-current="page">So sánh sản phẩm</span>
+    </nav>
+    <header class="page-head">
+      <div><h1>So sánh sản phẩm</h1><p>Chọn tối đa 4 sản phẩm cùng danh mục.</p></div>
+      <div class="cluster">
+        <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Thêm sản phẩm</a>
+        <button class="btn btn--secondary" type="button" data-action="product-compare-clear">Xóa danh sách</button>
+      </div>
+    </header>
+    {% if comparison_error %}<p class="message message--error" role="alert">{{ comparison_error }}</p>{% endif %}
+    {% if compared_products %}
+      {% if compared_products|length == 1 %}<p class="message">Chọn thêm sản phẩm cùng danh mục để đối chiếu.</p>{% endif %}
+      <div class="table-wrap product-comparison" tabindex="0" aria-label="Bảng so sánh sản phẩm, cuộn ngang để xem">
+        <table class="data-table">
+          <caption>Thông tin sản phẩm và shop bán</caption>
+          <thead><tr><th scope="col">Thông tin</th>
+            {% for product in compared_products %}
+              <th scope="col">{{ product.product_name }} <button class="btn btn--secondary" type="button" data-action="product-compare-remove" data-id="{{ product.product_id }}">Bỏ</button></th>
+            {% endfor %}
+          </tr></thead>
+          <tbody>
+            {% for row in comparison_rows %}
+              <tr><th scope="row">{{ row.label }}</th>
+                {% for value in row.values %}
+                  <td>{% if row.kind == 'price' %}<strong data-product-price="{{ value|floatformat:'2u' }}">{{ value|floatformat:'0g' }} ₫</strong>{% else %}{{ value }}{% endif %}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><h2>Chưa chọn sản phẩm</h2><p>Nhấn “Thêm so sánh” trên thẻ sản phẩm để bắt đầu.</p><a class="btn btn--primary" href="{% url 'buyer_search' %}">Xem sản phẩm</a></div>
+    {% endif %}
+    <div data-content="compare-tray" class="compare-tray"></div>
+{% else %}
 <nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav><header data-content="heading"></header><p>Chỉ so sánh các model cùng danh mục. Giá, thông số và nguồn là dữ liệu demo.</p><div data-content="comparison"></div>
+{% endif %}
   </template>
-  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+  <script type="module" src="{% static 'js/buyer.js' %}?v=database-catalog-3"></script>
 </body>
 </html>

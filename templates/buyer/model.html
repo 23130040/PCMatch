@@ -1,28 +1,104 @@
 {% load static %}
 <!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}" data-catalog-source="{{ catalog_source|default:'demo' }}">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chi tiết sản phẩm — PCMatch</title>
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
-  <link rel="stylesheet" href="{% static 'css/components.css' %}">
-  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if selected_product %}{{ selected_product.product_name }}{% else %}Chi tiết sản phẩm{% endif %} — PCMatch</title>
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/buyer.css' %}?v=product-detail-1">
+    {% include 'includes/frontend_config.html' %}</head>
 <body data-buyer-app>
-  <main id="main"><p role="status">Đang tải chi tiết sản phẩm…</p></main>
-  <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
-  <template data-page="model">
-<nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
-<header data-content="heading"></header>
-<section class="model-overview" aria-label="Chi tiết model"><figure class="product-figure" data-content="image"></figure><div class="stack" data-content="specs"></div></section>
-<section id="offers" aria-labelledby="offers-title"><div class="section-heading"><h2 id="offers-title">Offer từ các shop</h2><div data-content="region"></div></div><p data-content="offer-count"></p><div class="cluster"><button type="button" class="btn btn--secondary" data-action="offers-toggle" aria-expanded="false" aria-controls="offer-comparison">So sánh shop</button></div><section id="offer-comparison" hidden aria-label="Bảng so sánh shop" data-content="offer-table"></section><div class="offer-cards" data-content="offers"></div></section>
-<section id="questions" class="panel panel--padded" aria-labelledby="questions-title"><h2 id="questions-title">Hỏi đáp trước mua</h2><div data-content="questions"></div></section>
-<section id="reviews" class="panel panel--padded" aria-labelledby="reviews-title"><h2 id="reviews-title">Đánh giá sau mua</h2><div data-content="reviews"></div></section>
-<div data-content="compare-tray" class="compare-tray"></div><div data-content="report"></div>
-  </template>
-  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+<main id="main"><p role="status">Đang tải chi tiết sản phẩm…</p></main>
+<noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
+<template data-page="model">
+    {% if selected_product %}
+        {% with p=selected_product %}
+            <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
+                <a href="{% url 'buyer_home' %}">Trang chủ</a><span aria-hidden="true">/</span>
+                <a href="{% url 'buyer_search' %}">Tất cả sản phẩm</a><span aria-hidden="true">/</span>
+                <span aria-current="page">{{ p.product_name }}</span>
+            </nav>
+            <header class="page-head">
+                <div>
+                    <h1>{{ p.product_name }}</h1>
+                    <p>{{ p.category.category_name }}{% if p.brand %} · {{ p.brand.brand_name }}{% endif %} · Mã sản phẩm #{{ p.product_id }}</p>
+                </div>
+                <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Về danh sách sản phẩm</a>
+            </header>
+            <section class="model-overview" aria-label="Thông tin sản phẩm" data-product-id="{{ p.product_id }}" data-product-category="{{ p.category_id }}" data-product-name="{{ p.product_name }}">
+                <figure class="product-figure">
+                    <div class="product-detail-media">
+                        {% if p.thumbnail %}<img src="{{ p.thumbnail.url }}" alt="{{ p.product_name }}">
+                        {% else %}<p class="muted">Chưa có ảnh sản phẩm.</p>{% endif %}
+                    </div>
+                </figure>
+                <div class="stack">
+                    <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|floatformat:'0g' }} ₫</p>
+                    <dl class="shop-policies">
+                        <dt>Shop bán</dt><dd>{{ p.shop.shop_name }}</dd>
+                        <dt>Tồn kho</dt><dd>{{ p.stock_quantity }} sản phẩm</dd>
+                        <dt>Đã bán</dt><dd>{{ p.sold_quantity }} sản phẩm</dd>
+                        <dt>Tình trạng</dt>
+                        <dd>{% if p.status == 'INACTIVE' %}Tạm ngừng bán
+                            {% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng
+                            {% else %}Còn hàng{% endif %}</dd>
+                    </dl>
+                    <div class="cluster">
+                        <a class="btn btn--primary" href="{% url 'buyer_search' %}?shop={{ p.shop_id }}">Xem sản phẩm của shop</a>
+                        <button class="btn btn--secondary" type="button" data-action="product-compare-add" data-id="{{ p.product_id }}" aria-pressed="false">Thêm so sánh</button>
+                    </div>
+                </div>
+            </section>
+            <section class="panel panel--padded">
+                <h2>Mô tả sản phẩm</h2>
+                {% if p.description %}{{ p.description|linebreaks }}{% else %}<p>Chưa có mô tả.</p>{% endif %}
+            </section>
+            <section class="panel panel--padded">
+                <h2>Thông số kỹ thuật</h2>
+                <dl class="spec-grid">
+                    {% for specification in p.specifications.all %}
+                        <div><dt>{{ specification.specification_name }}</dt><dd>{{ specification.specification_value }}</dd></div>
+                    {% empty %}<div><dt>Thông số</dt><dd>Chưa cập nhật.</dd></div>{% endfor %}
+                </dl>
+            </section>
+            <div data-content="compare-tray" class="compare-tray"></div>
+        {% endwith %}
+    {% else %}
+    <nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
+    <header data-content="heading"></header>
+    <section class="model-overview" aria-label="Chi tiết model">
+        <figure class="product-figure" data-content="image"></figure>
+        <div class="stack" data-content="specs"></div>
+    </section>
+    <section id="offers" aria-labelledby="offers-title">
+        <div class="section-heading"><h2 id="offers-title">Offer từ các shop</h2>
+            <div data-content="region"></div>
+        </div>
+        <p data-content="offer-count"></p>
+        <div class="cluster">
+            <button type="button" class="btn btn--secondary" data-action="offers-toggle" aria-expanded="false"
+                    aria-controls="offer-comparison">So sánh shop
+            </button>
+        </div>
+        <section id="offer-comparison" hidden aria-label="Bảng so sánh shop" data-content="offer-table"></section>
+        <div class="offer-cards" data-content="offers"></div>
+    </section>
+    <section id="questions" class="panel panel--padded" aria-labelledby="questions-title"><h2 id="questions-title">Hỏi
+        đáp trước mua</h2>
+        <div data-content="questions"></div>
+    </section>
+    <section id="reviews" class="panel panel--padded" aria-labelledby="reviews-title"><h2 id="reviews-title">Đánh giá
+        sau mua</h2>
+        <div data-content="reviews"></div>
+    </section>
+    <div data-content="compare-tray" class="compare-tray"></div>
+    <div data-content="report"></div>
+    {% endif %}
+</template>
+<script type="module" src="{% static 'js/buyer.js' %}?v=database-catalog-4"></script>
 </body>
 </html>

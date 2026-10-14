@@ -1,41 +1,172 @@
 {% load static %}
 <!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}" data-catalog-source="database">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tìm linh kiện — PCMatch</title>
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
-  <link rel="stylesheet" href="{% static 'css/components.css' %}">
-  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-  <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tất cả sản phẩm — PCMatch</title>
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/buyer.css' %}?v=product-detail-1">
+    {% include 'includes/frontend_config.html' %}
+</head>
 <body data-buyer-app>
-  <main id="main"><p role="status">Đang tải tìm linh kiện…</p></main>
-  <noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
-  <template data-page="search">
-<nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
-<header data-content="heading"></header>
-<div data-content="status"></div>
-<div class="catalog-toolbar"><button class="btn btn--secondary filter-toggle" type="button" data-action="filters-open" aria-controls="filter-drawer" aria-expanded="false">Bộ lọc & sắp xếp</button><p data-content="count" role="status"></p><a class="btn btn--secondary" href="{% url 'buyer_compare' %}" data-compare-link>So sánh (0)</a></div>
-<div class="search-layout"><aside id="filter-home" class="filter-sidebar"><form data-form="filters" class="stack" id="catalog-filters">
-  <h2>Bộ lọc sản phẩm</h2>
-  <label class="field"><span>Từ khóa</span><input name="q" type="search" placeholder="Tên, hãng hoặc mã model"></label>
-  <label class="field"><span>Danh mục</span><select name="category"></select></label>
-  <label class="field"><span>Hãng</span><select name="brand"></select></label>
-  <div class="price-fields"><label class="field"><span>Giá từ (₫)</span><input name="min" type="number" min="0" step="1"></label><label class="field"><span>Giá đến (₫)</span><input name="max" type="number" min="0" step="1"></label></div>
-  <label class="field"><span>Shop bán</span><select name="shop"></select></label>
-  <label class="field"><span>Khu vực nhận hàng</span><select name="region"></select></label>
-  <p class="muted filter-hint">Chỉ hiện offer có hỗ trợ giao đến khu vực đã chọn. Giá lọc chưa gồm phí giao.</p>
-  <label class="field"><span>Tình trạng hàng</span><select name="availability"><option value="">Tất cả</option><option value="in">Còn hàng</option><option value="out">Hết hàng</option><option value="paused">Tạm ngừng bán</option></select></label>
-  <fieldset class="technical-fields"><legend>Thông số theo danh mục</legend><div data-technical class="stack"></div></fieldset>
-  <label class="field"><span>Sắp xếp</span><select name="sort"><option value="">Theo danh mục</option><option value="price">Giá tăng dần</option><option value="desc">Giá giảm dần</option><option value="sold">Bán chạy (demo)</option><option value="name">Tên A–Z</option></select></label>
-  <div class="filter-submit"><button class="btn btn--primary" type="submit">Áp dụng bộ lọc</button><a class="btn btn--secondary" data-clear-filters href="{% url 'buyer_search' %}">Xóa bộ lọc</a></div>
-  <p class="form-error" role="alert"></p>
-</form></aside><section aria-label="Kết quả tìm kiếm"><div class="cluster filter-chips" data-content="chips"></div><div class="catalog-grid results" data-content="results"></div><div data-content="pagination"></div></section></div>
-<div data-content="compare-tray" class="compare-tray"></div><dialog id="filter-drawer" class="filter-drawer" aria-label="Bộ lọc sản phẩm"><button type="button" class="btn btn--secondary drawer-close" data-action="filters-close">Đóng bộ lọc</button><div data-drawer-body></div></dialog>
-  </template>
-  <script type="module" src="{% static 'js/buyer.js' %}"></script>
+<main id="main"><p role="status">Đang tải sản phẩm…</p></main>
+<noscript>Vui lòng bật JavaScript để hiển thị giao diện.</noscript>
+<template data-page="search">
+    <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
+        <a href="{% url 'buyer_home' %}">Trang chủ</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Tất cả sản phẩm</span>
+    </nav>
+    <header>
+        <div class="page-head">
+            <div><h1>Tất cả sản phẩm</h1>
+                <p>Tìm linh kiện phù hợp với nhu cầu của bạn.</p></div>
+        </div>
+    </header>
+    <div class="catalog-toolbar">
+        <button class="btn btn--secondary filter-toggle" type="button" data-action="filters-open"
+                aria-controls="filter-drawer" aria-expanded="false">Bộ lọc &amp; sắp xếp
+        </button>
+        <p data-content="count" role="status">Tìm thấy {{ page_obj.paginator.count }} sản phẩm</p>
+        <a class="btn btn--secondary" href="{% url 'buyer_compare' %}" data-compare-link>So sánh (0)</a>
+    </div>
+    <div class="search-layout">
+        <aside id="filter-home" class="filter-sidebar">
+            <form method="get" action="{% url 'buyer_search' %}" class="stack" id="catalog-filters">
+                <h2>Bộ lọc sản phẩm</h2>
+                <label class="field" for="{{ filter_form.q.id_for_label }}"><span>Từ khóa</span>{{ filter_form.q }}
+                </label>
+                <label class="field"
+                       for="{{ filter_form.category.id_for_label }}"><span>Danh mục</span>{{ filter_form.category }}
+                </label>
+                <label class="field" for="{{ filter_form.brand.id_for_label }}"><span>Hãng</span>{{ filter_form.brand }}
+                </label>
+                <div class="price-fields">
+                    <label class="field"
+                           for="{{ filter_form.min.id_for_label }}"><span>Giá từ (₫)</span>{{ filter_form.min }}</label>
+                    <label class="field"
+                           for="{{ filter_form.max.id_for_label }}"><span>Giá đến (₫)</span>{{ filter_form.max }}
+                    </label>
+                </div>
+                <label class="field"
+                       for="{{ filter_form.shop.id_for_label }}"><span>Shop bán</span>{{ filter_form.shop }}</label>
+                <label class="field"
+                       for="{{ filter_form.region.id_for_label }}"><span>Khu vực nhận hàng</span>{{ filter_form.region }}
+                </label>
+                <p class="muted filter-hint">Chưa có thông tin khu vực giao hàng để lọc.</p>
+                <label class="field"
+                       for="{{ filter_form.availability.id_for_label }}"><span>Tình trạng hàng</span>{{ filter_form.availability }}
+                </label>
+                <fieldset class="technical-fields">
+                    <legend>Thông số theo danh mục</legend>
+                    <div data-technical class="stack">
+                        {% for technical_filter in technical_filters %}
+                            <label class="field"
+                                   for="{{ technical_filter.id_for_label }}"><span>{{ technical_filter.label }}</span>{{ technical_filter }}
+                            </label>
+                        {% empty %}
+                            <p class="muted">Chọn và áp dụng danh mục để lọc thông số phù hợp.</p>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <label class="field"
+                       for="{{ filter_form.sort.id_for_label }}"><span>Sắp xếp</span>{{ filter_form.sort }}</label>
+                <div class="filter-submit">
+                    <button class="btn btn--primary" type="submit">Áp dụng bộ lọc</button>
+                    <a class="btn btn--secondary" data-clear-filters href="{% url 'buyer_search' %}">Xóa bộ lọc</a>
+                </div>
+                {% if filter_form.errors %}
+                    <div class="form-error" role="alert">
+                        {% for field in filter_form %}
+                            {% for error in field.errors %}<p>{{ field.label }}: {{ error }}</p>{% endfor %}
+                        {% endfor %}
+                        {{ filter_form.non_field_errors }}
+                    </div>
+                {% endif %}
+            </form>
+        </aside>
+        <section aria-label="Kết quả tìm kiếm">
+            <div class="catalog-grid results" data-content="results">
+                {% for product in page_obj %}
+                    <article class="catalog-card" data-product-id="{{ product.product_id }}"
+                             data-product-category="{{ product.category_id }}"
+                             data-product-name="{{ product.product_name }}">
+                        <div class="catalog-product-image">
+                            <div class="product-image">
+                                {% if product.thumbnail %}
+                                    <img src="{{ product.thumbnail.url }}" alt="{{ product.product_name }}" width="320"
+                                         height="200" loading="lazy">
+                                {% else %}
+                                    <p class="muted">Chưa có ảnh sản phẩm</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="catalog-body">
+                            <p>{{ product.category.category_name }}{% if product.brand %} ·
+                                {{ product.brand.brand_name }}{% endif %}</p>
+                            <h3>{{ product.product_name }}</h3>
+                            <p class="catalog-variant">
+                                {% for specification in product.specifications.all|slice:':2' %}
+                                    {{ specification.specification_value }}{% if not forloop.last %} · {% endif %}
+                                {% endfor %}
+                            </p>
+                            <div class="catalog-price">
+                                <small>Giá bán</small>
+                                <strong data-product-price="{{ product.price|floatformat:'2u' }}">{{ product.price|floatformat:'0g' }}
+                                    ₫</strong>
+                                <span>
+                                    Shop: {{ product.shop.shop_name }} ·
+                                    {% if product.status == 'INACTIVE' %}
+                                        Tạm ngừng bán
+                                    {% elif product.status == 'OUT_OF_STOCK' or product.stock_quantity <= 0 %}
+                                        Hết hàng
+                                    {% else %}
+                                        Còn {{ product.stock_quantity }} sản phẩm
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="cluster catalog-actions">
+                                <a
+                                        href="{% url 'buyer_product_detail' product.product_id %}"
+                                        class="btn btn--primary product-detail"
+                                        aria-label="Xem chi tiết {{ product.product_name }}"
+                                >
+                                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                    <span>Chi tiết</span>
+                                </a>
+                                <button class="btn btn--secondary" type="button" data-action="product-compare-add"
+                                        data-id="{{ product.product_id }}" aria-pressed="false">Thêm so sánh
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty" style="background: none; border: none;"><p>Không có sản phẩm phù hợp.</p></div>
+                {% endfor %}
+            </div>
+            {% if page_obj.has_other_pages %}
+                <nav class="pagination" aria-label="Phân trang">
+                    {% if page_obj.has_previous %}
+                        <a class="btn btn--secondary" href="{% url 'buyer_search' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}p={{ page_obj.previous_page_number }}">Trước</a>
+                    {% endif %}
+                    <span>Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                        <a class="btn btn--secondary" href="{% url 'buyer_search' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}p={{ page_obj.next_page_number }}">Tiếp</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
+    </div>
+    <div data-content="compare-tray" class="compare-tray"></div>
+    <dialog id="filter-drawer" class="filter-drawer" aria-label="Bộ lọc sản phẩm">
+        <button type="button" class="btn btn--secondary drawer-close" data-action="filters-close">Đóng bộ lọc</button>
+        <div data-drawer-body></div>
+    </dialog>
+</template>
+<script type="module" src="{% static 'js/buyer.js' %}?v=database-catalog-4"></script>
 </body>
 </html>

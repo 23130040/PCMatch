@@ -42,6 +42,10 @@
 .catalog-body{padding:20px;display:flex;flex-direction:column;gap:8px;flex:1}
 .catalog-body h3{margin:0;min-height:3.4em}
 .catalog-body h3 a{text-decoration:none}
+.catalog-card[data-product-id] .catalog-variant{min-height:1.6em}
+.product-shop-dialog h2,.product-shop-dialog h3,.product-shop-dialog p{margin:0}
+.product-shop-dialog dd{overflow-wrap:anywhere}
+.product-comparison table{min-width:640px}
 .catalog-body p{font-size:.82rem;margin:0}
 .catalog-body>.cluster{margin-top:auto}
 .catalog-price{display:grid;gap:2px;padding-block:12px}
@@ -181,8 +185,12 @@
 .catalog-product-image{display:block;background:var(--color-cobalt-soft);text-decoration:none;border-bottom:1px solid var(--color-border)}
 .product-image{min-height:140px;display:grid;place-items:center;background:var(--color-cobalt-soft)}
 .product-image img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain}
+.catalog-product-image .product-image{width:100%;height:200px;min-height:0;padding:12px;overflow:hidden;z-index:auto;mix-blend-mode:normal;filter:none}
+.catalog-product-image .product-image img{width:100%;height:100%;max-height:100%;min-width:0;min-height:0;object-fit:contain;object-position:center}
 .image-caption{display:block;text-align:center;font-size:.75rem;color:var(--color-cobalt-deep);padding:8px 12px}
 .product-figure{margin:0;border:1px solid var(--color-border);background:var(--color-cobalt-soft)}
+.product-detail-media{height:320px;padding:24px;display:grid;place-items:center;overflow:hidden}
+.product-detail-media img{width:100%;height:100%;min-height:0;object-fit:contain}
 .product-figure .product-image{min-height:260px}
 .image-fallback{padding:24px;display:grid;text-align:center;gap:12px;color:var(--color-cobalt-deep)}
 .image-fallback strong{font-size:2rem}
@@ -206,7 +214,7 @@
  .filter-sidebar{display:none}
  .filter-toggle{display:inline-flex!important}
  .shop-heading{flex-direction:column;gap:16px}
- .catalog-product-image .product-image{min-height:100px}
+ .catalog-product-image .product-image{height:160px;min-height:0}
  .catalog-product-image .image-caption{font-size:.7rem;padding:6px}
  .compare-tray-inner{padding:16px}
  .shop-policies{grid-template-columns:1fr;gap:6px}.shop-policies dd{margin-bottom:10px}

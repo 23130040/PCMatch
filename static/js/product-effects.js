@@ -34,19 +34,14 @@
                         <dt>Danh mục</dt><dd data-product-drawer-category>—</dd>
                         <dt>Tồn kho</dt><dd data-product-drawer-stock>—</dd>
                         <dt>Đã bán</dt><dd data-product-drawer-total-sold>—</dd>
-                        <dt>Đánh giá</dt><dd data-product-drawer-rating>4.8/5</dd>
                     </dl>
                 </section>
 
                 <section class="product-drawer__revenue">
-                    <span>Doanh thu thuốc từ sản phẩm</span>
+                    <span>Giá trị theo giá bán hiện tại</span>
                     <strong data-product-drawer-revenue>0 đ</strong>
                 </section>
             </div>
-            <footer class="product-drawer__footer">
-                <button type="button" data-product-drawer-hide>◉ Tạm ẩn sản phẩm</button>
-                <button type="button" data-product-drawer-reject>⊗ Từ chối / Gỡ bỏ</button>
-            </footer>
         `;
 
         document.body.append(backdrop, drawer);
@@ -54,17 +49,22 @@
     };
 
     const formatCurrency = (value) => {
-        const number = Number(String(value).replace(/\D/g, ""));
-        return number ? new Intl.NumberFormat("vi-VN").format(number) + " đ" : "0 đ";
+        return new Intl.NumberFormat("vi-VN", {style: "currency", currency: "VND"}).format(Number(value) || 0);
     };
 
     const initProductDrawer = () => {
-        const rows = [...document.querySelectorAll(".product-table tbody tr")];
+        document.querySelectorAll("[data-admin-product-filter]").forEach((select) => {
+            select.addEventListener("change", () => {
+                document.getElementById("admin-product-filters")?.requestSubmit();
+            });
+        });
+        const rows = [...document.querySelectorAll(".product-table tbody tr[data-product-id]")];
         if (rows.length === 0 || document.querySelector(".product-detail-drawer")) return;
 
         const { backdrop, drawer } = createProductDrawer();
 
         const close = () => {
+            drawer.setAttribute("aria-hidden", "true");
             drawer.classList.remove("is-open");
             backdrop.classList.remove("is-open");
             document.body.classList.remove("has-product-drawer");
@@ -86,12 +86,12 @@
             const status = row.querySelector(".product-status")?.textContent.trim() || "—";
             const statusClass = row.querySelector(".product-status")?.className || "product-status product-status--selling";
             const icon = productCell?.querySelector(".product-icon")?.innerHTML || "";
-            const numericPrice = Number(price.replace(/\D/g, ""));
-            const numericSold = Number(sold.replace(/\D/g, ""));
+            const numericPrice = Number(row.dataset.price);
+            const numericSold = Number(row.dataset.sold);
             const revenue = formatCurrency(numericPrice * numericSold);
 
             drawer.querySelector("[data-product-drawer-title]").textContent = name;
-            drawer.querySelector("[data-product-drawer-sub]").textContent = `${id} · Đăng lúc 20/09/2026 · 09:12`;
+            drawer.querySelector("[data-product-drawer-sub]").textContent = `${id} · Đăng lúc ${row.dataset.createdAt}`;
             drawer.querySelector("[data-product-drawer-icon]").innerHTML = icon;
             drawer.querySelector("[data-product-drawer-name]").textContent = name;
             drawer.querySelector("[data-product-drawer-price]").textContent = price;
@@ -110,6 +110,7 @@
             drawer.dataset.productId = id;
             drawer.dataset.productName = name;
             drawer.hidden = false;
+            drawer.setAttribute("aria-hidden", "false");
             backdrop.hidden = false;
             document.body.classList.add("has-product-drawer");
             requestAnimationFrame(() => {
