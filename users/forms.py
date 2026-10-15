@@ -7,7 +7,7 @@ User = get_user_model()
 
 class BuyerRegisterForm(forms.Form):
     full_name = forms.CharField(
-        label='Họ tên', max_length=100, required=True,
+        label='Username', max_length=100, required=True,
         widget=forms.TextInput(attrs={'autocomplete': 'name', 'maxlength': '80'}),
     )
     email = forms.EmailField(

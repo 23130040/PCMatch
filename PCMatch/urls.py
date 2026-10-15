@@ -8,6 +8,8 @@ from django.views.generic import TemplateView
 from .pages import PAGE_GROUPS, route_name
 
 from products import views as product_views
+from users import views as user_views
+from users.views import staff_required
 urlpatterns = [
     path('django-admin/', admin.site.urls),
 
@@ -20,6 +22,16 @@ urlpatterns = [
          product_views.product_detail,
          name='buyer_product_detail',
     ),
+
+    path('staff/guest/<int:user_id>/toggle/',
+         staff_required(user_views.toggle_user_lock),
+         name='staff_guest_toggle',
+    ),
+
+    path('staff/logout/',
+         user_views.staff_logout,
+         name='staff_logout',
+    ),
 ]
 
 for section, pages in PAGE_GROUPS.items():
@@ -30,7 +42,16 @@ for section, pages in PAGE_GROUPS.items():
         elif section == 'buyer' and page == 'compare':
             view = product_views.buyer_product_compare
         elif section == 'staff' and page == 'products':
-            view = product_views.load_products
+            view = staff_required(product_views.load_products)
+        elif section == 'staff' and page == 'guest':
+            view = staff_required(user_views.guest_list)
+        elif section == 'staff' and page == 'login':
+            view = user_views.staff_login
+        elif section == 'staff':
+            view = staff_required(TemplateView.as_view(
+                template_name=template,
+                extra_context={'page_name': page, 'page_section': section},
+            ))
         else:
             view = TemplateView.as_view(
                 template_name=template,

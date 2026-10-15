@@ -2,7 +2,7 @@ import {installHeader} from './header.js';
 import {chatPage, initChat} from './chat.js';
 import {installValidation} from './validation.js';
 import * as catalog from './catalog.js?v=database-catalog-4';
-import * as account from './account.js';
+import * as account from './account.js?v=no-social-register';
 import * as commerce from './commerce.js';
 import * as builds from './builds.js';
 import * as support from './support.js';

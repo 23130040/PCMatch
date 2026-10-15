@@ -45,3 +45,80 @@
 .shop-aftersales-resolution{display:grid;gap:12px;margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--color-muted)}
 .shop-aftersales-resolution form{display:grid;gap:8px}
 @media(max-width:767px){.shop-evidence{align-items:flex-start;flex-direction:column}}
+
+/* Trang đăng nhập Kênh người bán: layout đứng riêng, không sidebar. */
+.shop-auth-page{background:var(--color-canvas, #f4f6fa)}
+.shop-auth{max-width:600px;margin:84px auto;padding:0 16px}
+.shop-auth__card{background:#fff;border:1px solid var(--color-border);border-radius:14px;padding:56px 48px;display:grid;gap:22px}
+.shop-auth__brand{display:grid;gap:10px;justify-items:center;text-align:center}
+.shop-auth__brand .logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:700}
+.shop-auth__brand h1{margin:8px 0 0;font-size:1.75rem}
+.shop-auth__brand p{margin:0;color:var(--color-slate);font-size:.9rem}
+.shop-auth__error{background:#fdecec;border:1px solid #f0a3a3;color:#a02323;border-radius:8px;padding:10px 14px;font-size:.9rem}
+.shop-auth__error[hidden]{display:none}
+.shop-auth__form{display:grid;gap:14px;margin:0}
+.shop-auth__form .password-wrap,.shop-reg__form .password-wrap{position:relative;display:block}
+.shop-auth__form .password-wrap input,.shop-reg__form .password-wrap input{width:100%;padding-right:44px;box-sizing:border-box}
+.shop-auth__form .password-eye,.shop-reg__form .password-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:18px;line-height:1;padding:6px}
+.shop-auth__row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.shop-auth__remember{padding-block:0}
+.linklike{background:none;border:0;padding:0;color:var(--color-cobalt-deep);cursor:pointer;font-size:.9rem;text-decoration:underline;text-underline-offset:3px}
+.shop-auth__submit{width:100%;min-height:44px}
+.shop-auth__submit:disabled{opacity:.7;cursor:wait}
+.shop-auth__switch{margin:0;text-align:center;font-size:.9rem}
+.shop-auth__footer{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-size:.85rem;color:var(--color-slate)}
+.shop-auth__footer a{color:var(--color-slate)}
+@media(max-width:767px){.shop-auth{margin:32px auto}.shop-auth__card{padding:32px 24px}}
+
+/* Wizard đăng ký người bán. */
+.shop-reg{max-width:720px;margin:48px auto;padding:0 16px}
+.shop-reg__card{background:#fff;border:1px solid var(--color-border);border-radius:14px;padding:40px 44px;display:grid;gap:20px}
+#reg-title{text-align:center}
+.shop-reg__brand{display:grid;gap:6px;justify-items:center;text-align:center}
+.shop-reg__brand h1{margin:0;font-size:1.75rem;text-align:center}
+.shop-reg__brand p{margin:0;color:var(--color-slate);font-size:.9rem;text-align:center}
+.reg-steps{list-style:none;display:flex;gap:4px;margin:4px 0 0;padding:0}
+.reg-steps__item{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.75rem;color:var(--color-slate);text-align:center}
+.reg-steps__num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--color-border);background:#fff;font-weight:700;font-size:.85rem}
+.reg-steps__item.is-current{color:var(--color-cobalt-deep)}
+.reg-steps__item.is-current .reg-steps__num{border-color:var(--color-cobalt);background:var(--color-cobalt-soft)}
+.reg-steps__item.is-done .reg-steps__num{border-color:var(--color-teal-deep);background:var(--color-teal-deep);color:#fff}
+.reg-progress{height:8px;border-radius:99px;background:var(--color-muted);overflow:hidden}
+.reg-progress i{display:block;height:100%;background:var(--color-cobalt);border-radius:99px;transition:width 200ms}
+.reg-pane{display:grid;gap:14px}
+.reg-pane h2{margin:0;font-size:1.2rem}
+.reg-pane .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pw-meter{display:flex;gap:6px;margin-top:-6px}
+.pw-meter i{flex:1;height:6px;border-radius:99px;background:var(--color-muted)}
+.pw-meter[data-level="1"] i:nth-child(-n+1){background:#d33}
+.pw-meter[data-level="2"] i:nth-child(-n+2){background:#e80}
+.pw-meter[data-level="3"] i:nth-child(-n+3){background:#2a7}
+.pw-meter[data-level="4"] i{background:#2a7}
+.pw-hint{color:var(--color-slate)}
+.otp-box{border:1px solid var(--color-border);border-radius:10px;padding:16px;margin:0;display:grid;gap:12px}
+.otp-box legend{font-weight:700;padding:0 8px}
+.otp-box__row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.upload-box{border:1px dashed var(--color-border);border-radius:10px;padding:14px;display:grid;gap:8px}
+.upload-box__label{font-weight:600;font-size:.9rem}
+.upload-box__preview{max-width:180px;max-height:120px;object-fit:contain;border:1px solid var(--color-border);border-radius:8px;background:#fff}
+.upload-box__btn{justify-self:start;cursor:pointer}
+.upload-box__btn input{display:none}
+.char-count{display:block;text-align:right;color:var(--color-slate);font-size:.8rem}
+.addr-grid{border:1px solid var(--color-border);border-radius:10px;padding:16px;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.addr-grid legend{font-weight:700;padding:0 8px}
+.biz-types{display:flex;gap:16px;flex-wrap:wrap}
+.sum-block{border:1px solid var(--color-border);border-radius:10px;padding:16px}
+.sum-block h3{margin:0;font-size:1rem}
+.sum-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sum-block dl{margin:0;display:grid;gap:6px}
+.sum-row{display:grid;grid-template-columns:150px 1fr;gap:10px;font-size:.9rem}
+.sum-row dt{color:var(--color-slate)}
+.sum-row dd{margin:0;overflow-wrap:anywhere}
+.reg-nav{display:flex;justify-content:space-between;gap:12px;margin-top:4px}
+.reg-demo{display:flex;justify-content:center}
+.demo-link-box{margin-top:12px;padding:12px 14px;border:1px dashed var(--color-border);border-radius:8px;background:var(--color-canvas,#f4f6fa);font-size:.9rem;overflow-wrap:anywhere}
+.reg-success{text-align:center;display:grid;gap:12px;justify-items:center;padding:24px 0}
+.reg-success__icon{width:64px;height:64px;border-radius:50%;background:var(--color-teal-soft,#e6f6ef);color:var(--color-teal-deep,#0f7a4d);display:grid;place-items:center;font-size:2rem;font-weight:700}
+.reg-success p{max-width:52ch;line-height:1.6}
+.muted{color:var(--color-slate);font-size:.85rem}
+@media(max-width:767px){.shop-reg{margin:28px auto}.shop-reg__card{padding:28px 20px}.reg-steps__item span:last-child{display:none}.reg-pane .two-col,.addr-grid{grid-template-columns:1fr}.sum-row{grid-template-columns:1fr;gap:2px}}
