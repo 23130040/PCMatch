@@ -24,7 +24,7 @@ def order_list(request):
         'locStatus': locStatus,
         'search': search,
     }
-    return x(request, 'admin/order.html', box)
+    return render(request, 'admin/order.html', box)
 
 
 def changeStatus(request, order_id):
