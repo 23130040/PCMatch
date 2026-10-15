@@ -109,7 +109,7 @@
                 
               
                 <div class="cluster" style="flex: 1; max-width: 600px;">
-                    <form method="GET" action="{% url 'load_web' %}" style="flex: 1; display: flex;">
+                    <form method="GET" action="{% url 'staff_guest' %}" style="flex: 1; display: flex;">
                         <label class="field" style="flex: 1;">
                             <span class="sr-only">Tìm kiếm khách hàng theo họ tên, email, số điện thoại hoặc mã</span>
                             <input type="text" name="search" value="{{ search }}" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
@@ -178,7 +178,7 @@
                             </td>
                             <td style="text-align: right;">
                                 <!-- Nút Khóa / Mở khóa gọi vào hàm lockUser -->
-                                <a href="{% url 'lockUser' u.id %}"
+                                <a href="{% url 'staff_guest_toggle' u.id %}"
                                    onclick="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản {{ u.username }}?');"
                                    class="btn btn--secondary btn--quiet"
                                    style="text-decoration: none; padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">

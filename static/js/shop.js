@@ -1,4 +1,4 @@
-import {categories,models,model,shop,money,regions} from './data.js';
+import {categories,models,model,shop,shops,money,regions} from './data.js';
 import {db,tx,uid,currentOffer,clone} from './store.js';
 import {compatibility} from './builds.js';
 import {appendRefund,refundsFor,discountForSerials} from './aftersale-data.js';
@@ -10,6 +10,10 @@ const page=pageName;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDate=v=>v?new Date(v).toLocaleString('vi-VN',{dateStyle:'short',timeStyle:'short'}):'—';
 const link=(name,p={})=>pageUrl('shop',name,p);
+const SHOP_PUBLIC_PAGES=['login','register','forgot'];
+const shopSession=()=>{try{const s=JSON.parse(sessionStorage.getItem('pcmatch-shop-session'));return s&&s.identity?s:null;}catch{return null;}};
+const shopSafeNext=()=>{const n=qs.get('next');return n&&n.startsWith('/shop/')&&!n.startsWith('//')?n:null;};
+if(!SHOP_PUBLIC_PAGES.includes(page)&&!shopSession()){location.replace(link('login',{next:location.pathname+location.search}));}
 const closedOrderStates=['Đã hủy','Đã giao','Hoàn tất','Đã hoàn hàng'];
 
 function statusClass(s){
@@ -120,7 +124,7 @@ function pushBuyerNotification(state,userId,title,path){state.notifications.unsh
 function sidebar(){
  const active=(file)=>file==='proposal-list'?['proposal-list','proposal','proposal-builder'].includes(page):file==='orders'?['orders','order'].includes(page):file==='fulfillment'?page==='fulfillment':page===file;
  const item=(file,label,count='')=>'<a href="'+link(file)+'" '+(active(file)?'aria-current="page"':'')+'>'+esc(label)+(count!==''?'<span class="sidebar__count">'+esc(count)+'</span>':'')+'</a>';
- return '<aside class="shop-sidebar"><div class="shop-sidebar__brand"><strong>'+esc(shopInfo.name)+'</strong><small>Shop đã xác minh · Chủ shop</small></div><nav><p class="sidebar__group">Vận hành</p>'+item('dashboard','Tổng quan')+item('offers','Tin bán',bpOffers().filter(o=>o.active).length)+item('inventory','Kho',bpOffers().filter(o=>o.active&&availableFor(o.id)<=2).length+' thấp')+'<p class="sidebar__group">Công việc</p>'+item('build-requests','Yêu cầu Build',liveRequests().length)+item('proposal-list','Proposal',proposals().filter(p=>['Cần sửa','Đã gửi'].includes(proposalState(p))).length)+item('orders','Đơn hàng',suborders().filter(x=>!closedOrderStates.includes(x.sub.status)).length)+item('fulfillment','Giao hàng')+item('aftersales','Hậu mãi',aftersalesCases().filter(c=>!caseClosed(c)).length)+'<p class="sidebar__group">Tài chính</p>'+item('revenue','Doanh thu')+'</nav></aside>';
+ return '<aside class="shop-sidebar"><div class="shop-sidebar__brand"><strong>'+esc(shopInfo.name)+'</strong><small>Shop đã xác minh · Chủ shop</small></div><nav><p class="sidebar__group">Vận hành</p>'+item('dashboard','Tổng quan')+item('offers','Tin bán',bpOffers().filter(o=>o.active).length)+item('inventory','Kho',bpOffers().filter(o=>o.active&&availableFor(o.id)<=2).length+' thấp')+'<p class="sidebar__group">Công việc</p>'+item('build-requests','Yêu cầu Build',liveRequests().length)+item('proposal-list','Proposal',proposals().filter(p=>['Cần sửa','Đã gửi'].includes(proposalState(p))).length)+item('orders','Đơn hàng',suborders().filter(x=>!closedOrderStates.includes(x.sub.status)).length)+item('fulfillment','Giao hàng')+item('aftersales','Hậu mãi',aftersalesCases().filter(c=>!caseClosed(c)).length)+'<p class="sidebar__group">Tài chính</p>'+item('revenue','Doanh thu')+'<p class="sidebar__group">Cài đặt</p><a href="'+link('login')+'" data-action="shop-logout">Đăng xuất</a></nav></aside>';
 }
 
 function shell(content,title='Cổng Shop'){
@@ -464,7 +468,159 @@ function fulfillmentPage(){
  );
 }
 
-const renderers={dashboard,offers:offersPage,inventory:inventoryPage,'build-requests':buildRequestsPage,'build-request-detail':requestDetailPage,'proposal-builder':proposalBuilderPage,'proposal-list':proposalListPage,proposal:proposalDetailPage,orders:orderListPage,order:orderPage,fulfillment:fulfillmentPage,aftersales:aftersalesPage,revenue:revenuePage};
+function loginPage(){
+ if(shopSession()){location.replace(shopSafeNext()||link('dashboard'));return;}
+ document.body.className='shop-app shop-auth-page';
+ const remembered=(()=>{try{return localStorage.getItem('pcmatch-shop-remember')==='1';}catch{return false;}})();
+ document.body.innerHTML='<a class="skip-link" href="#main">Bỏ qua điều hướng</a><div class="service-bar">PCMatch · Kênh người bán</div><header class="topbar"><div class="container topbar__inner" style="max-width:none"><a class="logo" href="'+link('login')+'"><i class="logo__mark"></i><span>PC</span><span>Match Shop</span></a><nav class="nav-links"><a href="'+pageUrl('buyer','home')+'">Mở phía người mua</a></nav></div></header><main id="main"><div class="shop-auth"><section class="shop-auth__card" aria-labelledby="shop-login-title"><div class="shop-auth__brand"><span class="logo"><i class="logo__mark"></i><span>PC</span><span>Match Shop</span></span><h1 id="shop-login-title">Kênh người bán</h1><p>Đăng nhập để vận hành gian hàng, proposal và đơn hàng của shop.</p><p class="muted">Tài khoản thử đã điền sẵn, bấm Đăng nhập để vào luôn.</p></div><div class="shop-auth__error" data-shop-error hidden role="alert"></div><form data-form="shop-login" class="shop-auth__form" novalidate><label class="field"><span>Email / Số điện thoại</span><input name="identity" type="text" value="shop-demo@pcmatch.local" autocomplete="username" required placeholder="vd: shop@pcmatch.vn hoặc 0901234567"></label><label class="field"><span>Mật khẩu</span><span class="password-wrap"><input name="password" type="password" value="Shop123456" autocomplete="current-password" required minlength="6" placeholder="Nhập mật khẩu"><button type="button" class="password-eye" data-action="shop-pass-eye" aria-label="Hiện mật khẩu">👁</button></span></label><div class="shop-auth__row"><label class="check shop-auth__remember"><input type="checkbox" name="remember" '+(remembered?'checked':'')+'> <span>Ghi nhớ đăng nhập</span></label><button type="button" class="linklike" data-action="shop-forgot">Quên mật khẩu?</button></div><button class="btn btn--primary shop-auth__submit" type="submit" data-shop-submit>Đăng nhập</button></form><p class="shop-auth__switch">Chưa có gian hàng? <button type="button" class="linklike" data-action="shop-register">Đăng ký làm người bán</button></p><footer class="shop-auth__footer"><a href="';
+}
+
+/* Đăng ký người bán: wizard 5 bước, demo frontend, chưa backend.
+   TODO: captcha (reCAPTCHA) ở bước xác nhận trước khi gửi hồ sơ.
+   TODO: eKYC tự động (OCR CCCD + face-match) thay upload ảnh thủ công. */
+const REG_STEPS=['Tài khoản','Thông tin shop','Xác minh danh tính','Thanh toán','Xác nhận'];
+const REG_BANKS=['Vietcombank','BIDV','VietinBank','Agribank','Techcombank','MBBank','ACB','VPBank','TPBank','Sacombank'];
+const regBlank=()=>({email:'demoshop@pcmatch.vn',phone:'0901234567',password:'Demo123456',confirm:'Demo123456',otpChannel:'sms',otp:'',shopName:'GearHub Demo',desc:'Shop demo chuyên linh kiện PC chính hãng.',category:'CPU',province:'HCM',district:'Quận 1',ward:'Phường Bến Nghé',detail:'123 Nguyễn Huệ',contactName:'Nguyễn Văn Demo',contactPhone:'0901234567',bizType:'personal',ownerName:'Nguyễn Văn Demo',cccd:'079012345678',taxCode:'0312345678',legalName:'Hộ kinh doanh GearHub Demo',bank:'Vietcombank',accountNo:'1234567890',accountHolder:'Nguyễn Văn Demo',agreeTerms:true,agreeFee:true,agreePrivacy:true});
+let regData=regBlank(),regStep=1,regDone=false,regBusy=false,regOtp=null,regTimer=null;
+const regFiles={logo:null,cccdFront:null,cccdBack:null,license:null};
+try{const s=JSON.parse(sessionStorage.getItem('pcmatch-shop-register-v2')||'null');if(s&&s.data){regData={...regBlank(),...s.data};regStep=Math.min(Math.max(s.step||1,1),5);}}catch{}
+const regSave=()=>{try{const {password,confirm,otp,...rest}=regData;sessionStorage.setItem('pcmatch-shop-register-v2',JSON.stringify({step:regStep,data:rest}));}catch{}};
+const regNorm=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
+const regShowErr=msg=>{const box=document.querySelector('[data-reg-error]');if(box){box.textContent=msg;box.hidden=!msg;}if(msg)toast(msg);};
+const regScore=pw=>{let s=0;if(pw.length>=8)s++;if(pw.length>=12||(/[a-z]/.test(pw)&&/[A-Z]/.test(pw)))s++;if(/\d/.test(pw)&&/[a-zA-Z]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw)&&pw.length>=8)s++;return Math.min(s,4);};
+const regStrengthHTML=()=>{const s=regScore(regData.password||'');const label=['Quá ngắn','Yếu','Trung bình','Mạnh','Rất mạnh'][s];return '<div class="pw-meter" data-pw-meter data-level="'+s+'"><i></i><i></i><i></i><i></i></div><small class="pw-hint">'+label+'</small>';};
+const regFileBtn=(key,label,accept)=>{const f=regFiles[key];return '<div class="upload-box"><span class="upload-box__label">'+label+'</span>'+(f?'<img class="upload-box__preview" src="'+f.url+'" alt="Xem trước '+label+'"><small>'+esc(f.name)+' · '+Math.round(f.size/1024)+' KB</small>':'<small class="muted">Chưa chọn file</small>')+'<label class="btn btn--secondary upload-box__btn">Chọn file<input type="file" name="file-'+key+'" accept="'+accept+'" hidden></label></div>';};
+function regCollect(form){const d=Object.fromEntries(new FormData(form));for(const k of Object.keys(regBlank())){if(k.startsWith('agree'))regData[k]=!!d[k];else if(d[k]!==undefined&&!k.startsWith('file'))regData[k]=typeof d[k]==='string'?d[k]:regData[k];}regSave();}
+function regValid(step){
+ if(step===1){
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regData.email.trim()))return 'Email chưa đúng định dạng.';
+  if(!/^0\d{9}$/.test(regData.phone.replace(/[\s.]/g,'')))return 'Số điện thoại gồm 10 số, bắt đầu bằng 0.';
+  if((regData.password||'').length<8)return 'Mật khẩu tối thiểu 8 ký tự.';
+  if(regData.password!==regData.confirm)return 'Nhập lại mật khẩu chưa khớp.';
+  if(!regOtp)failOtp('Nhấn “Gửi mã” để nhận mã OTP demo trước khi tiếp tục.');
+  if(String(regData.otp).trim()!==regOtp.code)return 'Mã OTP chưa đúng.';
+  if(Date.now()>regOtp.exp)return 'Mã OTP đã hết hạn, nhấn “Gửi lại mã”.';
+  return '';
+ }
+ if(step===2){
+  if(regData.shopName.trim().length<3)return 'Tên shop tối thiểu 3 ký tự.';
+  if(shops.some(s=>regNorm(s.name)===regNorm(regData.shopName)))return 'Tên shop đã tồn tại, chọn tên khác.';
+  if(!regFiles.logo)return 'Vui lòng tải logo shop.';
+  if(!regData.category)return 'Chọn danh mục kinh doanh chính.';
+  if(!regData.province)return 'Chọn tỉnh/thành lấy hàng.';
+  if(!regData.district.trim()||!regData.ward.trim()||!regData.detail.trim())return 'Nhập đủ quận/huyện, phường/xã và địa chỉ chi tiết.';
+  if(!regData.contactName.trim())return 'Nhập tên người liên hệ.';
+  if(!/^0\d{9}$/.test(regData.contactPhone.replace(/[\s.]/g,'')))return 'SĐT liên hệ gồm 10 số, bắt đầu bằng 0.';
+  return '';
+ }
+ if(step===3){
+  if(!regData.ownerName.trim())return 'Nhập họ tên chủ shop.';
+  if(!/^(\d{9}|\d{12})$/.test(regData.cccd.replace(/\s/g,'')))return 'CCCD 12 số (hoặc CMND 9 số).';
+  if(!regFiles.cccdFront||!regFiles.cccdBack)return 'Tải đủ ảnh CCCD mặt trước và mặt sau.';
+  if(regData.bizType!=='personal'){
+   if(!/^\d{10}(\d{3})?$/.test(regData.taxCode.replace(/\s/g,'')))return 'Mã số thuế 10 hoặc 13 số.';
+   if(!regData.legalName.trim())return 'Nhập tên pháp lý.';
+   if(!regFiles.license)return 'Tải giấy phép kinh doanh.';
+  }
+  return '';
+ }
+ if(step===4){
+  if(!regData.bank)return 'Chọn ngân hàng.';
+  if(!/^\d{6,19}$/.test(regData.accountNo.replace(/\s/g,'')))return 'Số tài khoản 6–19 chữ số.';
+  if(!regData.accountHolder.trim())return 'Nhập tên chủ tài khoản.';
+  if(regNorm(regData.accountHolder)!==regNorm(regData.ownerName))return 'Tên chủ tài khoản phải trùng tên chủ shop.';
+  return '';
+ }
+ if(step===5){
+  if(!(regData.agreeTerms&&regData.agreeFee&&regData.agreePrivacy))return 'Tick đủ 3 ô đồng ý chính sách.';
+  return '';
+ }
+ return '';
+}
+function failOtp(m){regShowErr(m);throw Error(m);}
+function regStepper(){return '<ol class="reg-steps">'+REG_STEPS.map((t,i)=>'<li class="reg-steps__item '+(i+1<regStep?'is-done':i+1===regStep?'is-current':'')+'"><span class="reg-steps__num">'+(i+1)+'</span><span>'+t+'</span></li>').join('')+'</ol><div class="reg-progress" role="progressbar" aria-valuenow="'+regStep+'" aria-valuemin="1" aria-valuemax="5"><i style="width:'+(regStep/5*100)+'%"></i></div>';}
+function regStepBody(){
+ const v=k=>esc(regData[k]||'');
+ const opts=(map,cur)=>Object.entries(map).map(([k,t])=>'<option value="'+esc(k)+'" '+(k===cur?'selected':'')+'>'+esc(t)+'</option>').join('');
+ if(regStep===1){
+  const cd=regOtp?Math.max(0,Math.ceil((regOtp.resendAt-Date.now())/1000)):0;
+  return '<div class="reg-pane"><h2>Tài khoản đăng nhập</h2><label class="field"><span>Email *</span><input name="email" type="email" value="'+v('email')+'" autocomplete="email" required placeholder="shop@pcmatch.vn"></label><label class="field"><span>Số điện thoại *</span><input name="phone" type="tel" value="'+v('phone')+'" required pattern="0[0-9]{9}" placeholder="0901234567"></label><label class="field"><span>Mật khẩu (tối thiểu 8 ký tự) *</span><span class="password-wrap"><input name="password" type="password" value="" autocomplete="new-password" required minlength="8"><button type="button" class="password-eye" data-action="reg-pass-eye" aria-label="Hiện mật khẩu">👁</button></span></label>'+regStrengthHTML()+'<label class="field"><span>Nhập lại mật khẩu *</span><span class="password-wrap"><input name="confirm" type="password" value="" autocomplete="new-password" required minlength="8"><button type="button" class="password-eye" data-action="reg-pass-eye" aria-label="Hiện mật khẩu">👁</button></span></label><fieldset class="otp-box"><legend>Xác thực OTP *</legend><div class="otp-box__row"><label class="check"><input type="radio" name="otpChannel" value="sms" '+(regData.otpChannel!=='email'?'checked':'')+'> <span>SMS</span></label><label class="check"><input type="radio" name="otpChannel" value="email" '+(regData.otpChannel==='email'?'checked':'')+'> <span>Email</span></label><button type="button" class="btn btn--secondary" data-action="reg-otp-send" '+(cd>0?'disabled':'')+'>'+(cd>0?'Gửi lại mã sau '+cd+'s':'Gửi mã')+'</button></div><label class="field"><span>Mã OTP 6 số</span><input name="otp" type="text" inputmode="numeric" maxlength="6" value="'+v('otp')+'" placeholder="Nhập mã demo hiện trong thông báo"></label></fieldset></div>';
+ }
+ if(regStep===2){
+  return '<div class="reg-pane"><h2>Thông tin shop</h2><label class="field"><span>Tên shop *</span><input name="shopName" type="text" value="'+v('shopName')+'" required minlength="3" maxlength="60" placeholder="vd: GearHub Cần Thơ"></label>'+regFileBtn('logo','Logo shop (PNG/JPG/WebP, ≤2MB)','.png,.jpg,.jpeg,.webp')+'<label class="field"><span>Mô tả ngắn (tối đa 200 ký tự)</span><textarea name="desc" maxlength="200" placeholder="Điểm mạnh, ngành hàng chủ lực…">'+v('desc')+'</textarea><small class="char-count"><span data-desc-count>'+regData.desc.length+'</span>/200</small></label><label class="field"><span>Danh mục kinh doanh chính *</span><select name="category" required><option value="">— Chọn —</option>'+opts(categories,regData.category)+'</select></label><fieldset class="addr-grid"><legend>Địa chỉ lấy hàng *</legend><label class="field"><span>Tỉnh/Thành</span><select name="province" required><option value="">— Chọn —</option>'+opts(regions,regData.province)+'</select></label><label class="field"><span>Quận/Huyện</span><input name="district" value="'+v('district')+'" required></label><label class="field"><span>Phường/Xã</span><input name="ward" value="'+v('ward')+'" required></label><label class="field"><span>Địa chỉ chi tiết</span><input name="detail" value="'+v('detail')+'" required placeholder="Số nhà, đường, tòa nhà…"></label></fieldset><div class="two-col"><label class="field"><span>Người liên hệ *</span><input name="contactName" value="'+v('contactName')+'" required></label><label class="field"><span>SĐT liên hệ *</span><input name="contactPhone" type="tel" value="'+v('contactPhone')+'" required pattern="0[0-9]{9}"></label></div></div>';
+ }
+ if(regStep===3){
+  const biz=regData.bizType;
+  const typeRadio=(val,label)=>'<label class="check"><input type="radio" name="bizType" value="'+val+'" '+(biz===val?'checked':'')+'> <span>'+label+'</span></label>';
+  return '<div class="reg-pane"><h2>Xác minh danh tính (KYC)</h2><div class="biz-types">'+typeRadio('personal','Cá nhân')+typeRadio('household','Hộ kinh doanh')+typeRadio('company','Doanh nghiệp')+'</div><div class="two-col"><label class="field"><span>Họ tên chủ shop *</span><input name="ownerName" value="'+v('ownerName')+'" required></label><label class="field"><span>Số CCCD/CMND *</span><input name="cccd" inputmode="numeric" value="'+v('cccd')+'" required placeholder="12 số CCCD hoặc 9 số CMND"></label></div><div class="two-col">'+regFileBtn('cccdFront','CCCD mặt trước (≤2MB)','.png,.jpg,.jpeg,.webp')+regFileBtn('cccdBack','CCCD mặt sau (≤2MB)','.png,.jpg,.jpeg,.webp')+'</div><div data-biz-extra '+(biz==='personal'?'hidden':'')+'><div class="two-col"><label class="field"><span>Mã số thuế *</span><input name="taxCode" inputmode="numeric" value="'+v('taxCode')+'"></label><label class="field"><span>Tên pháp lý *</span><input name="legalName" value="'+v('legalName')+'"></label></div>'+regFileBtn('license','Giấy phép kinh doanh (PDF/ảnh, ≤5MB)','.pdf,.png,.jpg,.jpeg,.webp')+'</div></div>';
+ }
+ if(regStep===4){
+  return '<div class="reg-pane"><h2>Tài khoản nhận tiền</h2><label class="field"><span>Ngân hàng *</span><select name="bank" required><option value="">— Chọn —</option>'+REG_BANKS.map(b=>'<option '+(b===regData.bank?'selected':'')+'>'+b+'</option>').join('')+'</select></label><label class="field"><span>Số tài khoản *</span><input name="accountNo" inputmode="numeric" value="'+v('accountNo')+'" required placeholder="6–19 chữ số"></label><label class="field"><span>Tên chủ tài khoản *</span><input name="accountHolder" value="'+v('accountHolder')+'" required placeholder="Phải trùng tên chủ shop"></label><p class="muted">Tiền đối soát chỉ chuyển về đúng tên chủ shop đã xác minh.</p></div>';
+ }
+ const row=(label,val)=>'<div class="sum-row"><dt>'+label+'</dt><dd>'+val+'</dd></div>';
+ const bizLabel={personal:'Cá nhân',household:'Hộ kinh doanh',company:'Doanh nghiệp'}[regData.bizType];
+ return '<div class="reg-pane"><h2>Xác nhận hồ sơ</h2>'
+ +'<section class="sum-block"><div class="sum-head"><h3>1. Tài khoản</h3><button type="button" class="linklike" data-action="reg-goto" data-id="1">Sửa</button></div><dl>'+row('Email',esc(regData.email))+row('SĐT',esc(regData.phone))+row('OTP','Đã xác thực ('+(regData.otpChannel==='email'?'Email':'SMS')+')')+'</dl></section>'
+ +'<section class="sum-block"><div class="sum-head"><h3>2. Thông tin shop</h3><button type="button" class="linklike" data-action="reg-goto" data-id="2">Sửa</button></div><dl>'+row('Tên shop',esc(regData.shopName))+row('Logo',(regFiles.logo?esc(regFiles.logo.name):'—'))+row('Mô tả',esc(regData.desc||'—'))+row('Danh mục',esc(categories[regData.category]||'—'))+row('Lấy hàng',esc([regData.detail,regData.ward,regData.district,regions[regData.province]].filter(Boolean).join(', ')))+row('Liên hệ',esc(regData.contactName)+' · '+esc(regData.contactPhone))+'</dl></section>'
+ +'<section class="sum-block"><div class="sum-head"><h3>3. Xác minh</h3><button type="button" class="linklike" data-action="reg-goto" data-id="3">Sửa</button></div><dl>'+row('Loại hình',bizLabel)+row('Chủ shop',esc(regData.ownerName))+row('CCCD',esc(regData.cccd))+(regData.bizType!=='personal'?row('MST',esc(regData.taxCode))+row('Pháp lý',esc(regData.legalName)):'')+'</dl></section>'
+ +'<section class="sum-block"><div class="sum-head"><h3>4. Thanh toán</h3><button type="button" class="linklike" data-action="reg-goto" data-id="4">Sửa</button></div><dl>'+row('Ngân hàng',esc(regData.bank))+row('STK',esc(regData.accountNo))+row('Chủ TK',esc(regData.accountHolder))+'</dl></section>'
+ +'<label class="check"><input type="checkbox" name="agreeTerms" '+(regData.agreeTerms?'checked':'')+'> <span>Tôi đồng ý <a href="'+pageUrl('staff','policies')+'">Điều khoản người bán</a> *</span></label>'
+ +'<label class="check"><input type="checkbox" name="agreeFee" '+(regData.agreeFee?'checked':'')+'> <span>Tôi đồng ý <a href="'+pageUrl('staff','policies')+'">Chính sách hoa hồng và phí</a> *</span></label>'
+ +'<label class="check"><input type="checkbox" name="agreePrivacy" '+(regData.agreePrivacy?'checked':'')+'> <span>Tôi đồng ý <a href="'+pageUrl('staff','policies')+'">Chính sách bảo mật</a> *</span></label></div>';
+}
+function regSuccessHTML(){
+ return '<section class="reg-success" aria-labelledby="reg-ok"><div class="reg-success__icon" aria-hidden="true">✓</div><h2 id="reg-ok">Hồ sơ đã được gửi, đang chờ duyệt</h2><p>Shop <strong>'+esc(regData.shopName)+'</strong> đang ở trạng thái <strong>pending</strong>. Thời gian duyệt dự kiến <strong>1–3 ngày làm việc</strong>; kết quả gửi qua email <strong>'+esc(regData.email)+'</strong> và SMS <strong>'+esc(regData.phone)+'</strong>.</p><a class="btn btn--primary" href="'+link('login')+'">Về trang đăng nhập</a></section>';
+}
+function registerPage(){
+ document.body.className='shop-app shop-auth-page';
+ if(regDone){document.body.innerHTML='<a class="skip-link" href="#main">Bỏ qua điều hướng</a><div class="service-bar">PCMatch · Kênh người bán</div><header class="topbar"><div class="container topbar__inner" style="max-width:none"><a class="logo" href="'+link('login')+'"><i class="logo__mark"></i><span>PC</span><span>Match Shop</span></a></div></header><main id="main"><div class="shop-reg">'+regSuccessHTML()+'</div></main><div id="shop-toast" class="shop-toast" hidden role="status"></div>';return;}
+ document.body.innerHTML='<a class="skip-link" href="#main">Bỏ qua điều hướng</a><div class="service-bar">PCMatch · Kênh người bán</div><header class="topbar"><div class="container topbar__inner" style="max-width:none"><a class="logo" href="'+link('login')+'"><i class="logo__mark"></i><span>PC</span><span>Match Shop</span></a><nav class="nav-links"><a href="'+link('login')+'">Đã có tài khoản? Đăng nhập</a></nav></div></header><main id="main"><div class="shop-reg"><section class="shop-reg__card" aria-labelledby="reg-title"><div class="shop-reg__brand"><h1 id="reg-title">Đăng ký làm người bán</h1><p>Hoàn tất 5 bước, hồ sơ được duyệt trong 1–3 ngày làm việc.</p></div><div class="shop-auth__error" data-reg-error hidden role="alert"></div><div class="reg-demo"><button type="button" class="btn btn--secondary" data-action="reg-fill-demo">Tự điền toàn bộ demo</button></div>'+regStepper()+'<form data-form="shop-register" data-reg-form class="shop-reg__form" novalidate><div data-reg-body>'+regStepBody()+'</div><div class="reg-nav">'+(regStep>1?'<button type="button" class="btn btn--secondary" data-action="reg-back">Quay lại</button>':'<span></span>')+(regStep<5?'<button class="btn btn--primary" type="submit">Tiếp tục</button>':'<button class="btn btn--primary" type="submit" data-reg-submit>Gửi đăng ký</button>')+'</div></form><footer class="shop-auth__footer"><a href="';
+}
+function regRerender(){if(page==='register'&&!regDone)registerPage();}
+function regDemoImage(key,name,caption){return new Promise(res=>{const done=file=>{try{if(regFiles[key]?.url)URL.revokeObjectURL(regFiles[key].url);}catch{}regFiles[key]={name:file.name,size:file.size||10240,url:URL.createObjectURL(file)};res();};try{const c=document.createElement('canvas');c.width=400;c.height=300;const x=c.getContext('2d');x.fillStyle='#eef2ff';x.fillRect(0,0,400,300);x.fillStyle='#1e3a8a';x.font='bold 26px sans-serif';x.textAlign='center';x.fillText(caption,200,135);x.fillStyle='#475569';x.font='18px sans-serif';x.fillText('File demo tu dong',200,175);c.toBlob(b=>done(new File([b],name,{type:'image/png'})),'image/png');}catch{done(new File([],name,{type:'image/png'}));}});}
+function regOtpTick(){if(regTimer)clearInterval(regTimer);regTimer=setInterval(()=>{const b=document.querySelector('[data-action="reg-otp-send"]');if(!regOtp){clearInterval(regTimer);return;}const s=Math.max(0,Math.ceil((regOtp.resendAt-Date.now())/1000));if(!b){if(s<=0)clearInterval(regTimer);return;}if(s>0){b.disabled=true;b.textContent='Gửi lại mã sau '+s+'s';}else{b.disabled=false;b.textContent='Gửi lại mã';clearInterval(regTimer);}},1000);}
+function regOnInput(el){
+ const form=el.closest('[data-reg-form]');if(!form||!el.name||el.type==='file')return;
+ if(el.type==='checkbox'){regData[el.name]=el.checked;regSave();return;}
+ if(el.type==='radio'){if(el.name==='otpChannel'){regData.otpChannel=el.value;regSave();}return;}
+ regData[el.name]=el.value;regSave();
+ if(el.name==='password'){const m=form.querySelector('[data-pw-meter]');if(m){const s=regScore(el.value);m.dataset.level=s;const hints=['Quá ngắn','Yếu','Trung bình','Mạnh','Rất mạnh'];const h=form.querySelector('.pw-hint');if(h)h.textContent=hints[s];}}
+ if(el.name==='desc'){const c=form.querySelector('[data-desc-count]');if(c)c.textContent=el.value.length;}
+}
+function regOnFile(input){
+ const key=input.name.slice(5),file=input.files?.[0];if(!file)return;
+ const isLicense=key==='license';
+ const msg=regCheckFile(key,file,isLicense?'.pdf,.png,.jpg,.jpeg,.webp':'.png,.jpg,.jpeg,.webp',isLicense?5:2);
+ if(msg){regShowErr(msg);input.value='';return;}
+ regCollect(input.form);regShowErr('');regSave();registerPage();toast('Đã chọn file '+file.name+'.');
+}
+function regCheckFile(key,file,accept,maxMB){
+ const exts=accept.split(',').map(s=>s.trim().toLowerCase());
+ const name=file.name.toLowerCase();
+ if(!exts.some(e=>name.endsWith(e)))return 'File '+file.name+' sai định dạng (chấp nhận '+accept+').';
+ if(file.size>maxMB*1024*1024)return 'File '+file.name+' vượt quá '+maxMB+'MB.';
+ try{if(regFiles[key]?.url)URL.revokeObjectURL(regFiles[key].url);}catch{}
+ regFiles[key]={name:file.name,size:file.size,url:URL.createObjectURL(file)};
+ return '';
+}
+
+function shopRecoveryList(){try{return JSON.parse(sessionStorage.getItem('pcmatch-shop-recovery')||'[]');}catch{return [];}}
+function shopRecoverySave(list){try{sessionStorage.setItem('pcmatch-shop-recovery',JSON.stringify(list));}catch{}}
+function forgotPage(){
+ if(shopSession()){location.replace(link('dashboard'));return;}
+ document.body.className='shop-app shop-auth-page';
+ const token=qs.get('token')||'';
+ const rec=token?shopRecoveryList().find(r=>r.id===token):null;
+ const validRec=rec&&!rec.used&&rec.exp>Date.now()?rec:null;
+ const inner=!token
+  ?'<h1>Quên mật khẩu</h1><p>Nhập email gian hàng, liên kết đặt lại demo hiện ngay bên dưới.</p><div class="shop-auth__error" data-forgot-error hidden role="alert"></div><form data-form="shop-forgot" class="shop-auth__form" novalidate><label class="field"><span>Email gian hàng *</span><input name="email" type="email" autocomplete="email" required placeholder="shop@pcmatch.vn"></label><button class="btn btn--primary shop-auth__submit" type="submit" data-forgot-submit>Gửi liên kết đặt lại</button></form>'
+  :validRec
+  ?'<h1>Đặt mật khẩu mới</h1><p>Gian hàng <strong>'+esc(validRec.email)+'</strong></p><div class="shop-auth__error" data-forgot-error hidden role="alert"></div><form data-form="shop-reset" class="shop-auth__form" novalidate><input type="hidden" name="token" value="'+esc(token)+'"><label class="field"><span>Mật khẩu mới (tối thiểu 6 ký tự) *</span><span class="password-wrap"><input name="password" type="password" autocomplete="new-password" required minlength="6"><button type="button" class="password-eye" data-action="shop-pass-eye" aria-label="Hiện mật khẩu">👁</button></span></label><label class="field"><span>Nhập lại mật khẩu *</span><span class="password-wrap"><input name="confirm" type="password" autocomplete="new-password" required minlength="6"><button type="button" class="password-eye" data-action="shop-pass-eye" aria-label="Hiện mật khẩu">👁</button></span></label><button class="btn btn--primary shop-auth__submit" type="submit" data-forgot-submit>Đặt lại mật khẩu</button></form>'
+  :'<h1>Liên kết hết hạn</h1><p>Liên kết đã dùng hoặc quá 10 phút demo.</p><p><button type="button" class="linklike" data-action="shop-forgot-again">Gửi lại liên kết mới</button></p>';
+ document.body.innerHTML='<a class="skip-link" href="#main">Bỏ qua điều hướng</a><div class="service-bar">PCMatch · Kênh người bán</div><header class="topbar"><div class="container topbar__inner" style="max-width:none"><a class="logo" href="'+link('login')+'"><i class="logo__mark"></i><span>PC</span><span>Match Shop</span></a><nav class="nav-links"><a href="'+link('login')+'">Về đăng nhập</a></nav></div></header><main id="main"><div class="shop-auth"><section class="shop-auth__card" aria-labelledby="shop-forgot-title"><div class="shop-auth__brand" id="shop-forgot-title">'+inner+'</div><footer class="shop-auth__footer"><a href="'+pageUrl('staff','policies')+'">Điều khoản</a><span aria-hidden="true">·</span><a href="'+pageUrl('staff','policies')+'">Chính sách bảo mật</a><span aria-hidden="true">·</span><a href="'+pageUrl('staff','support')+'">Hỗ trợ</a></footer></section></div></main><div id="shop-toast" class="shop-toast" hidden role="status"></div>';
+}
+
+const renderers={login:loginPage,register:registerPage,forgot:forgotPage,dashboard,offers:offersPage,inventory:inventoryPage,'build-requests':buildRequestsPage,'build-request-detail':requestDetailPage,'proposal-builder':proposalBuilderPage,'proposal-list':proposalListPage,proposal:proposalDetailPage,orders:orderListPage,order:orderPage,fulfillment:fulfillmentPage,aftersales:aftersalesPage,revenue:revenuePage};
 (renderers[page]||dashboard)();
 function rerender(){(renderers[page]||dashboard)();}
 function findProposal(id){return proposals().find(p=>p.id===id);}
@@ -487,7 +643,7 @@ document.addEventListener('click',e=>{
  const closer=e.target.closest('[data-dialog-close]');if(closer){closeDialog(closer.closest('dialog'));return;}
  const b=e.target.closest('[data-action]');if(!b)return;const act=b.dataset.action,id=b.dataset.id;
  try{
-  if(act==='offer-create-open'){
+  if(act==='shop-pass-eye'){const inputs=[...document.querySelectorAll('.shop-auth__form .password-wrap input')];if(!inputs.length)return;const show=inputs[0].type==='password';inputs.forEach(x=>x.type=show?'text':'password');document.querySelectorAll('.shop-auth__form .password-eye').forEach(b=>{b.textContent=show?'🙈':'👁';b.setAttribute('aria-label',show?'Ẩn mật khẩu':'Hiện mật khẩu');});return;} if(act==='shop-forgot'){location.href=link('forgot');return;} if(act==='shop-forgot-again'){location.href=link('forgot');return;} if(act==='shop-register'){location.href=link('register');return;} if(act==='shop-logout'){try{sessionStorage.removeItem('pcmatch-shop-session');}catch{}toast('Đã đăng xuất khỏi Kênh người bán.');location.href=link('login');return;} if(act==='reg-back'){const f=document.querySelector('[data-reg-form]');if(f)regCollect(f);regShowErr('');regStep=Math.max(1,regStep-1);regSave();registerPage();return;} if(act==='reg-goto'){const f=document.querySelector('[data-reg-form]');if(f)regCollect(f);regShowErr('');regStep=Math.min(5,Math.max(1,Number(id)||1));regSave();registerPage();return;} if(act==='reg-pass-eye'){const inputs=[...document.querySelectorAll('[data-reg-form] input[name=password],[data-reg-form] input[name=confirm]')];if(!inputs.length)return;const show=inputs[0].type==='password';inputs.forEach(x=>x.type=show?'text':'password');document.querySelectorAll('[data-reg-form] .password-eye').forEach(b=>{b.textContent=show?'🙈':'👁';});return;} if(act==='reg-otp-send'){const f=document.querySelector('[data-reg-form]');if(f)regCollect(f);const ch=regData.otpChannel==='email'?'email '+regData.email:'SĐT '+regData.phone;const code=String(Math.floor(100000+Math.random()*900000));regOtp={code,exp:Date.now()+5*60000,resendAt:Date.now()+60000};regData.otp=code;regSave();regShowErr('');toast('Mã OTP demo gửi tới '+ch+': '+code+' (đã tự điền)');regOtpTick();regRerender();return;} if(act==='reg-fill-demo'){(async()=>{const keepChannel=regData.otpChannel;regData=regBlank();regData.otpChannel=keepChannel;await regDemoImage('logo','logo-demo.png','LOGO DEMO');await regDemoImage('cccdFront','cccd-truoc.png','CCCD MAT TRUOC');await regDemoImage('cccdBack','cccd-sau.png','CCCD MAT SAU');const code=String(Math.floor(100000+Math.random()*900000));regOtp={code,exp:Date.now()+5*60000,resendAt:Date.now()+60000};regData.otp=code;regSave();regShowErr('');regOtpTick();registerPage();toast('Đã điền demo toàn bộ, OTP: '+code);})().catch(e=>toast(e.message));return;} if(act==='offer-create-open'){
    const dlg=document.querySelector('#offer-editor'),f=dlg.querySelector('form'),first=bpOffers().find(o=>!o.active)||bpOffers()[0],m=model(first.modelId);f.reset();f.elements.offerId.value='';f.elements.modelId.disabled=false;f.elements.modelId.value=m.id;f.elements.price.value=first.price;f.elements.warranty.value=first.warranty;f.elements.stock.value=Math.max(0,first.stock);f.elements.active.value='1';dlg.querySelector('[data-dialog-title]').textContent='Tạo tin bán';dlg.showModal();return;
   }
   if(act==='offer-edit-open'){
@@ -538,6 +694,10 @@ document.addEventListener('click',e=>{
 });
 
 document.addEventListener('change',e=>{
+ if(e.target.closest?.('[data-reg-form]')){
+  if(e.target.type==='file'&&e.target.name.startsWith('file-')){regOnFile(e.target);return;}
+  if(e.target.name==='bizType'){regCollect(e.target.form);regSave();regRerender();return;}
+ }
  if(e.target.closest('[data-form=proposal-builder]'))proposalPreview();
  if(e.target.closest('[data-form=offer-editor]')&&e.target.name==='modelId'){
   const f=e.target.form,o=currentOffer(SHOP_ID+'-'+e.target.value);if(o){f.elements.price.value=o.price;f.elements.warranty.value=o.warranty;f.elements.stock.value=o.stock;f.elements.active.value=o.active?'1':'0';}
@@ -545,11 +705,12 @@ document.addEventListener('change',e=>{
  if(e.target.closest('[data-form=stock-adjust]')&&e.target.name==='stock'){document.querySelector('[data-stock-result]').textContent=e.target.value||'0';}
 });
 document.addEventListener('input',e=>{
+ if(e.target.closest?.('[data-reg-form]')){regOnInput(e.target);return;}
  if(e.target.closest('[data-form=proposal-builder]')&&['fee','assembly'].includes(e.target.name))proposalPreview();
  if(e.target.closest('[data-form=stock-adjust]')&&e.target.name==='stock'){document.querySelector('[data-stock-result]').textContent=e.target.value||'0';}
 });
 
-document.addEventListener('submit',e=>{
+document.addEventListener('submit',async e=>{
  const form=e.target.closest('form[data-form]');if(!form)return;e.preventDefault();
  const name=form.dataset.form;
  if(!form.reportValidity())return;
@@ -558,7 +719,65 @@ document.addEventListener('submit',e=>{
   if(['offer-filter','request-filter','proposal-filter','order-filter','revenue-filter','case-filter'].includes(name)){
    const p=new URLSearchParams();for(const [k,v] of Object.entries(d))if(v)p.set(k,v);location.search=p;return;
   }
-  if(name==='offer-editor'){
+  if(name==='shop-forgot'){
+    const email=String(d.email||'').trim().toLowerCase();
+    const errBox=form.querySelector('[data-forgot-error]');
+    const fail=msg=>{if(errBox){errBox.textContent=msg;errBox.hidden=false;}throw Error(msg);};
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Email chưa đúng định dạng.');
+    const list=shopRecoveryList();
+    list.forEach(r=>{if(r.email===email&&!r.used)r.used=true;});
+    const rec={id:'RESET-'+Math.random().toString(36).slice(2,10).toUpperCase(),email,exp:Date.now()+10*60000,used:false};
+    list.push(rec);shopRecoverySave(list);
+    if(errBox)errBox.hidden=true;
+    const url=link('forgot',{token:rec.id});
+    form.insertAdjacentHTML('afterend','<div class="demo-link-box">Liên kết email mô phỏng (10 phút): <a href="'+url+'">Đặt mật khẩu mới</a></div>');
+    toast('Đã tạo liên kết đặt lại demo.');
+    const btn=form.querySelector('[data-forgot-submit]');if(btn)btn.disabled=true;
+    return;
+   }
+   if(name==='shop-reset'){
+    const rec=shopRecoveryList().find(r=>r.id===d.token);
+    const errBox=form.querySelector('[data-forgot-error]');
+    const fail=msg=>{if(errBox){errBox.textContent=msg;errBox.hidden=false;}throw Error(msg);};
+    if(!rec||rec.used||rec.exp<=Date.now())fail('Liên kết hết hạn hoặc đã dùng.');
+    if(String(d.password||'').length<6)fail('Mật khẩu tối thiểu 6 ký tự.');
+    if(d.password!==d.confirm)fail('Nhập lại mật khẩu chưa khớp.');
+    const list=shopRecoveryList();list.forEach(r=>{if(r.id===rec.id)r.used=true;});shopRecoverySave(list);
+    toast('Đã đặt lại mật khẩu demo, đăng nhập bằng mật khẩu mới.');location.href=link('login');return;
+   }
+   if(name==='shop-login'){
+    if(window.__shopLoginBusy)throw Error('Đang đăng nhập, vui lòng chờ.');
+    const identity=String(d.identity||'').trim(),password=String(d.password||'');
+    const errBox=form.closest('.shop-auth__card')?.querySelector('[data-shop-error]');
+    const fail=msg=>{if(errBox){errBox.textContent=msg;errBox.hidden=false;}throw Error(msg);};
+    const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity),isPhone=/^0\d{9}$/.test(identity.replace(/[\s.]/g,''));
+    if(!identity)fail('Nhập email hoặc số điện thoại.');
+    if(!isEmail&&!isPhone)fail('Email hoặc số điện thoại chưa đúng định dạng.');
+    if(password.length<6)fail('Mật khẩu phải từ 6 ký tự.');
+    if(errBox)errBox.hidden=true;
+    const btn=form.querySelector('[data-shop-submit]');
+    window.__shopLoginBusy=true;if(btn){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent='Đang đăng nhập…';}
+    try{await new Promise(r=>setTimeout(r,600));}finally{window.__shopLoginBusy=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.label;}}
+    try{sessionStorage.setItem('pcmatch-shop-session',JSON.stringify({identity,at:Date.now()}));}catch{}
+    try{localStorage.setItem('pcmatch-shop-remember',form.elements.remember?.checked?'1':'0');}catch{}
+    toast('Đăng nhập demo thành công.');location.href=shopSafeNext()||link('dashboard');return;
+   }
+   if(name==='shop-register'){
+    regCollect(form);
+    let msg='';
+    try{msg=regValid(regStep);}catch(err){msg=err.message;}
+    if(msg){regShowErr(msg);return;}
+    regShowErr('');
+    if(regStep<5){regStep++;regSave();registerPage();return;}
+    if(regBusy)throw Error('Đang gửi hồ sơ, vui lòng chờ.');
+    const btn=form.querySelector('[data-reg-submit]');
+    regBusy=true;if(btn){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent='Đang gửi hồ sơ…';}
+    try{await new Promise(r=>setTimeout(r,800));}finally{regBusy=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.label;}}
+    try{tx(s=>{s.shopApplications||[];s.shopApplications.push({id:uid('APP'),shopName:regData.shopName,email:regData.email,phone:regData.phone,status:'pending',at:Date.now()});});}catch{}
+    try{sessionStorage.removeItem('pcmatch-shop-register-v2');if(regTimer)clearInterval(regTimer);}catch{}
+    regDone=true;registerPage();return;
+   }
+   if(name==='offer-editor'){
    const modelId=d.offerId?currentOffer(d.offerId)?.modelId:d.modelId,id=d.offerId||SHOP_ID+'-'+modelId,o=currentOffer(id);if(!o)throw Error('Model này chưa có dữ liệu tin bán.');
    const price=Number(d.price),warranty=Number(d.warranty),stock=Number(d.stock),reserved=reservedFor(id);if(!Number.isInteger(price)||price<=0)throw Error('Giá bán không hợp lệ.');if(!Number.isInteger(warranty)||warranty<0)throw Error('Bảo hành không hợp lệ.');if(!Number.isInteger(stock)||stock<reserved)throw Error('Tồn mới không được thấp hơn lượng đang giữ ('+reserved+').');
    tx(s=>{const before=currentOffer(id).stock;s.overrides[id]={...s.overrides[id],price,warranty,stock,active:d.active==='1'};if(stock!==before)s.shopMeta.inventoryLog.unshift({offerId:id,before,after:stock,delta:stock-before,reason:'Cập nhật từ tin bán',at:Date.now()});});rerender();toast('Đã lưu tin bán.');return;

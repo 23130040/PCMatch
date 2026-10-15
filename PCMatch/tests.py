@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import resolve, reverse
@@ -49,6 +50,55 @@ class PageParser(HTMLParser):
             self.in_config = False
 
 class FrontendPagesTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = get_user_model().objects.create_user(
+            username='stafftest', email='stafftest@pcmatch.vn',
+            password='StaffTest123!', full_name='Staff Test',
+            role='ADMIN', status='ACTIVE', is_staff=True,
+        )
+        cls.buyer = get_user_model().objects.create_user(
+            username='buyertest@pcmatch.vn', email='buyertest@pcmatch.vn',
+            password='BuyerTest123!', full_name='Buyer Test',
+            role='BUYER', status='ACTIVE',
+        )
+
+    def setUp(self):
+        self.client.force_login(self.staff)
+
+    def test_staff_pages_require_login(self):
+        login_url = reverse('staff_login')
+        dashboard = reverse('staff_dashboard')
+        self.client.logout()
+        response = self.client.get(dashboard)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(login_url))
+        self.client.force_login(self.buyer)
+        response = self.client.get(dashboard)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(login_url))
+        response = self.client.post(login_url, {'username': 'buyertest@pcmatch.vn', 'password': 'BuyerTest123!'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'không có quyền quản trị')
+        self.client.logout()
+        response = self.client.post(login_url, {'username': 'stafftest', 'password': 'StaffTest123!'})
+        self.assertRedirects(response, dashboard, fetch_redirect_response=False)
+        self.client.logout()
+        response = self.client.post(login_url, {'username': 'stafftest@pcmatch.vn', 'password': 'sai'})
+        self.assertEqual(response.status_code, 200)
+        self.client.logout()
+        response = self.client.get(login_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_logout(self):
+        logout_url = reverse('staff_logout')
+        response = self.client.get(logout_url)
+        self.assertRedirects(response, reverse('staff_dashboard'), fetch_redirect_response=False)
+        response = self.client.post(logout_url)
+        self.assertRedirects(response, reverse('staff_login'), fetch_redirect_response=False)
+        response = self.client.get(reverse('staff_dashboard'))
+        self.assertEqual(response.status_code, 302)
+
     def test_all_pages_render_with_resolvable_links_and_assets(self):
         pages = [('index', 'sitemap', 'index')]
         pages += [
@@ -58,6 +108,10 @@ class FrontendPagesTests(TestCase):
         ]
         for name, section, page in pages:
             with self.subTest(page=name):
+                if name == 'staff_login':
+                    self.client.logout()
+                else:
+                    self.client.force_login(self.staff)
                 path = reverse(name)
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
@@ -82,7 +136,7 @@ class FrontendPagesTests(TestCase):
                     self.assertTrue(url.path.startswith(settings.STATIC_URL), asset)
                     asset_path = unquote(url.path[len(settings.STATIC_URL):])
                     self.assertIsNotNone(finders.find(asset_path), asset)
-                if section == 'staff':
+                if section == 'staff' and name != 'staff_login':
                     self.assertEqual(parser.components, {
                         'sidebar': 1, 'topbar': 1, 'service-bar': 1,
                     })
