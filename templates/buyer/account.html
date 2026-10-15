@@ -1,3 +1,125 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tài khoản — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Tài khoản — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Xin chào, {{ request.user.full_name|default:request.user.username }}
+        </h1>
+        <p>
+            {{ request.user.email }}
+        </p>
+    </div>
+    <div class="cluster">
+        <form method="post" action="{% url 'auth_logout' %}">{% csrf_token %}<button type="submit" class="btn btn--secondary">Đăng xuất</button></form>
+    </div>
+</div>
+<nav class="account-links">
+    <a class="btn btn--secondary" href="/buyer/chat/">
+        Chat với shop
+    </a>
+    <a class="btn btn--secondary" href="/buyer/addresses/">
+        Địa chỉ giao hàng
+    </a>
+    <a class="btn btn--secondary" href="/buyer/builds/">
+        Cấu hình đã lưu
+    </a>
+    <a class="btn btn--secondary" href="/buyer/requests/">
+        Yêu cầu ngân sách
+    </a>
+    <a class="btn btn--secondary" href="/buyer/consultation/">
+        Tư vấn cấu hình
+    </a>
+    <a class="btn btn--secondary" href="/buyer/orders/">
+        Lịch sử đơn hàng
+    </a>
+    <a class="btn btn--secondary" href="/buyer/cases/">
+        Hậu mãi
+        &amp;
+        hỗ trợ
+    </a>
+    <a class="btn btn--secondary" href="/buyer/notifications/">
+        Thông báo
+    </a>
+</nav>
+<div class="two-col">
+    <section class="panel panel--padded">
+        <h2>
+            Hồ sơ
+        </h2>
+        <section class="stack" id="" data-backend-form="pending">
+            <label class="field">
+                <span>
+                    Username
+                </span>
+                <input name="name" type="text" value="{{ request.user.full_name }}" required="" maxlength="80">
+            </label>
+            <label class="field">
+                <span>
+                    Email
+                </span>
+                <input name="email" type="email" value="{{ request.user.email }}" disabled="">
+            </label>
+            <label class="field">
+                <span>
+                    Số điện thoại liên hệ
+                </span>
+                <input name="phone" type="tel" value="{{ request.user.phone }}" pattern="0[0-9]{9}">
+            </label>
+            <button class="btn btn--primary" type="button" disabled="">
+                Lưu hồ sơ
+            </button>
+            <button type="button" class="btn btn--secondary" data-id="" disabled="">
+                Hủy thay đổi
+            </button>
+            <p class="form-error" role="alert">
+            </p>
+        </section>
+    </section>
+    <section class="panel panel--padded">
+        <h2>
+            Đổi mật khẩu
+        </h2>
+        <section class="stack" id="" data-backend-form="pending">
+            <label class="field password-field">
+                <span>
+                    Mật khẩu hiện tại
+                </span>
+                <span class="password-wrap">
+                    <input name="old" type="password" required="">
+                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
+                        👁
+                    </button>
+                </span>
+            </label>
+            <label class="field password-field">
+                <span>
+                    Mật khẩu mới
+                </span>
+                <span class="password-wrap">
+                    <input name="password" type="password" required="" minlength="8">
+                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
+                        👁
+                    </button>
+                </span>
+            </label>
+            <label class="field password-field">
+                <span>
+                    Nhập lại mật khẩu
+                </span>
+                <span class="password-wrap">
+                    <input name="confirm" type="password" required="" minlength="8">
+                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
+                        👁
+                    </button>
+                </span>
+            </label>
+            <button class="btn btn--primary" type="button" disabled="">
+                Đổi mật khẩu
+            </button>
+            <p class="form-error" role="alert">
+            </p>
+        </section>
+    </section>
+</div>
+{% endblock %}

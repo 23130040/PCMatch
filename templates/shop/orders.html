@@ -1,10 +1,8 @@
 {% load static %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Danh sách đơn hàng — PCMatch</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Danh sách đơn hàng</title>
 <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -12,5 +10,255 @@
 <link rel="stylesheet" href="{% static 'css/production.css' %}">
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
 {% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+<body class="shop-app">
+<a class="skip-link" href="#main">
+    Bỏ qua điều hướng
+</a>
+<div class="service-bar">
+    BuildPro Sài Gòn · Trung tâm vận hành shop
+</div>
+<header class="topbar">
+    <div class="container topbar__inner" style="max-width:none">
+        <button class="menu-toggle" type="button" data-sidebar-toggle="" aria-expanded="false" aria-label="Mở sidebar">
+            <span>
+            </span>
+        </button>
+        <a class="logo" href="/shop/dashboard/">
+            <i class="logo__mark">
+            </i>
+            <span>
+                PC
+            </span>
+            <span>
+                Match Shop
+            </span>
+        </a>
+        <label class="search shop-top-search">
+            <span class="sr-only">
+                Tìm trong shop
+            </span>
+            <input id="shop-global-search" placeholder="Tìm request, proposal, offer hoặc đơn">
+            <i class="search__glyph">
+            </i>
+        </label>
+        <nav class="nav-links">
+            <a href="/buyer/home/">
+                Mở phía người mua
+            </a>
+            <a href="/shop/dashboard/">
+                BuildPro Sài Gòn
+            </a>
+        </nav>
+    </div>
+</header>
+<div class="shop-shell">
+    <aside class="shop-sidebar">
+        <div class="shop-sidebar__brand">
+            <strong>
+                BuildPro Sài Gòn
+            </strong>
+            <small>
+                Shop đã xác minh · Chủ shop
+            </small>
+        </div>
+        <nav>
+            <p class="sidebar__group">
+                Vận hành
+            </p>
+            <a href="/shop/dashboard/">
+                Tổng quan
+            </a>
+            <a href="/shop/offers/">
+                Tin bán
+                <span class="sidebar__count">
+                    14
+                </span>
+            </a>
+            <a href="/shop/inventory/">
+                Kho
+                <span class="sidebar__count">
+                    1 thấp
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Công việc
+            </p>
+            <a href="/shop/build-requests/">
+                Yêu cầu Build
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/proposal-list/">
+                Proposal
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/orders/" aria-current="page">
+                Đơn hàng
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/fulfillment/">
+                Giao hàng
+            </a>
+            <a href="/shop/aftersales/">
+                Hậu mãi
+                <span class="sidebar__count">
+                    0
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Tài chính
+            </p>
+            <a href="/shop/revenue/">
+                Doanh thu
+            </a>
+            <p class="sidebar__group">
+                Cài đặt
+            </p>
+            <a href="/shop/login/">
+                Đăng xuất
+            </a>
+        </nav>
+    </aside>
+    <main class="shop-main" id="main">
+        <nav class="breadcrumb">
+            <a href="/shop/dashboard/">
+                Cổng Shop
+            </a>
+            <span>
+                Đơn hàng
+            </span>
+        </nav>
+        <div class="page-head">
+            <div>
+                <h1>
+                    Đơn hàng
+                </h1>
+                <p>
+                    Theo dõi các đơn con của BuildPro theo trạng thái xử lý.
+                </p>
+            </div>
+            <div class="cluster">
+                <a class="btn btn--secondary" href="/shop/fulfillment/">
+                    Mở giao hàng
+                </a>
+            </div>
+        </div>
+        <div class="shop-status-tabs">
+            <a href="/shop/orders/" aria-current="page">
+                Tất cả
+                <strong>
+                    1
+                </strong>
+            </a>
+            <a href="/shop/orders/?state=Ch%E1%BB%9D+shop+x%C3%A1c+nh%E1%BA%ADn">
+                Chờ shop xác nhận
+                <strong>
+                    1
+                </strong>
+            </a>
+        </div>
+        <section class="shop-toolbar--compact shop-toolbar" id="" data-backend-form="pending">
+            <label class="field">
+                <span>
+                    Tìm đơn
+                </span>
+                <input name="q" value="" placeholder="PCM-, SUB-, người mua...">
+            </label>
+            <label class="field">
+                <span>
+                    Trạng thái
+                </span>
+                <select name="state">
+                    <option value="">
+                        Tất cả
+                    </option>
+                    <option value="Chờ shop xác nhận">
+                        Chờ shop xác nhận
+                    </option>
+                </select>
+            </label>
+            <button class="btn btn--secondary" disabled="">
+                Lọc
+            </button>
+        </section>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            Đơn con
+                        </th>
+                        <th>
+                            Người mua
+                        </th>
+                        <th>
+                            Nguồn
+                        </th>
+                        <th>
+                            Tổng
+                        </th>
+                        <th>
+                            Thanh toán
+                        </th>
+                        <th>
+                            Trạng thái
+                        </th>
+                        <th>
+                            Giao nhận
+                        </th>
+                        <th>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>
+                                SUB-BP-002
+                            </strong>
+                            <small>
+                                PCM-260916-014 · 00:06 16/10/26
+                            </small>
+                        </td>
+                        <td>
+                            Nguyễn Minh
+                        </td>
+                        <td>
+                            Mua trực tiếp
+                        </td>
+                        <td>
+                            10.235.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            <span class="status status--info">
+                                Đã thanh toán
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status status--warn">
+                                Chờ shop xác nhận
+                            </span>
+                        </td>
+                        <td>
+                            Chưa tạo vận đơn
+                        </td>
+                        <td>
+                            <a class="btn btn--quiet" href="/shop/order/?sub=SUB-BP-002">
+                                Mở
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+<script src="{% static 'js/shop-interface.js' %}" defer></script>
+</body></html>

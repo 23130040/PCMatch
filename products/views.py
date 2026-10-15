@@ -1,9 +1,28 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.urls import reverse
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from urllib.parse import urlencode
 from django.db.models import Count, Q
 from .forms import AdminProductFilterForm, CatalogFilterForm
-from .models import Product
+from .models import Category, Product
+from shops.models import Shop
+from .comparison import SESSION_KEY, comparison_products, parse_product_ids, session_products
+
+
+def buyer_home(request):
+    products = Product.objects.filter(status='ACTIVE').select_related('category', 'brand', 'shop').prefetch_related('specifications')
+    return render(request, 'buyer/home.html', {
+        'page_name': 'home', 'page_section': 'buyer',
+        'categories': Category.objects.filter(status=True).order_by('category_name'),
+        'newest_products': products.order_by('-created_at', '-pk')[:4],
+        'bestselling_products': products.order_by('-sold_quantity', '-created_at', '-pk')[:4],
+        'shops': Shop.objects.filter(status='ACTIVE').order_by('shop_name')[:6],
+    })
 
 def load_products(request):
     selling = Q(status='ACTIVE', stock_quantity__gt=0)
@@ -41,6 +60,8 @@ def load_products(request):
         products = products.filter(status_filters[selected_status])
     products = products.order_by('-created_at', '-product_id')
     show_product = Paginator(products, 10).get_page(request.GET.get('page'))
+    for product in show_product:
+        product.current_sales_value = product.price * product.sold_quantity
     query_params = request.GET.copy()
     query_params.pop('page', None)
     context = {
@@ -86,6 +107,7 @@ def buyer_product_list(request):
             products = products.filter(
                 Q(product_name__icontains=keyword)
                 | Q(brand__brand_name__icontains=keyword)
+                | Q(category__category_name__icontains=keyword)
                 | Q(slug__icontains=keyword)
             )
         for field in ['category', 'brand', 'shop']:
@@ -139,26 +161,14 @@ def buyer_product_list(request):
 
 def buyer_product_compare(request):
     context = {'page_name': 'compare', 'page_section': 'buyer'}
-    if request.GET.get('source') != 'database':
-        return render(request, 'buyer/compare.html', context)
 
-    ids = []
-    for value in request.GET.get('products', '')[:100].split(','):
-        if value.isascii() and value.isdigit() and len(value) <= 18:
-            product_id = int(value)
-            if product_id not in ids:
-                ids.append(product_id)
-        if len(ids) == 4:
-            break
-    found = {
-        product.pk: product for product in Product.objects.filter(pk__in=ids)
-        .select_related('category', 'brand', 'shop').prefetch_related('specifications')
-    }
-    products = [found[product_id] for product_id in ids if product_id in found]
+    ids = parse_product_ids(request.GET.getlist('products')) if 'products' in request.GET else parse_product_ids(request.session.get(SESSION_KEY, []))
+    products = comparison_products(ids)
     error = ''
     if len({product.category_id for product in products}) > 1:
         error = 'Chỉ so sánh sản phẩm cùng danh mục.'
         products = []
+    request.session[SESSION_KEY] = [product.pk for product in products]
 
     rows = [
         {'label': 'Danh mục', 'values': [product.category.category_name for product in products]},
@@ -193,6 +203,68 @@ def buyer_product_compare(request):
     })
     return render(request, 'buyer/compare.html', context)
 
+
+@require_POST
+def buyer_comparison_update(request):
+    products = session_products(request)
+    action = request.POST.get('action')
+    ids = parse_product_ids([request.POST.get('product_id', '')])
+    error = ''
+    message = ''
+    if action == 'clear':
+        products = []
+        message = 'Đã xóa danh sách so sánh.'
+    elif action == 'remove' and ids:
+        products = [product for product in products if product.pk != ids[0]]
+        message = 'Đã bỏ sản phẩm khỏi so sánh.'
+    elif action == 'add' and ids:
+        product = Product.objects.filter(pk=ids[0]).first()
+        if product is None:
+            error = 'Không tìm thấy sản phẩm.'
+        elif any(item.pk == product.pk for item in products):
+            message = 'Sản phẩm đã có trong danh sách so sánh.'
+        elif any(item.category_id != product.category_id for item in products):
+            error = 'Chỉ so sánh sản phẩm cùng danh mục. Xóa danh sách hiện tại để chọn danh mục khác.'
+        elif len(products) >= 4:
+            error = 'Chỉ được so sánh tối đa 4 sản phẩm.'
+        else:
+            products.append(product)
+            message = f'Đã thêm {product.product_name} vào so sánh.'
+    else:
+        error = 'Thao tác so sánh không hợp lệ.'
+    request.session[SESSION_KEY] = [product.pk for product in products]
+    target = request.POST.get('return_to', '')
+    if not (target.startswith(('/buyer/', '/?')) or target == '/') or not url_has_allowed_host_and_scheme(
+        target, {request.get_host()}, require_https=request.is_secure(),
+    ):
+        target = reverse('buyer_search')
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({
+            'html': render_to_string('includes/compare_tray.html', {
+                'comparison_products': products, 'compare_return_to': target,
+            }, request=request),
+            'selected': [product.pk for product in products],
+            'message': error or message, 'error': bool(error),
+        }, status=400 if error else 200)
+    if error:
+        messages.error(request, error)
+    else:
+        messages.success(request, message)
+    return redirect(target)
+
+
+def buyer_model(request):
+    value = request.GET.get('id', '')
+    if value.isascii() and value.isdigit() and len(value) <= 18:
+        return redirect('buyer_product_detail', product_id=int(value))
+    return redirect('buyer_search')
+
+
+def buyer_shop(request):
+    value = request.GET.get('id', '')
+    if value.isascii() and value.isdigit() and len(value) <= 18:
+        return redirect(reverse('buyer_search') + '?' + urlencode({'shop': value}))
+    return redirect('buyer_search')
 
 def product_detail(request, product_id):
     product = get_object_or_404(

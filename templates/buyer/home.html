@@ -1,14 +1,59 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mua linh kiện — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch...</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><template data-page="home">
-  <section class="home-banners" aria-label="Khám phá mua sắm" data-content="banners"></section>
-  <nav class="category-strip" aria-label="Danh mục linh kiện" data-content="categories"></nav>
-  <section class="home-newest" role="region" aria-roledescription="banner luân phiên" tabindex="0" aria-labelledby="newest-title" data-content="newest"></section>
-  <section aria-labelledby="bestsellers-title">
-    <div class="section-heading"><h2 id="bestsellers-title">Sản phẩm bán chạy</h2><a class="btn btn--secondary" href="{% url 'buyer_search' %}?sort=sold" data-bestsellers-all>Xem tất cả</a></div>
-    <p class="muted">Xếp theo số lượng bán trong dữ liệu demo, không phải thống kê giao dịch thật của sàn.</p>
-    <div class="catalog-grid" data-content="bestsellers"></div>
-  </section>
-  <section class="build-entry" data-content="build"></section>
-  <section aria-labelledby="shops-title"><div class="section-heading"><h2 id="shops-title">Gian hàng trên PCMatch</h2></div><div class="shop-strip" data-content="shops"></div></section>
-</template><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% load static cart_prices %}
+{% block title %}Mua linh kiện — PCMatch{% endblock %}
+{% block body_class %}home-page catalog-page{% endblock %}
+{% block content %}
+<section class="home-banners" aria-label="Khám phá mua sắm">
+    <article class="home-banner home-banner--parts">
+        <div class="home-banner-copy"><h1>Chọn linh kiện. Chọn shop phù hợp.</h1><p>Khám phá sản phẩm và đối chiếu giá, bảo hành từ từng cửa hàng.</p><a class="btn btn--primary" href="{% url 'buyer_search' %}">Khám phá sản phẩm</a></div>
+        <div class="home-media"><img src="{% static 'images/products/msi-pro-b650m-a-wifi.png' %}" alt="Bo mạch chủ MSI" width="480" height="320" decoding="async"></div>
+    </article>
+    <article class="home-banner home-banner--graphics">
+        <div class="home-banner-copy"><h2>Tìm card đồ họa cho PC của bạn</h2><p>Đối chiếu VRAM, kích thước và nguồn đề nghị.</p><a class="btn btn--secondary" href="{% url 'buyer_search' %}?q=Card+đồ+họa">Khám phá card đồ họa</a></div>
+        <div class="home-media"><img src="{% static 'images/products/asus-dual-rtx-5060.png' %}" alt="Card đồ họa ASUS Dual RTX" width="480" height="320" decoding="async"></div>
+    </article>
+</section>
+<nav class="category-strip" aria-label="Danh mục linh kiện">
+    <a href="{% url 'buyer_search' %}?q=Bộ+xử+lý"><strong>CPU</strong><span>Bộ xử lý</span></a>
+    <a href="{% url 'buyer_search' %}?q=Mainboard"><strong>MB</strong><span>Mainboard</span></a>
+    <a href="{% url 'buyer_search' %}?q=Bộ+nhớ"><strong>RAM</strong><span>Bộ nhớ</span></a>
+    <a href="{% url 'buyer_search' %}?q=Card+đồ+họa"><strong>GPU</strong><span>Card đồ họa</span></a>
+    <a href="{% url 'buyer_search' %}?q=Lưu+trữ"><strong>SSD</strong><span>Lưu trữ</span></a>
+    <a href="{% url 'buyer_search' %}?q=Bộ+nguồn"><strong>PSU</strong><span>Bộ nguồn</span></a>
+    <a href="{% url 'buyer_search' %}?q=Vỏ+máy"><strong>CASE</strong><span>Vỏ máy</span></a>
+    <a href="{% url 'buyer_search' %}?q=Tản+nhiệt"><strong>COOL</strong><span>Tản nhiệt</span></a>
+</nav>
+<section class="home-newest" role="region" aria-roledescription="banner luân phiên" tabindex="0" aria-labelledby="newest-title" data-home-carousel>
+    <header class="home-newest-heading"><h2 id="newest-title">Sản phẩm mới nhất</h2><p>Khám phá linh kiện mới thêm vào PCMatch</p></header>
+    <div class="home-newest-stage">
+        {% for product in newest_products %}
+        <article class="home-newest-slide" id="newest-slide-{{ forloop.counter0 }}" role="group" aria-roledescription="slide" aria-label="{{ forloop.counter }} / {{ newest_products|length }} · {{ product.product_name }}"{% if not forloop.first %} hidden{% endif %}>
+            <div class="home-newest-copy">
+                <p class="home-newest-category">{{ product.category.category_name }}</p><h3>{{ product.product_name }}</h3>
+                <p class="muted">Thêm vào ngày <time datetime="{{ product.created_at|date:'c' }}">{{ product.created_at|date:'d/m/Y' }}</time></p>
+                <div class="home-specs">{% for specification in product.specifications.all|slice:':3' %}<span>{{ specification.specification_name }}: {{ specification.specification_value }}</span>{% endfor %}</div>
+                <p class="home-price">Giá bán <strong>{{ product.price|vnd }} ₫</strong> · {{ product.shop.shop_name }}</p>
+                <div class="cluster"><a class="btn btn--primary" href="{% url 'buyer_product_detail' product.pk %}">Xem sản phẩm</a><a class="btn btn--secondary" href="{% url 'buyer_search' %}?shop={{ product.shop_id }}">Xem sản phẩm của shop</a></div>
+            </div>
+            <div class="home-media">{% if product.thumbnail %}<img src="{{ product.thumbnail.url }}" alt="{{ product.product_name }}" width="480" height="320" loading="lazy">{% else %}<span>Chưa có ảnh sản phẩm</span>{% endif %}</div>
+        </article>
+        {% empty %}<div class="empty"><p>Chưa có sản phẩm mới.</p></div>{% endfor %}
+        {% if newest_products|length > 1 %}<button class="btn btn--secondary home-newest-arrow" type="button" data-newest-step="-1" aria-label="Banner trước">‹</button><button class="btn btn--secondary home-newest-arrow" type="button" data-newest-step="1" aria-label="Banner tiếp theo">›</button>{% endif %}
+    </div>
+    <div class="home-newest-controls"{% if newest_products|length < 2 %} hidden{% endif %}>
+        <div class="home-newest-dots" role="group" aria-label="Chọn banner sản phẩm">{% for product in newest_products %}<button type="button" data-newest-index="{{ forloop.counter0 }}" aria-controls="newest-slide-{{ forloop.counter0 }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}" aria-label="Xem {{ product.product_name }}"><span aria-hidden="true"></span></button>{% endfor %}</div>
+        <span data-newest-position>1 / {{ newest_products|length }}</span>
+    </div>
+</section>
+<section aria-labelledby="bestsellers-title">
+    <div class="section-heading"><h2 id="bestsellers-title">Sản phẩm bán chạy</h2><a class="btn btn--secondary" href="{% url 'buyer_search' %}?sort=sold">Xem tất cả</a></div>
+    <div class="catalog-grid">{% for product in bestselling_products %}{% include 'includes/product_card.html' %}{% empty %}<p class="muted">Chưa có sản phẩm đang bán.</p>{% endfor %}</div>
+</section>
+<section class="build-entry"><div><h2>Cần chọn cả cấu hình?</h2><p>Tự chọn từng linh kiện hoặc gửi nhu cầu để shop đề xuất.</p></div><div class="cluster"><a class="btn btn--secondary" href="{% url 'buyer_builder' %}">Tự build PC</a><a class="btn btn--secondary" href="{% url 'buyer_requests' %}">Build theo ngân sách</a></div></section>
+<section aria-labelledby="shops-title"><div class="section-heading"><h2 id="shops-title">Gian hàng trên PCMatch</h2></div>
+    <div class="shop-strip">
+        {% for shop in shops %}<a href="{% url 'buyer_search' %}?shop={{ shop.pk }}"><strong>{{ shop.shop_name }}</strong><span>Khám phá sản phẩm</span></a>
+        {% empty %}<a href="{% url 'buyer_search' %}"><strong>BuildPro Sài Gòn</strong><span>TP. Hồ Chí Minh · Linh kiện máy tính</span></a><a href="{% url 'buyer_search' %}"><strong>TechZone Hà Nội</strong><span>Hà Nội · Phụ kiện và cấu hình</span></a><a href="{% url 'buyer_search' %}"><strong>NovaPC Đà Nẵng</strong><span>Đà Nẵng · Khám phá linh kiện</span></a>{% endfor %}
+    </div>
+</section>
+{% endblock %}

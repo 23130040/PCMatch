@@ -1,10 +1,8 @@
 {% load static %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Đăng ký làm người bán — PCMatch</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng ký làm người bán</title>
 <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -12,5 +10,191 @@
 <link rel="stylesheet" href="{% static 'css/production.css' %}">
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
 {% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Kênh người bán…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+<body class="shop-app shop-auth-page">
+<a class="skip-link" href="#main">
+    Bỏ qua điều hướng
+</a>
+<div class="service-bar">
+    PCMatch · Kênh người bán
+</div>
+<header class="topbar">
+    <div class="container topbar__inner" style="max-width:none">
+        <a class="logo" href="/shop/login/">
+            <i class="logo__mark">
+            </i>
+            <span>
+                PC
+            </span>
+            <span>
+                Match Shop
+            </span>
+        </a>
+        <nav class="nav-links">
+            <a href="/shop/login/">
+                Đã có tài khoản? Đăng nhập
+            </a>
+        </nav>
+    </div>
+</header>
+<main id="main">
+    <div class="shop-reg">
+        <section class="shop-reg__card" aria-labelledby="reg-title">
+            <div class="shop-reg__brand">
+                <h1 id="reg-title">
+                    Đăng ký làm người bán
+                </h1>
+                <p>
+                    Hoàn tất 5 bước, hồ sơ được duyệt trong 1–3 ngày làm việc.
+                </p>
+            </div>
+            <div class="shop-auth__error" data-reg-error="" hidden="" role="alert">
+            </div>
+            <div class="reg-demo">
+                <button type="button" class="btn btn--secondary" disabled="">
+                    Tự điền toàn bộ demo
+                </button>
+            </div>
+            <ol class="reg-steps">
+                <li class="reg-steps__item is-current">
+                    <span class="reg-steps__num">
+                        1
+                    </span>
+                    <span>
+                        Tài khoản
+                    </span>
+                </li>
+                <li class="reg-steps__item ">
+                    <span class="reg-steps__num">
+                        2
+                    </span>
+                    <span>
+                        Thông tin shop
+                    </span>
+                </li>
+                <li class="reg-steps__item ">
+                    <span class="reg-steps__num">
+                        3
+                    </span>
+                    <span>
+                        Xác minh danh tính
+                    </span>
+                </li>
+                <li class="reg-steps__item ">
+                    <span class="reg-steps__num">
+                        4
+                    </span>
+                    <span>
+                        Thanh toán
+                    </span>
+                </li>
+                <li class="reg-steps__item ">
+                    <span class="reg-steps__num">
+                        5
+                    </span>
+                    <span>
+                        Xác nhận
+                    </span>
+                </li>
+            </ol>
+            <div class="reg-progress" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="5">
+                <i style="width:20%">
+                </i>
+            </div>
+            <section class="shop-reg__form" id="" data-backend-form="pending">
+                <div data-reg-body="">
+                    <div class="reg-pane">
+                        <h2>
+                            Tài khoản đăng nhập
+                        </h2>
+                        <label class="field">
+                            <span>
+                                Email *
+                            </span>
+                            <input name="email" type="email" autocomplete="email" required="" placeholder="shop@pcmatch.vn">
+                        </label>
+                        <label class="field">
+                            <span>
+                                Số điện thoại *
+                            </span>
+                            <input name="phone" type="tel" value="0901234567" required="" pattern="0[0-9]{9}" placeholder="0901234567">
+                        </label>
+                        <label class="field">
+                            <span>
+                                Mật khẩu (tối thiểu 8 ký tự) *
+                            </span>
+                            <span class="password-wrap">
+                                <input name="password" type="password" autocomplete="new-password" required="" minlength="8">
+                                <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
+                                    👁
+                                </button>
+                            </span>
+                        </label>
+                        <div class="pw-meter" data-pw-meter="" data-level="3">
+                            <i>
+                            </i>
+                            <i>
+                            </i>
+                            <i>
+                            </i>
+                            <i>
+                            </i>
+                        </div>
+                        <small class="pw-hint">
+                            Mạnh
+                        </small>
+                        <label class="field">
+                            <span>
+                                Nhập lại mật khẩu *
+                            </span>
+                            <span class="password-wrap">
+                                <input name="confirm" type="password" autocomplete="new-password" required="" minlength="8">
+                                <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
+                                    👁
+                                </button>
+                            </span>
+                        </label>
+                        <fieldset class="otp-box">
+                            <legend>
+                                Xác thực OTP *
+                            </legend>
+                            <div class="otp-box__row">
+                                <label class="check">
+                                    <input type="radio" name="otpChannel" value="sms" checked="">
+                                    <span>
+                                        SMS
+                                    </span>
+                                </label>
+                                <label class="check">
+                                    <input type="radio" name="otpChannel" value="email">
+                                    <span>
+                                        Email
+                                    </span>
+                                </label>
+                                <button type="button" class="btn btn--secondary" disabled="">
+                                    Gửi mã
+                                </button>
+                            </div>
+                            <label class="field">
+                                <span>
+                                    Mã OTP 6 số
+                                </span>
+                                <input name="otp" type="text" inputmode="numeric" maxlength="6" value="" placeholder="Nhập mã demo hiện trong thông báo">
+                            </label>
+                        </fieldset>
+                    </div>
+                </div>
+                <div class="reg-nav">
+                    <span>
+                    </span>
+                    <button class="btn btn--primary" type="button" disabled="">
+                        Tiếp tục
+                    </button>
+                </div>
+            </section>
+            <footer class="shop-auth__footer">
+            </footer>
+        </section>
+    </div>
+</main>
+<script src="{% static 'js/shop-interface.js' %}" defer></script>
+</body></html>

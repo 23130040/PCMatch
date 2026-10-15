@@ -1,3 +1,227 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tự build PC — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Tự build PC — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Cấu hình của tôi
+        </h1>
+        <p>
+            BLD-405A861E · Phiên bản 1
+        </p>
+    </div>
+    <div class="cluster">
+        <a class="btn btn--secondary" href="/buyer/builds/">
+            Cấu hình đã lưu
+        </a>
+    </div>
+</div>
+<div class="message message--info">
+    Mua các món đã chọn hoặc kiểm tra đủ bộ riêng. Linh kiện đã có không cộng tiền mua.
+</div>
+<div class="carts-layout">
+    <section class="stack">
+        <section class="panel panel--padded">
+            <h2>
+                CPU · Bộ xử lý
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=CPU&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Bộ xử lý
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                MB · Mainboard
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=MB&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Mainboard
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                RAM · Bộ nhớ
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=RAM&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Bộ nhớ
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                GPU · Card đồ họa
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=GPU&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Card đồ họa
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                SSD · Lưu trữ
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=SSD&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Lưu trữ
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                PSU · Bộ nguồn
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=PSU&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Bộ nguồn
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                CASE · Vỏ máy
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=CASE&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Vỏ máy
+            </a>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                COOL · Tản nhiệt
+            </h2>
+            <a class="btn btn--secondary" href="/buyer/search/?slot=COOL&amp;build=BLD-405A861E&amp;version=1">
+                Chọn Tản nhiệt
+            </a>
+        </section>
+    </section>
+    <aside class="stack">
+        <section class="panel panel--padded">
+            <h2>
+                Chi phí cần mua
+            </h2>
+            <strong class="price">
+                0
+                &nbsp;
+                ₫
+            </strong>
+            <p>
+                Chưa gồm phí giao. Không hỗ trợ lắp ráp cấu hình nhiều shop.
+            </p>
+            <section class="stack" id="" data-backend-form="pending">
+                <label class="field">
+                    <span>
+                        Tên cấu hình
+                    </span>
+                    <input name="name" type="text" value="Cấu hình của tôi" required="" maxlength="80">
+                </label>
+                <button class="btn btn--primary" type="button" disabled="">
+                    Lưu cấu hình
+                </button>
+                <p class="form-error" role="alert">
+                </p>
+            </section>
+            <div class="stack">
+                <button type="button" class="btn btn--primary" data-id="" disabled="">
+                    Mua các món đã chọn
+                </button>
+                <button type="button" class="btn btn--secondary" data-id="" disabled="">
+                    Kiểm tra mua trọn bộ
+                </button>
+                <a class="btn btn--secondary" href="/buyer/consultation/?new=1">
+                    Gửi shop tư vấn
+                </a>
+                <button type="button" class="btn btn--secondary" data-id="" disabled="">
+                    Làm mới cấu hình
+                </button>
+            </div>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                Kiểm tra theo dữ liệu demo
+            </h2>
+            <ul class="compat-results">
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        CPU và socket mainboard
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        RAM và mainboard
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        GPU và case
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        Công suất nguồn
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        Chiều cao tản
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        Ngàm tản và CPU
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        Mainboard và case
+                    </strong>
+                    <p>
+                        Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                    </p>
+                </li>
+                <li>
+                    <span class="status status--warn">
+                        Chưa đủ dữ liệu
+                    </span>
+                    <strong>
+                        BIOS, khe SSD và đầu cấp điện
+                    </strong>
+                    <p>
+                        Dữ liệu demo chưa đủ BIOS lô hàng, khe M.2 và đầu cắm nguồn. Hỏi shop; không coi là đã đạt.
+                    </p>
+                </li>
+            </ul>
+        </section>
+    </aside>
+</div>
+{% endblock %}

@@ -1,22 +1,10 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}" data-catalog-source="database">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tất cả sản phẩm — PCMatch</title>
-    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/buyer.css' %}?v=product-detail-1">
-    {% include 'includes/frontend_config.html' %}
-</head>
-<body data-buyer-app>
-<main id="main"><p role="status">Đang tải sản phẩm…</p></main>
-<noscript>Vui lòng bật JavaScript để hiển thị giao diện.</noscript>
-<template data-page="search">
-    <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
+{% extends 'includes/buyer_base.html' %}
+{% load cart_prices %}
+{% block body_class %}catalog-page{% endblock %}
+{% block html_attributes %} data-catalog-source="database"{% endblock %}
+{% block title %}Tất cả sản phẩm — PCMatch{% endblock %}
+{% block content %}
+<nav class="catalog-breadcrumb" aria-label="Đường dẫn">
         <a href="{% url 'buyer_home' %}">Trang chủ</a>
         <span aria-hidden="true">/</span>
         <span aria-current="page">Tất cả sản phẩm</span>
@@ -28,11 +16,10 @@
         </div>
     </header>
     <div class="catalog-toolbar">
-        <button class="btn btn--secondary filter-toggle" type="button" data-action="filters-open"
-                aria-controls="filter-drawer" aria-expanded="false">Bộ lọc &amp; sắp xếp
-        </button>
+        <button class="btn btn--secondary filter-toggle" type="button" data-ui-filters aria-controls="filter-drawer" aria-expanded="false">Bộ lọc &amp; sắp xếp</button>
+
         <p data-content="count" role="status">Tìm thấy {{ page_obj.paginator.count }} sản phẩm</p>
-        <a class="btn btn--secondary" href="{% url 'buyer_compare' %}" data-compare-link>So sánh (0)</a>
+        <a class="btn btn--secondary" href="{% url 'buyer_compare' %}" data-compare-link>So sánh (<span data-compare-count>{{ comparison_products|length }}</span>)</a>
     </div>
     <div class="search-layout">
         <aside id="filter-home" class="filter-sidebar">
@@ -116,7 +103,7 @@
                             </p>
                             <div class="catalog-price">
                                 <small>Giá bán</small>
-                                <strong data-product-price="{{ product.price|floatformat:'2u' }}">{{ product.price|floatformat:'0g' }}
+                                <strong data-product-price="{{ product.price|floatformat:'2u' }}">{{ product.price|vnd }}
                                     ₫</strong>
                                 <span>
                                     Shop: {{ product.shop.shop_name }} ·
@@ -138,9 +125,7 @@
                                     <i class="fa-solid fa-eye" aria-hidden="true"></i>
                                     <span>Chi tiết</span>
                                 </a>
-                                <button class="btn btn--secondary" type="button" data-action="product-compare-add"
-                                        data-id="{{ product.product_id }}" aria-pressed="false">Thêm so sánh
-                                </button>
+                                {% include 'includes/compare_button.html' %}
                             </div>
                         </div>
                     </article>
@@ -161,12 +146,5 @@
             {% endif %}
         </section>
     </div>
-    <div data-content="compare-tray" class="compare-tray"></div>
-    <dialog id="filter-drawer" class="filter-drawer" aria-label="Bộ lọc sản phẩm">
-        <button type="button" class="btn btn--secondary drawer-close" data-action="filters-close">Đóng bộ lọc</button>
-        <div data-drawer-body></div>
-    </dialog>
-</template>
-<script type="module" src="{% static 'js/buyer.js' %}?v=database-catalog-4"></script>
-</body>
-</html>
+    <dialog id="filter-drawer" class="filter-drawer" aria-label="Bộ lọc sản phẩm"><button type="button" class="btn btn--secondary drawer-close" data-ui-filters-close>Đóng bộ lọc</button><div data-drawer-body></div></dialog>
+{% endblock %}

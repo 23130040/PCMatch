@@ -1,0 +1,9 @@
+{% load cart_prices %}
+<article class="catalog-card" data-product-id="{{ product.pk }}" data-sold="{{ product.sold_quantity }}">
+    <a href="{% url 'buyer_product_detail' product.pk %}" aria-label="{{ product.product_name }}"><div class="home-media">{% if product.thumbnail %}<img src="{{ product.thumbnail.url }}" alt="{{ product.product_name }}" width="480" height="320" loading="lazy">{% else %}<span>Chưa có ảnh sản phẩm</span>{% endif %}</div></a>
+    <div class="catalog-body"><p>{{ product.category.category_name }}</p><h3><a class="btn btn--text" href="{% url 'buyer_product_detail' product.pk %}">{{ product.product_name }}</a></h3>
+        <p>{% for specification in product.specifications.all|slice:':2' %}{{ specification.specification_value }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+        <div class="catalog-price"><small>Giá bán</small><strong>{{ product.price|vnd }} ₫</strong><span>{{ product.shop.shop_name }} · Đã bán {{ product.sold_quantity }}</span></div>
+        <div class="cluster"><a class="btn btn--primary" href="{% url 'buyer_product_detail' product.pk %}">Xem chi tiết</a><a class="btn btn--secondary" href="{% url 'buyer_search' %}?shop={{ product.shop_id }}">Xem sản phẩm của shop</a></div>
+    </div>
+</article>

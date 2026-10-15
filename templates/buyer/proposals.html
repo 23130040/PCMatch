@@ -1,19 +1,344 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Báo giá từ shop — PCMatch</title>
-    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
-    {% include 'includes/frontend_config.html' %}</head>
-<body data-buyer-app>
-<main id="main"><p>Đang tải PCMatch…</p></main>
-<noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript>
-<script type="module" src="{% static 'js/buyer.js' %}"></script>
-</body>
-</html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Proposal PR-BP-260916-018 — PCMatch{% endblock %}
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>
+                PR-BP-260916-018
+            </h1>
+            <p>
+                BuildPro Sài Gòn
+            </p>
+        </div>
+        <div class="cluster">
+            <a class="btn btn--secondary" href="/buyer/requests/?id=BR-260916-018">
+                Về yêu cầu
+            </a>
+            <a class="btn btn--secondary" href="/buyer/shop/?id=BP">
+                Gian hàng
+            </a>
+        </div>
+    </div>
+    <section class="panel panel--padded">
+        <h2>
+            Chi tiết báo giá
+        </h2>
+        <p>
+            Yêu cầu v1 · Báo giá v1 · Cần sửa · Hạn 18:48:50 16/10/2026
+        </p>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=CPU-12400&amp;shop=BP">
+                Intel Core i5-12400F
+            </a>
+            <span>
+            1 × 2.890.000
+            &nbsp;
+            ₫ = 2.890.000
+            &nbsp;
+            ₫ · BH 36 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=MB-B660&amp;shop=BP">
+                MSI PRO B660M-A DDR4
+            </a>
+            <span>
+            1 × 2.790.000
+            &nbsp;
+            ₫ = 2.790.000
+            &nbsp;
+            ₫ · BH 36 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=RAM-C16&amp;shop=BP">
+                Corsair Vengeance 16GB (2×8GB)
+            </a>
+            <span>
+            1 × 990.000
+            &nbsp;
+            ₫ = 990.000
+            &nbsp;
+            ₫ · BH 36 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=GPU-4060&amp;shop=BP">
+                MSI RTX 4060 Ventus 8GB
+            </a>
+            <span>
+            1 × 6.990.000
+            &nbsp;
+            ₫ = 6.990.000
+            &nbsp;
+            ₫ · BH 36 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=SSD-MP44&amp;shop=BP">
+                TeamGroup MP44L 1TB
+            </a>
+            <span>
+            1 × 1.590.000
+            &nbsp;
+            ₫ = 1.590.000
+            &nbsp;
+            ₫ · BH 60 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=PSU-550&amp;shop=BP">
+                Cooler Master MWE 550W
+            </a>
+            <span>
+            1 × 1.190.000
+            &nbsp;
+            ₫ = 1.190.000
+            &nbsp;
+            ₫ · BH 36 tháng
+        </span>
+        </div>
+        <div class="proposal-line">
+            <a href="/buyer/model/?id=CASE-MINI&amp;shop=BP">
+                Case Mini demo
+            </a>
+            <span>
+            1 × 790.000
+            &nbsp;
+            ₫ = 790.000
+            &nbsp;
+            ₫ · BH 12 tháng
+        </span>
+        </div>
+        <p>
+            Giao ước tính 65.000
+            &nbsp;
+            ₫ · Lắp 150.000
+            &nbsp;
+            ₫ · Ưu đãi: 0 ₫
+        </p>
+        <p>
+            <strong>
+                Tổng 17.445.000
+                &nbsp;
+                ₫
+            </strong>
+        </p>
+        <p>
+            Chênh ngân sách: -2.555.000
+            &nbsp;
+            ₫
+        </p>
+        <p>
+            Tiếp nhận bảo hành tại BuildPro Sài Gòn; giao 3–5 ngày demo. Linh kiện giữ lại: Đã có màn hình 2K, bàn phím
+            và chuột
+        </p>
+        <div class="message message--warn">
+            Báo giá mẫu cố định để thử luồng; shop cần đối chiếu phạm vi yêu cầu và linh kiện đã có. Không cam kết hiệu
+            năng.
+        </div>
+        <ul class="compat-results">
+            <li>
+            <span class="status status--ok">
+                Đạt kiểm tra
+            </span>
+                <strong>
+                    CPU và socket mainboard
+                </strong>
+                <p>
+                    Socket CPU và mainboard phải giống nhau.
+                </p>
+            </li>
+            <li>
+            <span class="status status--ok">
+                Đạt kiểm tra
+            </span>
+                <strong>
+                    RAM và mainboard
+                </strong>
+                <p>
+                    Đối chiếu thế hệ DDR của RAM và mainboard.
+                </p>
+            </li>
+            <li>
+            <span class="status status--ok">
+                Đạt kiểm tra
+            </span>
+                <strong>
+                    GPU và case
+                </strong>
+                <p>
+                    Chiều dài GPU không được vượt giới hạn case.
+                </p>
+            </li>
+            <li>
+            <span class="status status--ok">
+                Đạt kiểm tra
+            </span>
+                <strong>
+                    Công suất nguồn
+                </strong>
+                <p>
+                    Nguồn phải đáp ứng mức đề nghị của GPU; vẫn cần kiểm tra đầu cắm.
+                </p>
+            </li>
+            <li>
+            <span class="status status--warn">
+                Chưa đủ dữ liệu
+            </span>
+                <strong>
+                    Chiều cao tản
+                </strong>
+                <p>
+                    Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                </p>
+            </li>
+            <li>
+            <span class="status status--warn">
+                Chưa đủ dữ liệu
+            </span>
+                <strong>
+                    Ngàm tản và CPU
+                </strong>
+                <p>
+                    Chọn linh kiện và xác nhận đủ thông số với shop trước khi kết luận.
+                </p>
+            </li>
+            <li>
+            <span class="status status--ok">
+                Đạt kiểm tra
+            </span>
+                <strong>
+                    Mainboard và case
+                </strong>
+                <p>
+                    Fixture hiện có case mATX và mainboard mATX; đối chiếu kích thước trước khi mua.
+                </p>
+            </li>
+            <li>
+            <span class="status status--warn">
+                Chưa đủ dữ liệu
+            </span>
+                <strong>
+                    BIOS, khe SSD và đầu cấp điện
+                </strong>
+                <p>
+                    Dữ liệu demo chưa đủ BIOS lô hàng, khe M.2 và đầu cắm nguồn. Hỏi shop; không coi là đã đạt.
+                </p>
+            </li>
+            <li>
+            <span class="status status--warn">
+                Có điều kiện
+            </span>
+                <strong>
+                    Profile bộ nhớ
+                </strong>
+                <p>
+                    Bật XMP/EXPO trong BIOS và kiểm tra ổn định trước khi dùng profile.
+                </p>
+            </li>
+        </ul>
+        <div class="message message--info">
+            Trong ngân sách đã nhập.
+        </div>
+        <div class="message message--warn">
+            Báo giá không thể chọn: hết hạn, bản cũ, đã chọn/rút hoặc yêu cầu đã đóng.
+        </div>
+    </section>
+    <section class="panel panel--padded">
+        <h2>
+            Yêu cầu shop chỉnh sửa
+        </h2>
+        <section class="stack" id="" data-backend-form="pending">
+            <label class="field">
+            <span>
+                Món hoặc chi phí cần sửa
+            </span>
+                <textarea name="text" required="">
+            </textarea>
+            </label>
+            <button class="btn btn--primary" type="button" disabled="">
+                Gửi yêu cầu chỉnh sửa
+            </button>
+            <p class="form-error" role="alert">
+            </p>
+        </section>
+        <p>
+            v1: Đổi case thoáng hơn nhưng giữ tổng dưới 20 triệu.
+        </p>
+    </section>
+    <section class="panel panel--padded">
+        <h2>
+            Lịch sử phiên bản
+        </h2>
+        <p>
+            <a class="btn btn--secondary" href="/buyer/proposals/?id=PR-BP-260916-018">
+                Báo giá v1
+            </a>
+            · 17.445.000
+            &nbsp;
+            ₫ · Cần sửa
+        </p>
+    </section>
+    <section class="panel panel--padded">
+        <h2>
+            Trao đổi với BuildPro Sài Gòn
+        </h2>
+        <div class="list-row">
+            <div>
+                <strong>
+                    Nguyễn Minh
+                </strong>
+                <p>
+                    Mình ưu tiên case thoáng, không cần RGB. Tổng vẫn giữ dưới 20 triệu giúp mình nhé.
+                </p>
+                <small>
+                    00:13:50 16/10/2026
+                </small>
+            </div>
+        </div>
+        <div class="list-row">
+            <div>
+                <strong>
+                    BuildPro Sài Gòn
+                </strong>
+                <p>
+                    Shop đã nhận yêu cầu. Mình sẽ kiểm tra lại case và nguồn trước khi gửi báo giá.
+                </p>
+                <small>
+                    00:20:50 16/10/2026
+                </small>
+            </div>
+        </div>
+        <section class="stack" id="" data-backend-form="pending">
+            <input type="hidden" name="requestId" value="BR-260916-018">
+            <input type="hidden" name="shopId" value="BP">
+            <label class="field">
+            <span>
+                Tin nhắn
+            </span>
+                <textarea name="text" required="" maxlength="500">
+            </textarea>
+            </label>
+            <button class="btn btn--primary" type="button" disabled="">
+                Gửi tin nhắn
+            </button>
+            <p class="form-error" role="alert">
+            </p>
+        </section>
+    </section>
+    <details class="demo-scenarios" hidden="">
+        <summary>
+            Kịch bản proposal
+        </summary>
+        <button type="button" class="btn btn--secondary" data-id="PR-BP-260916-018" disabled="">
+            Shop gửi bản sửa (giảm 50.000 ₫ phí)
+        </button>
+        <button type="button" class="btn btn--secondary" data-id="PR-BP-260916-018" disabled="">
+            Hết hạn báo giá
+        </button>
+        <button type="button" class="btn btn--secondary" data-id="PR-BP-260916-018" disabled="">
+            Shop rút báo giá
+        </button>
+    </details>
+{% endblock %}

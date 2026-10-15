@@ -1,10 +1,8 @@
 {% load static %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Yêu cầu Build — PCMatch</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yêu cầu Build</title>
 <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -12,5 +10,272 @@
 <link rel="stylesheet" href="{% static 'css/production.css' %}">
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
 {% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+<body class="shop-app">
+<a class="skip-link" href="#main">
+    Bỏ qua điều hướng
+</a>
+<div class="service-bar">
+    BuildPro Sài Gòn · Trung tâm vận hành shop
+</div>
+<header class="topbar">
+    <div class="container topbar__inner" style="max-width:none">
+        <button class="menu-toggle" type="button" data-sidebar-toggle="" aria-expanded="false" aria-label="Mở sidebar">
+            <span>
+            </span>
+        </button>
+        <a class="logo" href="/shop/dashboard/">
+            <i class="logo__mark">
+            </i>
+            <span>
+                PC
+            </span>
+            <span>
+                Match Shop
+            </span>
+        </a>
+        <label class="search shop-top-search">
+            <span class="sr-only">
+                Tìm trong shop
+            </span>
+            <input id="shop-global-search" placeholder="Tìm request, proposal, offer hoặc đơn">
+            <i class="search__glyph">
+            </i>
+        </label>
+        <nav class="nav-links">
+            <a href="/buyer/home/">
+                Mở phía người mua
+            </a>
+            <a href="/shop/dashboard/">
+                BuildPro Sài Gòn
+            </a>
+        </nav>
+    </div>
+</header>
+<div class="shop-shell">
+    <aside class="shop-sidebar">
+        <div class="shop-sidebar__brand">
+            <strong>
+                BuildPro Sài Gòn
+            </strong>
+            <small>
+                Shop đã xác minh · Chủ shop
+            </small>
+        </div>
+        <nav>
+            <p class="sidebar__group">
+                Vận hành
+            </p>
+            <a href="/shop/dashboard/">
+                Tổng quan
+            </a>
+            <a href="/shop/offers/">
+                Tin bán
+                <span class="sidebar__count">
+                    14
+                </span>
+            </a>
+            <a href="/shop/inventory/">
+                Kho
+                <span class="sidebar__count">
+                    1 thấp
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Công việc
+            </p>
+            <a href="/shop/build-requests/" aria-current="page">
+                Yêu cầu Build
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/proposal-list/">
+                Proposal
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/orders/">
+                Đơn hàng
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/fulfillment/">
+                Giao hàng
+            </a>
+            <a href="/shop/aftersales/">
+                Hậu mãi
+                <span class="sidebar__count">
+                    0
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Tài chính
+            </p>
+            <a href="/shop/revenue/">
+                Doanh thu
+            </a>
+            <p class="sidebar__group">
+                Cài đặt
+            </p>
+            <a href="/shop/login/">
+                Đăng xuất
+            </a>
+        </nav>
+    </aside>
+    <main class="shop-main" id="main">
+        <nav class="breadcrumb">
+            <a href="/shop/dashboard/">
+                Cổng Shop
+            </a>
+            <span>
+                Yêu cầu Build
+            </span>
+        </nav>
+        <div class="page-head">
+            <div>
+                <h1>
+                    Yêu cầu Build đang mở
+                </h1>
+                <p>
+                    Lọc các nhu cầu theo thông tin người mua đã cung cấp.
+                </p>
+            </div>
+            <div class="cluster">
+                <a class="btn btn--secondary" href="/shop/proposal-list/">
+                    Proposal của shop
+                </a>
+            </div>
+        </div>
+        <section class="shop-toolbar" id="" data-backend-form="pending">
+            <label class="field">
+                <span>
+                    Tìm request
+                </span>
+                <input name="q" value="" placeholder="Gaming, GPU, REQ-...">
+            </label>
+            <label class="field">
+                <span>
+                    Ngân sách
+                </span>
+                <select name="budget">
+                    <option value="0">
+                        Tất cả
+                    </option>
+                    <option value="15000000">
+                        Từ 15 triệu
+                    </option>
+                    <option value="20000000">
+                        Từ 20 triệu
+                    </option>
+                </select>
+            </label>
+            <label class="field">
+                <span>
+                    Khu vực
+                </span>
+                <select name="region">
+                    <option value="">
+                        Tất cả
+                    </option>
+                    <option value="HCM">
+                        TP. Hồ Chí Minh
+                    </option>
+                    <option value="HN">
+                        Hà Nội
+                    </option>
+                    <option value="DN">
+                        Đà Nẵng
+                    </option>
+                </select>
+            </label>
+            <label class="field">
+                <span>
+                    Phạm vi
+                </span>
+                <select name="scope">
+                    <option value="">
+                        Tất cả
+                    </option>
+                    <option value="full">
+                        Build nhiều linh kiện
+                    </option>
+                    <option value="upgrade">
+                        Nâng cấp một phần
+                    </option>
+                </select>
+            </label>
+            <label class="field">
+                <span>
+                    Thời hạn
+                </span>
+                <select name="deadline">
+                    <option value="0">
+                        Tất cả
+                    </option>
+                    <option value="24">
+                        Trong 24 giờ
+                    </option>
+                    <option value="72">
+                        Trong 3 ngày
+                    </option>
+                    <option value="168">
+                        Trong 7 ngày
+                    </option>
+                </select>
+            </label>
+            <button class="btn btn--secondary" disabled="">
+                Lọc
+            </button>
+        </section>
+        <div class="shop-list">
+            <article class="shop-card">
+                <div>
+                    <div class="shop-badge-row">
+                        <span class="status status--info">
+                            Đang nhận
+                        </span>
+                        <span class="shop-signal">
+                            Cùng khu vực
+                        </span>
+                        <span class="shop-signal">
+                            Cần lắp ráp
+                        </span>
+                        <span class="shop-signal">
+                            Build nhiều linh kiện
+                        </span>
+                        <span class="shop-signal">
+                            Còn 5 ngày
+                        </span>
+                        <span class="shop-signal">
+                            Proposal: Cần sửa
+                        </span>
+                    </div>
+                    <h2>
+                        Gaming 2K + lập trình
+                    </h2>
+                    <p>
+                        <strong>
+                            20.000.000
+                            &nbsp;
+                            ₫
+                        </strong>
+                        · TP. Hồ Chí Minh · BR-260916-018
+                    </p>
+                    <p>
+                        Phạm vi: CPU, mainboard, RAM, GPU, SSD, PSU, case
+                    </p>
+                    <p class="shop-mini">
+                        Người mua: Nguyễn Minh · Proposal gần nhất v1
+                    </p>
+                </div>
+                <a class="btn btn--primary" href="/shop/build-request-detail/?id=BR-260916-018">
+                    Xem yêu cầu
+                </a>
+            </article>
+        </div>
+    </main>
+</div>
+<script src="{% static 'js/shop-interface.js' %}" defer></script>
+</body></html>

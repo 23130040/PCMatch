@@ -1,3 +1,77 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trợ giúp — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Trợ giúp — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Mua hàng cùng PCMatch
+        </h1>
+        <p>
+            Hướng dẫn ngắn cho bản demo.
+        </p>
+    </div>
+    <div class="cluster">
+    </div>
+</div>
+<details class="help-item" open="">
+    <summary>
+        Mua linh kiện
+    </summary>
+    <p>
+        Chọn sản phẩm → chọn offer của shop → giỏ → checkout. Không cần qua Builder.
+    </p>
+</details>
+<details class="help-item">
+    <summary>
+        Mua nhiều shop
+    </summary>
+    <p>
+        Đơn nhiều shop có phí giao, đơn con và bảo hành riêng. Một shop hủy không tự hủy các shop khác.
+    </p>
+</details>
+<details class="help-item">
+    <summary>
+        Giá, tồn
+        &amp;
+        thanh toán
+    </summary>
+    <p>
+        Giỏ không giữ tồn. Checkout mô phỏng kiểm tra lại dữ liệu local; không có backend xác minh giá hay thanh toán.
+    </p>
+</details>
+<details class="help-item">
+    <summary>
+        Kiểm tra cấu hình
+    </summary>
+    <p>
+        Linh kiện đã có trong Builder không tính vào giỏ. Thiếu dữ liệu kỹ thuật không phải kết quả đạt.
+    </p>
+</details>
+<details class="help-item">
+    <summary>
+        Hậu mãi
+    </summary>
+    <p>
+        Đổi/trả demo: tiếp nhận trong 7 ngày sau giao. Bảo hành theo số tháng ghi ở từng dòng hàng. Đây là giả định kiểm thử, không phải chính sách thương mại thật.
+    </p>
+</details>
+<details class="help-item">
+    <summary>
+        Dữ liệu demo
+    </summary>
+    <p>
+        Dữ liệu demo lưu tại trình duyệt này. Reset demo xóa toàn bộ tài khoản, giỏ và đơn. Chia sẻ cấu hình không hoạt động trên thiết bị khác.
+    </p>
+</details>
+<div class="cluster">
+    <a class="btn btn--secondary" href="/buyer/orders/">
+        Đơn hàng của tôi
+    </a>
+    <a class="btn btn--secondary" href="/buyer/cases/">
+        Hồ sơ hỗ trợ
+    </a>
+    <a class="btn btn--secondary" href="/buyer/search/">
+        Xem linh kiện
+    </a>
+</div>
+{% endblock %}

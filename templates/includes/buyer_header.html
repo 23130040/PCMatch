@@ -1,0 +1,71 @@
+{% load cart_prices %}
+<div class="buyer-service"><div class="container"><span><b>PCMatch</b> Linh kiện và cấu hình máy tính</span><div><a href="{% url 'buyer_orders' %}">Theo dõi đơn</a><a href="{% url 'buyer_help' %}">Trợ giúp</a></div></div></div>
+<header class="market-header buyer-header">
+    <div class="container market-top">
+        <button class="btn btn--secondary mobile-menu" type="button" aria-label="Mở menu mua sắm" aria-expanded="false" aria-controls="buyer-menu" data-ui-menu>{% include 'includes/buyer_icon.html' with icon='menu' %}</button>
+        <a class="logo" href="{% url 'home' %}" aria-label="PCMatch — Trang chủ"><i class="logo__mark" aria-hidden="true"></i><span>PC</span><span>Match</span></a>
+        <div class="header-search-wrap">
+            <form action="{% url 'buyer_search' %}" class="market-search" role="search">
+                <label class="sr-only" for="global-search">Tìm linh kiện</label>{% include 'includes/buyer_icon.html' with icon='search' %}
+                <input id="global-search" name="q" type="search" value="{{ request.GET.q }}" enterkeyhint="search" autocomplete="off" placeholder="Bạn đang tìm linh kiện nào?" aria-controls="header-suggestions" aria-expanded="false">
+                <button class="btn btn--primary" type="submit">Tìm kiếm</button>
+            </form>
+            <div id="header-suggestions" class="header-popover" role="region" aria-label="Khám phá nhanh" hidden>
+                <p class="header-popup-title">Khám phá linh kiện</p>
+                <a class="search-history" href="{% url 'buyer_search' %}?q=CPU">{% include 'includes/buyer_icon.html' with icon='search' %}CPU</a>
+                <a class="search-history" href="{% url 'buyer_search' %}?q=RTX">{% include 'includes/buyer_icon.html' with icon='search' %}Card đồ họa RTX</a>
+                <a class="search-history" href="{% url 'buyer_search' %}?q=SSD">{% include 'includes/buyer_icon.html' with icon='search' %}Ổ cứng SSD</a>
+            </div>
+        </div>
+        <div class="header-utilities">
+            <button class="header-utility header-chat-toggle" type="button" data-ui-chat>{% include 'includes/buyer_icon.html' with icon='chat' %}<span>Chat</span></button>
+            <a class="header-utility" href="{% url 'buyer_notifications' %}">{% include 'includes/buyer_icon.html' with icon='bell' %}<span>Thông báo</span></a>
+            <details class="header-cart header-dropdown">
+                <summary class="header-utility cart-link" aria-label="Xem nhanh giỏ hàng">{% include 'includes/buyer_icon.html' with icon='cart' %}<span>Giỏ hàng</span><b id="cart-count">{{ database_cart_count }}</b></summary>
+                <div class="header-popover" id="header-cart-preview">
+                    <div class="header-popup-title"><strong>Giỏ hàng của bạn</strong><span>{{ database_cart_count }} sản phẩm</span></div>
+                    {% if database_cart_items %}
+                        <div class="mini-cart-items">
+                            {% for item in database_cart_items %}
+                                <article class="mini-cart-row">
+                                    {% if item.product.thumbnail %}<img src="{{ item.product.thumbnail.url }}" alt="{{ item.product.product_name }}" width="64" height="64">{% endif %}
+                                    <div><a href="{% url 'buyer_product_detail' item.product_id %}">{{ item.product.product_name }}</a><small>{{ item.product.shop.shop_name }} · SL {{ item.quantity }}</small><strong>{{ item.line_total|vnd }} ₫</strong></div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                        <div class="mini-cart-total"><span>Tiền hàng</span><strong>{{ database_cart_subtotal|vnd }} ₫</strong></div><p>Chưa gồm phí giao và ưu đãi.</p>
+                    {% else %}<p>Giỏ hàng đang trống.</p>{% endif %}
+                    <a class="btn btn--primary" href="{% url 'buyer_cart' %}">Xem giỏ hàng</a>
+                </div>
+            </details>
+            <details class="header-account header-dropdown">
+                <summary class="header-utility">
+                    {% if request.user.is_authenticated %}<span class="header-avatar">{{ request.user.full_name|default:request.user.username|first|upper }}</span>{% else %}{% include 'includes/buyer_icon.html' with icon='user' %}{% endif %}
+                    <span>{% if request.user.is_authenticated %}{{ request.user.full_name|default:request.user.username }}{% else %}Tài khoản{% endif %}</span>
+                </summary>
+                <div class="header-popover header-account-links">{% include 'includes/buyer_account_links.html' %}</div>
+            </details>
+        </div>
+    </div>
+    <div class="header-nav-strip">
+        <nav id="market-nav" class="container market-nav" aria-label="Điều hướng mua sắm">
+            <details class="header-categories header-dropdown">
+                <summary>{% include 'includes/buyer_icon.html' with icon='grid' %}Danh mục sản phẩm{% include 'includes/buyer_icon.html' with icon='chevron' %}</summary>
+                <div class="header-popover category-mega">
+                    {% for category in navigation_categories %}<a href="{% url 'buyer_search' %}?category={{ category.pk }}"><span class="category-code">{{ category.category_name|slice:':3' }}</span><span>{{ category.category_name }}</span></a>{% empty %}<a href="{% url 'buyer_search' %}">Tất cả linh kiện</a>{% endfor %}
+                </div>
+            </details>
+            <a href="{% url 'home' %}"{% if page_name == 'home' %} aria-current="page"{% endif %}>Trang chủ</a>
+            <a href="{% url 'buyer_search' %}"{% if page_name == 'search' %} aria-current="page"{% endif %}>Tất cả sản phẩm</a>
+            <a href="{% url 'buyer_orders' %}">Đơn hàng</a>
+            <details class="header-services header-dropdown">
+                <summary>{% include 'includes/buyer_icon.html' with icon='build' %}Dịch vụ build PC{% include 'includes/buyer_icon.html' with icon='chevron' %}</summary>
+                <div class="header-popover"><a href="{% url 'buyer_builder' %}"><strong>Tự build PC</strong><small>Tự chọn linh kiện và kiểm tra cấu hình</small></a><a href="{% url 'buyer_requests' %}"><strong>Build theo ngân sách</strong><small>Gửi nhu cầu để shop đề xuất</small></a></div>
+            </details>
+            <div class="header-mobile-links"><button class="btn btn--secondary" type="button" data-ui-chat>Chat với shop</button><a href="{% url 'buyer_notifications' %}">Thông báo</a><a href="{% url 'buyer_help' %}">Trợ giúp</a><div class="header-account-links">{% include 'includes/buyer_account_links.html' %}</div></div>
+            <span class="header-nav-note">Linh kiện từ nhiều shop</span>
+        </nav>
+    </div>
+</header>
+<noscript><nav class="container market-nav no-script-nav"><a href="{% url 'home' %}">Trang chủ</a><a href="{% url 'buyer_search' %}">Sản phẩm</a><a href="{% url 'buyer_cart' %}">Giỏ hàng</a>{% if request.user.is_authenticated %}<form method="post" action="{% url 'auth_logout' %}">{% csrf_token %}<button class="btn btn--secondary" type="submit">Đăng xuất</button></form>{% else %}<a href="{% url 'auth_login' %}">Đăng nhập</a>{% endif %}</nav></noscript>
+<dialog id="buyer-menu" class="buyer-menu" aria-labelledby="buyer-menu-title"><div class="buyer-menu-heading"><h2 id="buyer-menu-title">Khám phá PCMatch</h2><button class="btn btn--secondary" type="button" data-ui-menu-close aria-label="Đóng menu">{% include 'includes/buyer_icon.html' with icon='close' %}</button></div><div data-menu-body></div></dialog>

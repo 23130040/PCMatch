@@ -1,3 +1,84 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thanh toán mô phỏng — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Kết quả — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Thanh toán demo thành công
+        </h1>
+        <p>
+            PCM-260916-014
+        </p>
+    </div>
+    <div class="cluster">
+    </div>
+</div>
+<div class="message message--info">
+    Đơn vừa tạo đang chờ shop xác nhận. Không có tiền thật được thu.
+</div>
+<dl class="money-summary">
+    <div>
+        <dt>
+            Tiền hàng
+        </dt>
+        <dd>
+            10.370.000
+            &nbsp;
+            ₫
+        </dd>
+    </div>
+    <div>
+        <dt>
+            Phí giao ước tính
+        </dt>
+        <dd>
+            65.000
+            &nbsp;
+            ₫
+        </dd>
+    </div>
+    <div>
+        <dt>
+            Lắp ráp một shop
+        </dt>
+        <dd>
+            0
+            &nbsp;
+            ₫
+        </dd>
+    </div>
+    <div>
+        <dt>
+            Ưu đãi đã phân bổ
+        </dt>
+        <dd>
+            −200.000
+            &nbsp;
+            ₫
+        </dd>
+    </div>
+    <div class="total">
+        <dt>
+            Tổng demo
+        </dt>
+        <dd data-total="">
+            10.235.000
+            &nbsp;
+            ₫
+        </dd>
+    </div>
+</dl>
+<section class="panel panel--padded">
+    <h2>
+        Các đơn con
+    </h2>
+    <p>
+        SUB-BP-002 · BuildPro Sài Gòn · Chờ shop xác nhận · 10.235.000
+        &nbsp;
+        ₫
+    </p>
+</section>
+<a class="btn btn--primary" href="/buyer/order/?id=PCM-260916-014">
+    Theo dõi đơn này
+</a>
+{% endblock %}

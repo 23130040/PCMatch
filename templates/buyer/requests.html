@@ -1,3 +1,72 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Build theo ngân sách — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Build theo ngân sách — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Yêu cầu build của tôi
+        </h1>
+        <p>
+            Quản lý ngân sách và so sánh cấu hình từ các shop.
+        </p>
+    </div>
+    <div class="cluster">
+        <a class="btn btn--primary" href="/buyer/requests/?new=1">
+            Tạo yêu cầu
+        </a>
+    </div>
+</div>
+<section class="stack" id="" data-backend-form="pending">
+    <label class="field">
+        <span>
+            Lọc trạng thái
+        </span>
+        <select name="status">
+            <option value="" selected="">
+                Tất cả
+            </option>
+            <option value="open">
+                Đang nhận
+            </option>
+            <option value="expired">
+                Hết hạn
+            </option>
+            <option value="draft">
+                Nháp
+            </option>
+            <option value="selected">
+                Đã chọn
+            </option>
+            <option value="closed">
+                Đã đóng
+            </option>
+            <option value="cancelled">
+                Đã hủy
+            </option>
+        </select>
+    </label>
+    <button class="btn btn--primary" type="button" disabled="">
+        Lọc
+    </button>
+    <p class="form-error" role="alert">
+    </p>
+</section>
+<article class="list-row">
+    <div>
+        <h2>
+            Gaming 2K + lập trình
+        </h2>
+        <p>
+            BR-260916-018 · v1 · 20.000.000
+            &nbsp;
+            ₫ · Đang nhận
+        </p>
+        <p>
+            1 proposal · Hạn 2026-10-20
+        </p>
+    </div>
+    <a class="btn btn--secondary" href="/buyer/requests/?id=BR-260916-018">
+        Mở yêu cầu
+    </a>
+</article>
+{% endblock %}

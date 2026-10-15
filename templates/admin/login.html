@@ -43,7 +43,7 @@
                 <span class="logo"><i class="logo__mark"></i><span>PC Match Admin</span></span>
                 <h1 id="staff-login-title">Quản trị hệ thống</h1>
                 <p>Đăng nhập để vận hành sàn PCMatch.</p>
-                <p class="staff-login-meta">Tài khoản thử: staffdemo / Staff123456 (đã điền sẵn)</p>
+                <p class="staff-login-meta">Sử dụng tài khoản được cấp quyền quản trị.</p>
             </div>
 
             {% if messages %}
@@ -58,12 +58,12 @@
                 {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
                 <label class="field">
                     <span>Email hoặc tên đăng nhập *</span>
-                    <input type="text" name="username" value="{{ username|default:"staffdemo" }}" autocomplete="username" required placeholder="vd: admin@pcmatch.vn">
+                    <input type="text" name="username" value="{{ username|default:'' }}" autocomplete="username" required placeholder="vd: admin@pcmatch.vn">
                 </label>
                 <label class="field">
                     <span>Mật khẩu *</span>
                     <span class="password-wrap">
-                        <input type="password" name="password" value="Staff123456" autocomplete="current-password" required placeholder="Nhập mật khẩu">
+                        <input type="password" name="password" autocomplete="current-password" required placeholder="Nhập mật khẩu">
                         <button type="button" class="password-eye" data-staff-pass-eye aria-label="Hiện mật khẩu">👁</button>
                     </span>
                 </label>

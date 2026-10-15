@@ -1,10 +1,8 @@
 {% load static %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quản lý tin bán — PCMatch</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý tin bán</title>
 <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -12,5 +10,1057 @@
 <link rel="stylesheet" href="{% static 'css/production.css' %}">
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
 {% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+<body class="shop-app">
+<a class="skip-link" href="#main">
+    Bỏ qua điều hướng
+</a>
+<div class="service-bar">
+    BuildPro Sài Gòn · Trung tâm vận hành shop
+</div>
+<header class="topbar">
+    <div class="container topbar__inner" style="max-width:none">
+        <button class="menu-toggle" type="button" data-sidebar-toggle="" aria-expanded="false" aria-label="Mở sidebar">
+            <span>
+            </span>
+        </button>
+        <a class="logo" href="/shop/dashboard/">
+            <i class="logo__mark">
+            </i>
+            <span>
+                PC
+            </span>
+            <span>
+                Match Shop
+            </span>
+        </a>
+        <label class="search shop-top-search">
+            <span class="sr-only">
+                Tìm trong shop
+            </span>
+            <input id="shop-global-search" placeholder="Tìm request, proposal, offer hoặc đơn">
+            <i class="search__glyph">
+            </i>
+        </label>
+        <nav class="nav-links">
+            <a href="/buyer/home/">
+                Mở phía người mua
+            </a>
+            <a href="/shop/dashboard/">
+                BuildPro Sài Gòn
+            </a>
+        </nav>
+    </div>
+</header>
+<div class="shop-shell">
+    <aside class="shop-sidebar">
+        <div class="shop-sidebar__brand">
+            <strong>
+                BuildPro Sài Gòn
+            </strong>
+            <small>
+                Shop đã xác minh · Chủ shop
+            </small>
+        </div>
+        <nav>
+            <p class="sidebar__group">
+                Vận hành
+            </p>
+            <a href="/shop/dashboard/">
+                Tổng quan
+            </a>
+            <a href="/shop/offers/" aria-current="page">
+                Tin bán
+                <span class="sidebar__count">
+                    14
+                </span>
+            </a>
+            <a href="/shop/inventory/">
+                Kho
+                <span class="sidebar__count">
+                    1 thấp
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Công việc
+            </p>
+            <a href="/shop/build-requests/">
+                Yêu cầu Build
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/proposal-list/">
+                Proposal
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/orders/">
+                Đơn hàng
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/fulfillment/">
+                Giao hàng
+            </a>
+            <a href="/shop/aftersales/">
+                Hậu mãi
+                <span class="sidebar__count">
+                    0
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Tài chính
+            </p>
+            <a href="/shop/revenue/">
+                Doanh thu
+            </a>
+            <p class="sidebar__group">
+                Cài đặt
+            </p>
+            <a href="/shop/login/">
+                Đăng xuất
+            </a>
+        </nav>
+    </aside>
+    <main class="shop-main" id="main">
+        <nav class="breadcrumb">
+            <a href="/shop/dashboard/">
+                Cổng Shop
+            </a>
+            <span>
+                Tin bán
+            </span>
+        </nav>
+        <div class="page-head">
+            <div>
+                <h1>
+                    Quản lý tin bán
+                </h1>
+                <p>
+                    Theo dõi model, giá, bảo hành, tồn và trạng thái bán.
+                </p>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--primary" type="button" disabled="">
+                    Tạo tin bán
+                </button>
+            </div>
+        </div>
+        <section class="shop-toolbar--compact shop-toolbar" id="" data-backend-form="pending">
+            <label class="field">
+                <span>
+                    Tìm offer / model
+                </span>
+                <input name="q" value="" placeholder="Ryzen, SSD, BP-CPU...">
+            </label>
+            <label class="field">
+                <span>
+                    Danh mục
+                </span>
+                <select name="category">
+                    <option value="">
+                        Tất cả
+                    </option>
+                    <option value="CPU">
+                        Bộ xử lý
+                    </option>
+                    <option value="MB">
+                        Mainboard
+                    </option>
+                    <option value="RAM">
+                        Bộ nhớ
+                    </option>
+                    <option value="GPU">
+                        Card đồ họa
+                    </option>
+                    <option value="SSD">
+                        Lưu trữ
+                    </option>
+                    <option value="PSU">
+                        Bộ nguồn
+                    </option>
+                    <option value="CASE">
+                        Vỏ máy
+                    </option>
+                    <option value="COOL">
+                        Tản nhiệt
+                    </option>
+                </select>
+            </label>
+            <label class="field">
+                <span>
+                    Trạng thái
+                </span>
+                <select name="active">
+                    <option value="">
+                        Tất cả
+                    </option>
+                    <option value="1">
+                        Đang bán
+                    </option>
+                    <option value="0">
+                        Tạm ẩn
+                    </option>
+                </select>
+            </label>
+            <button class="btn btn--secondary" disabled="">
+                Lọc
+            </button>
+        </section>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            Offer
+                        </th>
+                        <th>
+                            Model chuẩn
+                        </th>
+                        <th>
+                            Giá
+                        </th>
+                        <th>
+                            Bảo hành
+                        </th>
+                        <th>
+                            Tồn
+                        </th>
+                        <th>
+                            Trạng thái
+                        </th>
+                        <th>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-CPU-7600
+                            </strong>
+                            <small>
+                                Bộ xử lý
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                AMD Ryzen 5 7600
+                            </strong>
+                            <small>
+                                AMD
+                            </small>
+                        </td>
+                        <td>
+                            4.690.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            8
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-7600" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-7600" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-CPU-7700
+                            </strong>
+                            <small>
+                                Bộ xử lý
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                AMD Ryzen 7 7700
+                            </strong>
+                            <small>
+                                AMD
+                            </small>
+                        </td>
+                        <td>
+                            7.290.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            0
+                        </td>
+                        <td>
+                            <span class="status status--info">
+                                Tạm ẩn
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-7700" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-7700" disabled="">
+                                    Mở bán
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-CPU-12400
+                            </strong>
+                            <small>
+                                Bộ xử lý
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Intel Core i5-12400F
+                            </strong>
+                            <small>
+                                Intel
+                            </small>
+                        </td>
+                        <td>
+                            2.890.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            10
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-12400" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-CPU-12400" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-MB-B650
+                            </strong>
+                            <small>
+                                Mainboard
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                MSI PRO B650M-A WIFI
+                            </strong>
+                            <small>
+                                MSI
+                            </small>
+                        </td>
+                        <td>
+                            3.890.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            11
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-MB-B650" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-MB-B650" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-MB-B660
+                            </strong>
+                            <small>
+                                Mainboard
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                MSI PRO B660M-A DDR4
+                            </strong>
+                            <small>
+                                MSI
+                            </small>
+                        </td>
+                        <td>
+                            2.790.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            12
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-MB-B660" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-MB-B660" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-RAM-K32
+                            </strong>
+                            <small>
+                                Bộ nhớ
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Kingston Fury Beast 32GB (2×16GB)
+                            </strong>
+                            <small>
+                                Kingston
+                            </small>
+                        </td>
+                        <td>
+                            2.190.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            8
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-RAM-K32" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-RAM-K32" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-RAM-C16
+                            </strong>
+                            <small>
+                                Bộ nhớ
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Corsair Vengeance 16GB (2×8GB)
+                            </strong>
+                            <small>
+                                Corsair
+                            </small>
+                        </td>
+                        <td>
+                            990.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            9
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-RAM-C16" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-RAM-C16" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-GPU-5060
+                            </strong>
+                            <small>
+                                Card đồ họa
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                ASUS Dual RTX 5060 8GB
+                            </strong>
+                            <small>
+                                ASUS
+                            </small>
+                        </td>
+                        <td>
+                            8.190.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            10
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-GPU-5060" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-GPU-5060" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-GPU-4060
+                            </strong>
+                            <small>
+                                Card đồ họa
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                MSI RTX 4060 Ventus 8GB
+                            </strong>
+                            <small>
+                                MSI
+                            </small>
+                        </td>
+                        <td>
+                            6.990.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            2
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-GPU-4060" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-GPU-4060" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-SSD-SN770
+                            </strong>
+                            <small>
+                                Lưu trữ
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                WD Black SN770 1TB
+                            </strong>
+                            <small>
+                                WD
+                            </small>
+                        </td>
+                        <td>
+                            1.790.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            60 tháng
+                        </td>
+                        <td>
+                            12
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-SSD-SN770" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-SSD-SN770" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-SSD-MP44
+                            </strong>
+                            <small>
+                                Lưu trữ
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                TeamGroup MP44L 1TB
+                            </strong>
+                            <small>
+                                TeamGroup
+                            </small>
+                        </td>
+                        <td>
+                            1.590.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            60 tháng
+                        </td>
+                        <td>
+                            8
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-SSD-MP44" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-SSD-MP44" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-PSU-750
+                            </strong>
+                            <small>
+                                Bộ nguồn
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Corsair RM750e 750W
+                            </strong>
+                            <small>
+                                Corsair
+                            </small>
+                        </td>
+                        <td>
+                            2.490.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            9
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-PSU-750" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-PSU-750" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-PSU-550
+                            </strong>
+                            <small>
+                                Bộ nguồn
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Cooler Master MWE 550W
+                            </strong>
+                            <small>
+                                Cooler Master
+                            </small>
+                        </td>
+                        <td>
+                            1.190.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            10
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-PSU-550" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-PSU-550" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-CASE-AIR
+                            </strong>
+                            <small>
+                                Vỏ máy
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Montech AIR 100
+                            </strong>
+                            <small>
+                                Montech
+                            </small>
+                        </td>
+                        <td>
+                            1.290.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            12 tháng
+                        </td>
+                        <td>
+                            11
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-CASE-AIR" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-CASE-AIR" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-CASE-MINI
+                            </strong>
+                            <small>
+                                Vỏ máy
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                Case Mini demo
+                            </strong>
+                            <small>
+                                PCMatch
+                            </small>
+                        </td>
+                        <td>
+                            790.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            12 tháng
+                        </td>
+                        <td>
+                            12
+                        </td>
+                        <td>
+                            <span class="status status--ok">
+                                Đang bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-CASE-MINI" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-CASE-MINI" disabled="">
+                                    Ẩn tin
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>
+                                BP-COOL-AK
+                            </strong>
+                            <small>
+                                Tản nhiệt
+                            </small>
+                        </td>
+                        <td>
+                            <strong>
+                                DeepCool AK400
+                            </strong>
+                            <small>
+                                DeepCool
+                            </small>
+                        </td>
+                        <td>
+                            690.000
+                            &nbsp;
+                            ₫
+                        </td>
+                        <td>
+                            36 tháng
+                        </td>
+                        <td>
+                            0
+                        </td>
+                        <td>
+                            <span class="status status--info">
+                                Tạm ẩn
+                            </span>
+                        </td>
+                        <td>
+                            <div class="shop-table-actions">
+                                <button type="button" class="btn btn--secondary" data-id="BP-COOL-AK" disabled="">
+                                    Sửa
+                                </button>
+                                <button type="button" class="btn btn--secondary" data-id="BP-COOL-AK" disabled="">
+                                    Mở bán
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <dialog class="modal shop-dialog" id="offer-editor">
+            <section class="" id="" data-backend-form="pending">
+                <div class="modal__head">
+                    <div>
+                        <h2 data-dialog-title="">
+                            Tạo tin bán
+                        </h2>
+                        <p class="shop-mini">
+                            Tin bán luôn gắn với một model chuẩn.
+                        </p>
+                    </div>
+                    <button type="button" class="icon-button" data-dialog-close="" aria-label="Đóng" disabled="">
+                        <span class="close-glyph">
+                        </span>
+                    </button>
+                </div>
+                <div class="modal__body stack">
+                    <input type="hidden" name="offerId">
+                    <label class="field">
+                        <span>
+                            Model chuẩn
+                        </span>
+                        <select name="modelId" required="">
+                            <option value="CPU-7600">
+                                AMD Ryzen 5 7600 · Bộ xử lý
+                            </option>
+                            <option value="CPU-7700">
+                                AMD Ryzen 7 7700 · Bộ xử lý
+                            </option>
+                            <option value="CPU-12400">
+                                Intel Core i5-12400F · Bộ xử lý
+                            </option>
+                            <option value="MB-B650">
+                                MSI PRO B650M-A WIFI · Mainboard
+                            </option>
+                            <option value="MB-B660">
+                                MSI PRO B660M-A DDR4 · Mainboard
+                            </option>
+                            <option value="RAM-K32">
+                                Kingston Fury Beast 32GB (2×16GB) · Bộ nhớ
+                            </option>
+                            <option value="RAM-C16">
+                                Corsair Vengeance 16GB (2×8GB) · Bộ nhớ
+                            </option>
+                            <option value="GPU-5060">
+                                ASUS Dual RTX 5060 8GB · Card đồ họa
+                            </option>
+                            <option value="GPU-4060">
+                                MSI RTX 4060 Ventus 8GB · Card đồ họa
+                            </option>
+                            <option value="SSD-SN770">
+                                WD Black SN770 1TB · Lưu trữ
+                            </option>
+                            <option value="SSD-MP44">
+                                TeamGroup MP44L 1TB · Lưu trữ
+                            </option>
+                            <option value="PSU-750">
+                                Corsair RM750e 750W · Bộ nguồn
+                            </option>
+                            <option value="PSU-550">
+                                Cooler Master MWE 550W · Bộ nguồn
+                            </option>
+                            <option value="CASE-AIR">
+                                Montech AIR 100 · Vỏ máy
+                            </option>
+                            <option value="CASE-MINI">
+                                Case Mini demo · Vỏ máy
+                            </option>
+                            <option value="COOL-AK">
+                                DeepCool AK400 · Tản nhiệt
+                            </option>
+                        </select>
+                    </label>
+                    <div class="form-grid">
+                        <label class="field">
+                            <span>
+                                Giá bán (₫)
+                            </span>
+                            <input name="price" type="number" min="1" step="1000" required="">
+                        </label>
+                        <label class="field">
+                            <span>
+                                Bảo hành (tháng)
+                            </span>
+                            <input name="warranty" type="number" min="0" step="1" required="">
+                        </label>
+                        <label class="field">
+                            <span>
+                                Tồn thực tế
+                            </span>
+                            <input name="stock" type="number" min="0" step="1" required="">
+                        </label>
+                        <label class="field">
+                            <span>
+                                Trạng thái
+                            </span>
+                            <select name="active">
+                                <option value="1">
+                                    Đang bán
+                                </option>
+                                <option value="0">
+                                    Tạm ẩn
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal__foot">
+                    <button type="button" class="btn btn--secondary" data-dialog-close="" disabled="">
+                        Hủy
+                    </button>
+                    <button class="btn btn--primary" disabled="">
+                        Lưu tin bán
+                    </button>
+                </div>
+            </section>
+        </dialog>
+    </main>
+</div>
+<script src="{% static 'js/shop-interface.js' %}" defer></script>
+</body></html>

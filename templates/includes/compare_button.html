@@ -1,0 +1,10 @@
+<form method="post" action="{% url 'buyer_comparison_update' %}" data-comparison-form class="comparison-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="product_id" value="{{ product.pk }}">
+    <input type="hidden" name="return_to" value="{{ compare_return_to }}">
+    <button class="btn btn--secondary" type="submit" data-compare-product="{{ product.pk }}" aria-pressed="{% if product.pk in comparison_ids %}true{% else %}false{% endif %}">
+        <span data-compare-add-label{% if product.pk in comparison_ids %} hidden{% endif %}>Thêm so sánh</span>
+        <span data-compare-added-label{% if product.pk not in comparison_ids %} hidden{% endif %}>Đã thêm so sánh</span>
+    </button>
+</form>

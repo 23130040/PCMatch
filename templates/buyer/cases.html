@@ -1,3 +1,37 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hỗ trợ & hậu mãi — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Hỗ trợ & hậu mãi — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Hồ sơ hỗ trợ của tôi
+        </h1>
+        <p>
+            Theo dõi riêng từng món, shop và khoản hoàn.
+        </p>
+    </div>
+    <div class="cluster">
+    </div>
+</div>
+<section class="empty">
+    <h2>
+        Chưa có hồ sơ
+    </h2>
+    <p>
+        Mở đơn để gửi hậu mãi, hoặc báo cáo từ trang sản phẩm/shop.
+    </p>
+    <a class="btn btn--secondary" href="/buyer/orders/">
+        Lịch sử đơn
+    </a>
+</section>
+<section class="panel panel--padded">
+    <h2>
+        Sản phẩm đã giao
+        &amp;
+        bảo hành
+    </h2>
+    <p>
+        Chưa có hàng đã giao.
+    </p>
+</section>
+{% endblock %}

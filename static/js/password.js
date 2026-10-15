@@ -76,7 +76,4 @@ document.addEventListener('DOMContentLoaded', function () {
         updateStrength('');
     });
 
-    document.getElementById('change-password-form').addEventListener('submit', function (e) {
-        e.preventDefault();
-    });
 });

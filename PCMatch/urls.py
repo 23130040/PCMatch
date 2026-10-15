@@ -8,15 +8,18 @@ from django.views.generic import TemplateView
 from .pages import PAGE_GROUPS, route_name
 
 from products import views as product_views
+from carts import views as cart_views
 from users import views as user_views
 from users.views import staff_required
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+    path('auth/logout/', user_views.buyer_logout, name='auth_logout'),
+    path('buyer/cart/add/<int:product_id>/', cart_views.cart_add, name='buyer_cart_add'),
+    path('buyer/cart/items/<int:item_id>/update/', cart_views.cart_update, name='buyer_cart_update'),
+    path('buyer/cart/items/<int:item_id>/remove/', cart_views.cart_remove, name='buyer_cart_remove'),
+    path('buyer/compare/selection/', product_views.buyer_comparison_update, name='buyer_comparison_update'),
 
-    path('', TemplateView.as_view(
-        template_name='index.html',
-        extra_context={'page_name': 'index', 'page_section': 'sitemap',},
-    ), name='index'),
+    path('', product_views.buyer_home, name='home'),
 
     path('buyer/products/<int:product_id>/',
          product_views.product_detail,
@@ -37,10 +40,22 @@ urlpatterns = [
 for section, pages in PAGE_GROUPS.items():
     for page, template in pages.items():
 
-        if section == 'buyer' and page == 'search':
+        if section == 'auth' and page == 'login':
+            view = user_views.buyer_login
+        elif section == 'buyer' and page == 'home':
+            view = product_views.buyer_home
+        elif section == 'buyer' and page == 'model':
+            view = product_views.buyer_model
+        elif section == 'buyer' and page == 'shop':
+            view = product_views.buyer_shop
+        elif section == 'buyer' and page == 'cart':
+            view = cart_views.cart_detail
+        elif section == 'buyer' and page == 'search':
             view = product_views.buyer_product_list
         elif section == 'buyer' and page == 'compare':
             view = product_views.buyer_product_compare
+        elif section == 'buyer' and page == 'checkout':
+            view = cart_views.cart_checkout
         elif section == 'staff' and page == 'products':
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
@@ -57,6 +72,11 @@ for section, pages in PAGE_GROUPS.items():
                 template_name=template,
                 extra_context={'page_name': page, 'page_section': section},
             )
+            if (section == 'buyer' and page in {
+                'checkout', 'payment', 'orders', 'order', 'account', 'addresses',
+                'builds', 'consultation', 'requests', 'proposals', 'cases', 'notifications', 'chat',
+            }) or (section == 'shop' and page not in {'login', 'register', 'forgot'}):
+                view = user_views.buyer_required(view)
 
         urlpatterns.append(path(
             f'{section}/{page}/',

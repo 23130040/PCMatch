@@ -1,19 +1,77 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Lịch sử đơn — PCMatch</title>
-    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
-    {% include 'includes/frontend_config.html' %}</head>
-<body data-buyer-app>
-<main id="main"><p>Đang tải PCMatch…</p></main>
-<noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript>
-<script type="module" src="{% static 'js/buyer.js' %}"></script>
-</body>
-</html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Đơn hàng — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Lịch sử đơn hàng
+        </h1>
+        <p>
+        </p>
+    </div>
+    <div class="cluster">
+    </div>
+</div>
+<section class="stack" id="" data-backend-form="pending">
+    <label class="field">
+        <span>
+            Tìm mã đơn
+        </span>
+        <input name="q" type="text" value="">
+    </label>
+    <label class="field">
+        <span>
+            Thanh toán
+        </span>
+        <select name="status">
+            <option value="" selected="">
+                Tất cả
+            </option>
+            <option value="pending">
+                Chờ thanh toán
+            </option>
+            <option value="paid">
+                Đã thanh toán demo
+            </option>
+            <option value="failed">
+                Thất bại
+            </option>
+            <option value="expired">
+                Hết hạn
+            </option>
+            <option value="unknown">
+                Chưa rõ kết quả
+            </option>
+            <option value="processing">
+                Đang xử lý
+            </option>
+        </select>
+    </label>
+    <button class="btn btn--primary" type="button" disabled="">
+        Lọc đơn
+    </button>
+    <p class="form-error" role="alert">
+    </p>
+</section>
+<article class="list-row">
+    <div>
+        <h2>
+            PCM-260916-014
+        </h2>
+        <p>
+            00:06:50 16/10/2026 · 1 shop
+        </p>
+        <p>
+            10.235.000
+            &nbsp;
+            ₫ · Đã thanh toán mô phỏng
+        </p>
+        <p>
+            BuildPro Sài Gòn: Chờ shop xác nhận
+        </p>
+    </div>
+    <a class="btn btn--secondary" href="/buyer/order/?id=PCM-260916-014">
+        Xem đơn
+    </a>
+</article>
+{% endblock %}

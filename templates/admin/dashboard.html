@@ -355,7 +355,6 @@
     </main>
 </div>
 
-<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
 <script src="{% static 'js/app.js' %}?v=20260926f"></script>
 
 
@@ -366,7 +365,7 @@
     const ctx = document.getElementById('bieuDoDoanhThu');
     const revenueData = JSON.parse(document.getElementById('revenue-data').textContent);
 
-    new Chart(ctx, {
+    if (ctx && Array.isArray(revenueData)) new Chart(ctx, {
         type: 'bar',
         data: {
             labels: [
@@ -392,5 +391,7 @@
         }
     });
 </script>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
 </html>

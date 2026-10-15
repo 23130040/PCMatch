@@ -1,3 +1,30 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cấu hình lưu — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Cấu hình đã lưu — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Cấu hình đã lưu
+        </h1>
+        <p>
+            Giá và tồn được đọc lại khi mở cấu hình.
+        </p>
+    </div>
+    <div class="cluster">
+        <a class="btn btn--secondary" href="/buyer/builder/">
+            Tạo cấu hình
+        </a>
+    </div>
+</div>
+<section class="empty">
+    <h2>
+        Chưa lưu cấu hình
+    </h2>
+    <p>
+        Bắt đầu chọn linh kiện rồi lưu cấu hình.
+    </p>
+    <a class="btn btn--secondary" href="/buyer/builder/">
+        Tạo cấu hình
+    </a>
+</section>
+{% endblock %}

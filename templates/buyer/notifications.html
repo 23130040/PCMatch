@@ -1,3 +1,30 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thông báo — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Thông báo — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Thông báo
+        </h1>
+        <p>
+            Mở thông báo để xem đúng đối tượng liên quan.
+        </p>
+    </div>
+    <div class="cluster">
+        <button type="button" class="btn btn--secondary" data-id="" disabled="">
+            Đánh dấu tất cả đã đọc
+        </button>
+    </div>
+</div>
+<section class="empty">
+    <h2>
+        Chưa có thông báo
+    </h2>
+    <p>
+        Thông báo xuất hiện khi gửi yêu cầu, thanh toán hoặc nhận phản hồi.
+    </p>
+    <a class="btn btn--secondary" href="/buyer/search/">
+        Tiếp tục mua
+    </a>
+</section>
+{% endblock %}

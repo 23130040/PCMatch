@@ -100,7 +100,7 @@ class FrontendPagesTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_all_pages_render_with_resolvable_links_and_assets(self):
-        pages = [('index', 'sitemap', 'index')]
+        pages = [('home', 'buyer', 'home')]
         pages += [
             (route_name(section, page), section, page)
             for section, group in PAGE_GROUPS.items()
@@ -114,12 +114,15 @@ class FrontendPagesTests(TestCase):
                     self.client.force_login(self.staff)
                 path = reverse(name)
                 response = self.client.get(path)
+                if name in {'buyer_model', 'buyer_shop'}:
+                    self.assertRedirects(response, reverse('buyer_search'))
+                    continue
                 self.assertEqual(response.status_code, 200)
                 parser = PageParser()
                 parser.feed(response.content.decode())
                 self.assertEqual((parser.section, parser.page), (section, page))
                 config = json.loads(parser.config)
-                self.assertEqual(config['index'], reverse('index'))
+                self.assertEqual(config['index'], reverse('home'))
                 for group, urls in config['urls'].items():
                     for key, url in urls.items():
                         self.assertEqual(resolve(url).url_name, route_name(group, key))
@@ -144,12 +147,20 @@ class FrontendPagesTests(TestCase):
                     self.assertNotIn('initSharedComponent', response.content.decode())
 
     def test_registry_covers_every_existing_page(self):
-        page_templates = {'index.html'}
+        page_templates = set()
         page_templates.update(
             template for pages in PAGE_GROUPS.values() for template in pages.values()
         )
         partials = {
             'admin/header.html', 'admin/sidebar.html', 'includes/frontend_config.html',
+            'includes/buyer_base.html',
+            'includes/product_card.html',
+            'includes/buyer_icon.html', 'includes/buyer_header.html', 'includes/buyer_account_links.html',
+            'includes/buyer_chat_content.html', 'includes/buyer_chat_widget.html',
+            'includes/admin_interface_controls.html',
+            'includes/admin_product_drawers.html',
+            'includes/admin_support_drawers.html',
+            'includes/compare_button.html', 'includes/compare_tray.html',
         }
         root = settings.BASE_DIR / 'templates'
         existing = {path.relative_to(root).as_posix() for path in root.rglob('*.html')}
@@ -158,6 +169,33 @@ class FrontendPagesTests(TestCase):
     def test_django_admin_and_unknown_pages(self):
         self.assertEqual(reverse('admin:index'), '/django-admin/')
         self.assertEqual(self.client.get('/buyer/not-a-page/').status_code, 404)
+
+    def test_prototype_state_and_form_interception_are_removed(self):
+        scripts = settings.BASE_DIR / 'static' / 'js'
+        for name in ['buyer.js', 'shop.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js']:
+            self.assertFalse((scripts / name).exists(), name)
+        self.assertFalse((settings.BASE_DIR / 'templates' / 'index.html').exists())
+        for path in scripts.glob('*.js'):
+            content = path.read_text(encoding='utf-8')
+            for forbidden in ['localStorage', 'sessionStorage', 'document.body.innerHTML']:
+                self.assertNotIn(forbidden, content, path.name)
+            # Comparison enhances only its own POST forms; transaction forms stay native.
+            if path.name != 'comparison.js':
+                for forbidden in ["addEventListener('submit'", 'addEventListener("submit"']:
+                    self.assertNotIn(forbidden, content, path.name)
+        for path in (settings.BASE_DIR / 'templates' / 'buyer').glob('*.html'):
+            self.assertNotIn('<template data-page=', path.read_text(encoding='utf-8'), path.name)
+
+    def test_private_layouts_use_django_authentication(self):
+        self.client.logout()
+        for name in ['buyer_account', 'buyer_orders', 'buyer_checkout', 'shop_dashboard', 'shop_offers']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.url.startswith(reverse('auth_login') + '?next='))
+        response = self.client.post(reverse('auth_login'), {
+            'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': reverse('shop_dashboard'),
+        })
+        self.assertRedirects(response, reverse('shop_dashboard'))
 
     def test_search_query_is_preserved_on_slash_redirect(self):
         response = self.client.get('/buyer/search?q=CPU&sort=price')

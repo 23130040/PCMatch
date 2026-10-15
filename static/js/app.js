@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
-// Keyboard navigation for legacy Shop/Admin tabs. Buyer state lives in buyer.js modules.
+// Keyboard navigation for presentation tabs; backend forms submit normally.
 selectAll("[role=tablist]").forEach(list => list.addEventListener("keydown", event => {
     const tabs = selectAll("[role=tab]", list);
     const index = tabs.indexOf(document.activeElement);

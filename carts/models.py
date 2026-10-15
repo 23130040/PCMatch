@@ -7,6 +7,9 @@ class Cart(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user'], name='unique_user_cart')]
+
     def __str__(self):
         return f"Giỏ hàng của {self.user}"
 

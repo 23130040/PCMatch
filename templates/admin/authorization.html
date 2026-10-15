@@ -360,19 +360,9 @@
 </div>
 
 
-<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 
-<script>
-    (function initRoleTabs() {
-        const tabs = document.querySelectorAll('.tabs[aria-label="Chọn vai trò cấu hình quyền"] .tab');
-        tabs.forEach((tab) => {
-            tab.addEventListener('click', () => {
-                tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
-                tab.setAttribute('aria-selected', 'true');
-            });
-        });
-    })();
-</script>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
 </html>

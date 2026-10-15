@@ -1,3 +1,54 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Giỏ hàng — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% load cart_prices %}
+{% block title %}Giỏ hàng — PCMatch{% endblock %}
+{% block content %}
+<header class="page-head">
+    <div><h1>Giỏ hàng của bạn</h1><p>{{ cart_items|length }} dòng hàng · {{ item_count }} sản phẩm</p></div>
+    <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Tiếp tục mua sắm</a>
+</header>
+{% if cart_items %}
+    <div class="server-cart-layout">
+        <div class="stack">
+            {% regroup cart_items by product.shop as shop_groups %}
+            {% for group in shop_groups %}
+                <section class="panel panel--padded" aria-labelledby="shop-{{ group.grouper.pk }}">
+                    <h2 id="shop-{{ group.grouper.pk }}"><a href="{% url 'buyer_search' %}?shop={{ group.grouper.pk }}">{{ group.grouper.shop_name }}</a></h2>
+                    {% for item in group.list %}
+                        <article class="cart-row" data-cart-item="{{ item.pk }}">
+                            <div class="server-cart-product">
+                                <a class="server-cart-image" href="{% url 'buyer_product_detail' item.product_id %}" aria-label="{{ item.product.product_name }}">
+                                    {% if item.product.thumbnail %}<img src="{{ item.product.thumbnail.url }}" alt="{{ item.product.product_name }}" width="88" height="88">{% else %}<span>Chưa có ảnh</span>{% endif %}
+                                </a>
+                                <div>
+                                    <h3><a href="{% url 'buyer_product_detail' item.product_id %}">{{ item.product.product_name }}</a></h3>
+                                    <p>{{ item.product.price|vnd }} ₫ / sản phẩm</p>
+                                    <p class="muted">Còn {{ item.product.stock_quantity }} sản phẩm</p>
+                                    {% if not item.available %}<p class="message message--error" role="alert">Sản phẩm đã hết hàng hoặc tạm ngừng bán.</p>
+                                    {% elif item.quantity > item.product.stock_quantity %}<p class="message message--error" role="alert">Số lượng trong giỏ vượt tồn kho. Vui lòng giảm số lượng.</p>{% endif %}
+                                </div>
+                            </div>
+                            <form method="post" action="{% url 'buyer_cart_update' item.pk %}" class="stack">
+                                {% csrf_token %}
+                                <label class="field" for="quantity-{{ item.pk }}"><span>Số lượng</span><input id="quantity-{{ item.pk }}" aria-label="Số lượng {{ item.product.product_name }}" type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" step="1" required{% if not item.available %} disabled{% endif %}></label>
+                                <button class="btn btn--secondary" type="submit"{% if not item.available %} disabled{% endif %}>Cập nhật</button>
+                            </form>
+                            <div>
+                                <strong>{{ item.line_total|vnd }} ₫</strong>
+                                <form method="post" action="{% url 'buyer_cart_remove' item.pk %}">{% csrf_token %}<button class="btn btn--secondary" type="submit" aria-label="Xóa {{ item.product.product_name }}">Xóa sản phẩm</button></form>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </section>
+            {% endfor %}
+        </div>
+        <aside class="panel panel--padded server-cart-summary" aria-label="Tóm tắt giỏ hàng">
+            <h2>Tạm tính</h2>
+            <dl class="money-summary"><div><dt>Số sản phẩm</dt><dd>{{ item_count }}</dd></div><div class="total"><dt>Tiền hàng</dt><dd>{{ subtotal|vnd }} ₫</dd></div></dl>
+            <p>Chưa bao gồm phí vận chuyển và ưu đãi. Giỏ hàng không giữ tồn kho.</p>
+            <a class="btn btn--primary" href="{% url 'buyer_checkout' %}">Tiến hành thanh toán</a>
+        </aside>
+    </div>
+{% else %}
+    <section class="empty"><h2>Giỏ hàng đang trống</h2><p>Chọn sản phẩm bạn muốn mua để thêm vào giỏ hàng.</p><a class="btn btn--primary" href="{% url 'buyer_search' %}">Khám phá sản phẩm</a></section>
+{% endif %}
+{% endblock %}

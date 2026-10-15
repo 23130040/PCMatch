@@ -1,10 +1,8 @@
 {% load static %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quản lý đơn hàng — PCMatch</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý đơn hàng</title>
 <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -12,5 +10,458 @@
 <link rel="stylesheet" href="{% static 'css/production.css' %}">
 <link rel="stylesheet" href="{% static 'css/shop.css' %}">
 {% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+<body class="shop-app">
+<a class="skip-link" href="#main">
+    Bỏ qua điều hướng
+</a>
+<div class="service-bar">
+    BuildPro Sài Gòn · Trung tâm vận hành shop
+</div>
+<header class="topbar">
+    <div class="container topbar__inner" style="max-width:none">
+        <button class="menu-toggle" type="button" data-sidebar-toggle="" aria-expanded="false" aria-label="Mở sidebar">
+            <span>
+            </span>
+        </button>
+        <a class="logo" href="/shop/dashboard/">
+            <i class="logo__mark">
+            </i>
+            <span>
+                PC
+            </span>
+            <span>
+                Match Shop
+            </span>
+        </a>
+        <label class="search shop-top-search">
+            <span class="sr-only">
+                Tìm trong shop
+            </span>
+            <input id="shop-global-search" placeholder="Tìm request, proposal, offer hoặc đơn">
+            <i class="search__glyph">
+            </i>
+        </label>
+        <nav class="nav-links">
+            <a href="/buyer/home/">
+                Mở phía người mua
+            </a>
+            <a href="/shop/dashboard/">
+                BuildPro Sài Gòn
+            </a>
+        </nav>
+    </div>
+</header>
+<div class="shop-shell">
+    <aside class="shop-sidebar">
+        <div class="shop-sidebar__brand">
+            <strong>
+                BuildPro Sài Gòn
+            </strong>
+            <small>
+                Shop đã xác minh · Chủ shop
+            </small>
+        </div>
+        <nav>
+            <p class="sidebar__group">
+                Vận hành
+            </p>
+            <a href="/shop/dashboard/">
+                Tổng quan
+            </a>
+            <a href="/shop/offers/">
+                Tin bán
+                <span class="sidebar__count">
+                    14
+                </span>
+            </a>
+            <a href="/shop/inventory/">
+                Kho
+                <span class="sidebar__count">
+                    1 thấp
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Công việc
+            </p>
+            <a href="/shop/build-requests/">
+                Yêu cầu Build
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/proposal-list/">
+                Proposal
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/orders/" aria-current="page">
+                Đơn hàng
+                <span class="sidebar__count">
+                    1
+                </span>
+            </a>
+            <a href="/shop/fulfillment/">
+                Giao hàng
+            </a>
+            <a href="/shop/aftersales/">
+                Hậu mãi
+                <span class="sidebar__count">
+                    0
+                </span>
+            </a>
+            <p class="sidebar__group">
+                Tài chính
+            </p>
+            <a href="/shop/revenue/">
+                Doanh thu
+            </a>
+            <p class="sidebar__group">
+                Cài đặt
+            </p>
+            <a href="/shop/login/">
+                Đăng xuất
+            </a>
+        </nav>
+    </aside>
+    <main class="shop-main" id="main">
+        <nav class="breadcrumb">
+            <a href="/shop/dashboard/">
+                Cổng Shop
+            </a>
+            <span>
+                Đơn hàng
+            </span>
+        </nav>
+        <div class="page-head">
+            <div>
+                <h1>
+                    Đơn SUB-BP-002
+                </h1>
+                <p>
+                    PCM-260916-014 · Nguyễn Minh
+                </p>
+            </div>
+            <div class="cluster">
+                <a class="btn btn--secondary" href="/shop/orders/">
+                    Danh sách
+                </a>
+                <button type="button" class="btn btn--secondary" data-id="SUB-BP-002" disabled="">
+                    Từ chối
+                </button>
+                <button type="button" class="btn btn--primary" data-id="SUB-BP-002" disabled="">
+                    Xác nhận đơn
+                </button>
+            </div>
+        </div>
+        <div class="shop-grid">
+            <div class="stack">
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Nguồn đơn hàng
+                            </h2>
+                        </div>
+                    </div>
+                    <p>
+                        Đơn mua trực tiếp, không đi từ Build Request.
+                    </p>
+                </section>
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Sản phẩm
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        Sản phẩm
+                                    </th>
+                                    <th>
+                                        SL
+                                    </th>
+                                    <th>
+                                        Giá snapshot
+                                    </th>
+                                    <th>
+                                        Bảo hành
+                                    </th>
+                                    <th>
+                                        Tồn hiện tại
+                                    </th>
+                                    <th>
+                                        Khả dụng
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            AMD Ryzen 5 7600
+                                        </strong>
+                                        <small>
+                                            BP-CPU-7600
+                                        </small>
+                                    </td>
+                                    <td>
+                                        1
+                                    </td>
+                                    <td>
+                                        4.690.000
+                                        &nbsp;
+                                        ₫
+                                    </td>
+                                    <td>
+                                        36 tháng
+                                    </td>
+                                    <td>
+                                        8
+                                    </td>
+                                    <td>
+                                        7
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            MSI PRO B650M-A WIFI
+                                        </strong>
+                                        <small>
+                                            BP-MB-B650
+                                        </small>
+                                    </td>
+                                    <td>
+                                        1
+                                    </td>
+                                    <td>
+                                        3.890.000
+                                        &nbsp;
+                                        ₫
+                                    </td>
+                                    <td>
+                                        36 tháng
+                                    </td>
+                                    <td>
+                                        11
+                                    </td>
+                                    <td>
+                                        10
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            WD Black SN770 1TB
+                                        </strong>
+                                        <small>
+                                            BP-SSD-SN770
+                                        </small>
+                                    </td>
+                                    <td>
+                                        1
+                                    </td>
+                                    <td>
+                                        1.790.000
+                                        &nbsp;
+                                        ₫
+                                    </td>
+                                    <td>
+                                        60 tháng
+                                    </td>
+                                    <td>
+                                        12
+                                    </td>
+                                    <td>
+                                        11
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Dòng thời gian
+                            </h2>
+                        </div>
+                    </div>
+                    <ul class="shop-timeline">
+                        <li>
+                            <strong>
+                                00:06 16/10/26
+                            </strong>
+                            <span>
+                                Thanh toán thành công; chờ shop xác nhận
+                            </span>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+            <div class="stack">
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Trạng thái
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="shop-badge-row">
+                        <span class="status status--info">
+                            Đã thanh toán
+                        </span>
+                        <span class="status status--warn">
+                            Chờ shop xác nhận
+                        </span>
+                        <span class="status status--warn">
+                            Chưa tạo vận đơn
+                        </span>
+                    </div>
+                </section>
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Giao hàng
+                            </h2>
+                        </div>
+                    </div>
+                    <p>
+                        <strong>
+                            Nguyễn Minh
+                        </strong>
+                        · 0900000128
+                    </p>
+                    <p>
+                        72 Nguyễn Thị Minh Khai, Phường Xuân Hòa · TP. Hồ Chí Minh
+                    </p>
+                </section>
+                <section class="panel panel--padded">
+                    <div class="panel__head">
+                        <div>
+                            <h2 style="font-size:var(--text-xl)">
+                                Tài chính đơn con
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="shop-total">
+                        <span>
+                            Tiền hàng
+                        </span>
+                        <strong>
+                            10.370.000
+                            &nbsp;
+                            ₫
+                        </strong>
+                    </div>
+                    <div class="shop-total">
+                        <span>
+                            Giảm giá
+                        </span>
+                        <strong>
+                            − 200.000
+                            &nbsp;
+                            ₫
+                        </strong>
+                    </div>
+                    <div class="shop-total">
+                        <span>
+                            Phí giao
+                        </span>
+                        <strong>
+                            65.000
+                            &nbsp;
+                            ₫
+                        </strong>
+                    </div>
+                    <div class="shop-total">
+                        <span>
+                            Lắp ráp
+                        </span>
+                        <strong>
+                            0
+                            &nbsp;
+                            ₫
+                        </strong>
+                    </div>
+                    <div class="shop-total shop-total--grand">
+                        <span>
+                            Tổng đơn con
+                        </span>
+                        <strong>
+                            10.235.000
+                            &nbsp;
+                            ₫
+                        </strong>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <dialog class="modal shop-dialog" id="order-reject-dialog">
+            <section class="" id="" data-backend-form="pending">
+                <div class="modal__head">
+                    <div>
+                        <h2>
+                            Từ chối đơn
+                        </h2>
+                        <p class="shop-mini">
+                            SUB-BP-002
+                        </p>
+                    </div>
+                    <button type="button" class="icon-button" data-dialog-close="" aria-label="Đóng" disabled="">
+                        <span class="close-glyph">
+                        </span>
+                    </button>
+                </div>
+                <div class="modal__body stack">
+                    <input type="hidden" name="subId" value="SUB-BP-002">
+                    <label class="field">
+                        <span>
+                            Lý do
+                        </span>
+                        <select name="reason" required="">
+                            <option value="Hết hàng sau đối chiếu tồn">
+                                Hết hàng sau đối chiếu tồn
+                            </option>
+                            <option value="Không đáp ứng điều kiện lắp ráp">
+                                Không đáp ứng điều kiện lắp ráp
+                            </option>
+                            <option value="Không thể giao đúng thời gian">
+                                Không thể giao đúng thời gian
+                            </option>
+                            <option value="Khác">
+                                Khác
+                            </option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>
+                            Ghi chú
+                        </span>
+                        <textarea name="note" maxlength="300" placeholder="Thông tin bổ sung">
+                        </textarea>
+                    </label>
+                </div>
+                <div class="modal__foot">
+                    <button type="button" class="btn btn--secondary" data-dialog-close="" disabled="">
+                        Quay lại
+                    </button>
+                    <button class="btn btn--danger" disabled="">
+                        Xác nhận từ chối
+                    </button>
+                </div>
+            </section>
+        </dialog>
+    </main>
+</div>
+<script src="{% static 'js/shop-interface.js' %}" defer></script>
+</body></html>
