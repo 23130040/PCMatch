@@ -8,7 +8,7 @@ BUYER_PAGES = (
 SHOP_PAGES = (
     'login', 'register', 'forgot', 'dashboard', 'offers', 'inventory', 'build-requests',
     'build-request-detail', 'proposal-builder', 'proposal-list',
-    'proposal', 'orders', 'order', 'fulfillment', 'aftersales', 'revenue',
+    'proposal', 'orders', 'order', 'fulfillment', 'aftersales', 'revenue', 'questions',
 )
 
 STAFF_PAGES = (
