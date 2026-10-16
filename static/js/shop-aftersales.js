@@ -1,5 +1,5 @@
-﻿import {mineSeller,sdb,stx,seller,uid} from './shop-store.js';
-import {esc,params,go,link,a,btn,field,select,textarea,submit,form,notice,empty,panel,head,badge,statusBadge,mount,toast,dialog,requireSeller} from './shop-ui.js';
+import {renderTemplate,esc,params,link,a,btn,textarea,submit,form,panel,badge,statusBadge,mount,toast,dialog,requireSeller} from './shop-ui.js';
+import {mineSeller,stx} from './shop-store.js';
 
 export function aftersales(){
   if(!requireSeller())return;
@@ -16,49 +16,33 @@ export function aftersales(){
   };
   const totalAll=mineSeller('shopAftersales').length;
 
-  mount('Hậu mãi',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <span>Hậu mãi</span>
-        </div>
-        <h1>Quản lý hậu mãi</h1>
-        <p>Xử lý các yêu cầu đổi trả và bảo hành từ khách hàng</p>
-      </div>
-    </section>
-
-    <div class="sa-table-card">
-      <div class="sa-filter-tabs">
-        <button class="sa-tab ${!statusFilter?'is-active':''}" data-action="aftersale-tab" data-status="">Tất cả <span>${totalAll}</span></button>
-        ${Object.entries(counts).map(([s,c])=>`<button class="sa-tab ${statusFilter===s?'is-active':''}" data-action="aftersale-tab" data-status="${esc(s)}">${esc(s)} <span>${c}</span></button>`).join('')}
-      </div>
-
-      ${list.length?`
-        <div style="padding:16px;display:grid;gap:12px">
-          ${list.map(af=>`
-            <div class="shop-card">
-              <div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${statusBadge(af.status)} ${badge(af.type,'default')} <span style="color:#94a3b8;font-size:11px">${new Date(af.createdAt).toLocaleString('vi-VN')}</span></div>
-                <strong style="font-size:14px">${esc(af.buyerName)}</strong>
-                <p style="margin:4px 0;color:#475569;font-size:13px">Sản phẩm: <strong>${esc(af.productName)}</strong></p>
-                <p style="margin:4px 0;color:#475569;font-size:13px">Lý do: ${esc(af.reason)}</p>
-                ${af.logs.slice(-1).map(l=>`<p style="margin:4px 0;color:#94a3b8;font-size:12px">${esc(l.text)}</p>`).join('')}
-              </div>
-              <div class="stack">
-                ${a('Xử lý','aftersales',{id:af.id},'primary')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `:`<div class="sa-empty-table">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <h3>Không có hồ sơ hậu mãi</h3>
-          <p>Khách hàng chưa gửi yêu cầu đổi trả hoặc bảo hành.${statusFilter?' Thử bỏ bộ lọc.':''}</p>
-        </div>`}
-    </div>
-  `);
+  mount('Hậu mãi',renderTemplate("shop-aftersales-aftersales-4", {
+    dashboardUrl: link('dashboard'),
+    contentContent: !statusFilter?'is-active':'',
+    totalAll: totalAll,
+    entriesRows: Object.entries(counts).map(([s,c])=>renderTemplate("shop-aftersales-aftersales-5", {
+      statusFilterContent: statusFilter===s?'is-active':'',
+      s: esc(s),
+      s2: esc(s),
+      c: c
+    })).join(''),
+    lengthContent: list.length?renderTemplate("shop-aftersales-aftersales-6", {
+      listRows: list.map(af=>renderTemplate("shop-aftersales-aftersales-2", {
+        statusBadge: statusBadge(af.status),
+        content: badge(af.type,'default'),
+        toLocaleString: new Date(af.createdAt).toLocaleString('vi-VN'),
+        buyerName: esc(af.buyerName),
+        productName: esc(af.productName),
+        reason: esc(af.reason),
+        sliceRows: af.logs.slice(-1).map(l=>renderTemplate("shop-aftersales-aftersales-1", {
+          text: esc(l.text)
+        })).join(''),
+        aftersalesLink: a('Xử lý','aftersales',{id:af.id},'primary')
+      })).join('')
+    }):renderTemplate("shop-aftersales-aftersales-3", {
+      statusFilterContent: statusFilter?' Thử bỏ bộ lọc.':''
+    })
+  }));
 
   document.querySelectorAll('[data-action="aftersale-tab"]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -73,86 +57,49 @@ export function aftersales(){
 export function aftersaleDetail(){
   if(!requireSeller())return;
   const af=mineSeller('shopAftersales').find(x=>x.id===params.get('id'));
-  if(!af){mount('Hậu mãi',`<div class="sa-empty-table"><h3>Không tìm thấy hồ sơ</h3><p>Hồ sơ không tồn tại.</p>${a('Quay lại','aftersales')}</div>`);return;}
+  if(!af){mount('Hậu mãi',renderTemplate("shop-aftersales-aftersaleDetail-1", {
+    aftersalesLink: a('Quay lại','aftersales')
+  }));return;}
 
   const canProcess=!['Đã giải quyết','Từ chối'].includes(af.status);
 
-  mount('Hồ sơ '+af.id,`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <a href="${link('aftersales')}">Hậu mãi</a>
-          <span>/</span>
-          <span>${esc(af.id)}</span>
-        </div>
-        <h1>${esc(af.id)}</h1>
-        <p>${af.type} · ${esc(af.buyerName)}</p>
-      </div>
-      <div class="sa-page-actions">
-        ${a('← Danh sách hậu mãi','aftersales')}
-      </div>
-    </section>
-
-    <div class="shop-grid">
-      <div class="stack">
-        ${panel('Thông tin hồ sơ',`
-          <dl class="info-dl">
-            <dt>Khách hàng</dt><dd>${esc(af.buyerName)}</dd>
-            <dt>Loại yêu cầu</dt><dd>${badge(af.type,'default')}</dd>
-            <dt>Sản phẩm</dt><dd>${esc(af.productName)}</dd>
-            <dt>Lý do</dt><dd>${esc(af.reason)}</dd>
-            <dt>Trạng thái</dt><dd>${statusBadge(af.status)}</dd>
-            <dt>Ngày gửi</dt><dd>${new Date(af.createdAt).toLocaleString('vi-VN')}</dd>
-          </dl>
-        `)}
-
-        ${panel('Lịch sử xử lý',`
-          <ul class="shop-timeline">
-            ${af.logs.map(l=>`<li><strong>${new Date(l.at).toLocaleString('vi-VN')}</strong><span>${esc(l.text)}</span></li>`).join('')}
-          </ul>
-        `)}
-
-        ${canProcess?`
-          <div class="shop-aftersales-actions">
-            <section class="shop-action-form">
-              <h3>Tiếp nhận & trả lời khách</h3>
-              ${form('aftersale-reply',`
-                <input type="hidden" name="id" value="${esc(af.id)}">
-                ${textarea('Phản hồi cho khách hàng','reply','','required maxlength="500" placeholder="Hướng dẫn gửi hàng, địa chỉ tiếp nhận, thời gian xử lý dự kiến..."')}
-                <div class="cluster">
-                  ${submit('Gửi phản hồi')}
-                  ${btn('Tiếp nhận kiểm tra','case-inspect',af.id,'secondary')}
-                </div>
-              `)}
-            </section>
-            <section class="shop-action-form">
-              <h3>Kết quả xử lý</h3>
-              <div class="cluster">
-                ${btn('Duyệt đổi/trả','case-approve',af.id,'primary')}
-                ${btn('Sửa & gửi lại (bảo hành)','case-repair',af.id)}
-                ${btn('Từ chối','case-reject',af.id,'danger')}
-              </div>
-            </section>
-          </div>
-        `:`<div class="shop-case-result">
-          <span>${statusBadge(af.status)}</span>
-          <p>Hồ sơ đã được xử lý xong.</p>
-        </div>`}
-      </div>
-
-      <div>
-        ${panel('Hướng dẫn xử lý',`
-          <div class="shop-aftersales-resolution">
-            <p><strong>Đổi/trả:</strong> Xác nhận lý do hợp lệ → Hướng dẫn gửi hàng → Duyệt hoàn tiền hoặc gửi hàng mới.</p>
-            <p><strong>Bảo hành:</strong> Tiếp nhận kiểm tra → Sửa chữa hoặc thay thế → Gửi lại cho khách.</p>
-            <p class="muted">Thời gian xử lý mô phỏng, không ràng buộc nghĩa vụ thương mại.</p>
-          </div>
-        `)}
-      </div>
-    </div>
-  `);
+  mount('Hồ sơ '+af.id,renderTemplate("shop-aftersales-aftersaleDetail-4", {
+    dashboardUrl: link('dashboard'),
+    aftersalesUrl: link('aftersales'),
+    id: esc(af.id),
+    id2: esc(af.id),
+    type: af.type,
+    buyerName: esc(af.buyerName),
+    aftersalesLink: a('← Danh sách hậu mãi','aftersales'),
+    ThongTinHoSoPanel: panel('Thông tin hồ sơ',renderTemplate("shop-aftersales-aftersaleDetail-5", {
+      buyerName: esc(af.buyerName),
+      content: badge(af.type,'default'),
+      productName: esc(af.productName),
+      reason: esc(af.reason),
+      statusBadge: statusBadge(af.status),
+      toLocaleString: new Date(af.createdAt).toLocaleString('vi-VN')
+    })),
+    LichSuXuLyPanel: panel('Lịch sử xử lý',renderTemplate("shop-aftersales-aftersaleDetail-7", {
+      logsRows: af.logs.map(l=>renderTemplate("shop-aftersales-aftersaleDetail-6", {
+        toLocaleString: new Date(l.at).toLocaleString('vi-VN'),
+        text: esc(l.text)
+      })).join('')
+    })),
+    canProcessContent: canProcess?renderTemplate("shop-aftersales-aftersaleDetail-9", {
+      aftersaleReplyForm: form('aftersale-reply',renderTemplate("shop-aftersales-aftersaleDetail-8", {
+        id: esc(af.id),
+        replyField: textarea('Phản hồi cho khách hàng','reply','','required maxlength="500" placeholder="Hướng dẫn gửi hàng, địa chỉ tiếp nhận, thời gian xử lý dự kiến..."'),
+        content: submit('Gửi phản hồi'),
+        caseInspectButton: btn('Tiếp nhận kiểm tra','case-inspect',af.id,'secondary')
+      })),
+      caseApproveButton: btn('Duyệt đổi/trả','case-approve',af.id,'primary'),
+      caseRepairButton: btn('Sửa & gửi lại (bảo hành)','case-repair',af.id),
+      caseRejectButton: btn('Từ chối','case-reject',af.id,'danger')
+    }):renderTemplate("shop-aftersales-aftersaleDetail-2", {
+      statusBadge: statusBadge(af.status)
+    }),
+    HuongDanXuLyPanel: panel('Hướng dẫn xử lý',renderTemplate("shop-aftersales-aftersaleDetail-3"))
+  }));
 }
 
 export function questions(){
@@ -166,64 +113,33 @@ export function questions(){
   const unanswered=mineSeller('shopQuestions').filter(q=>!q.answered).length;
   const answered=mineSeller('shopQuestions').filter(q=>q.answered).length;
 
-  mount('Câu hỏi',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <span>Câu hỏi</span>
-        </div>
-        <h1>Câu hỏi từ khách hàng</h1>
-        <p>Trả lời câu hỏi để tăng tỷ lệ chuyển đổi</p>
-      </div>
-    </section>
-
-    <div class="sa-table-card">
-      <div class="sa-filter-tabs">
-        <button class="sa-tab ${!showAnswered?'is-active':''}" data-action="question-tab" data-answered="">Chưa trả lời <span>${unanswered}</span></button>
-        <button class="sa-tab ${showAnswered?'is-active':''}" data-action="question-tab" data-answered="1">Đã trả lời <span>${answered}</span></button>
-      </div>
-
-      ${list.length?`
-        <div class="table-scroll"><table>
-          <thead><tr>
-            <th>KHÁCH / SẢN PHẨM</th>
-            <th>CÂU Hỏi</th>
-            <th>THỜI GIAN</th>
-            <th>${showAnswered?'CÂU TRẢ LỜI':'GỪI CÂU TRẢ LỜI'}</th>
-          </tr></thead>
-          <tbody>
-            ${list.map(q=>`<tr>
-              <td>
-                <div class="sa-product-cell">
-                  <div class="sa-product-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                  <div>
-                    <strong>${esc(q.buyerName)}</strong>
-                    <small>${esc(q.productName)}</small>
-                  </div>
-                </div>
-              </td>
-              <td class="sa-q-text">${esc(q.question)}</td>
-              <td class="sa-q-time">${new Date(q.createdAt).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-              <td>
-                ${q.answered
-                  ?`<div class="sa-q-answered">${esc(q.answer)}<br><button type="button" class="sa-detail-btn" style="margin-top:6px" data-action="edit-answer" data-id="${esc(q.id)}">Sửa</button></div>`
-                  :`<form data-form="answer-question" class="sa-q-reply-form"><input type="hidden" name="id" value="${esc(q.id)}"><input type="text" name="answer" required maxlength="500" placeholder="Nhập câu trả lời ngắn gọn, rõ ràng..."><button type="submit" class="inv-update-btn">Gửi trả lời</button></form>`
-                }
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table></div>
-      `:`<div class="sa-empty-table">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M8 10h8M8 14h4m-7 5h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <h3>${showAnswered?'Chưa có câu hỏi nào được trả lời':'Không có câu hỏi mới'}</h3>
-          <p>${showAnswered?'Các câu hỏi đã trả lời sẽ xuất hiện ở đây.':'Tuyệt vời! Không có câu hỏi mới cần trả lời.'}</p>
-        </div>`}
-    </div>
-  `);
+  mount('Câu hỏi',renderTemplate("shop-aftersales-questions-2", {
+    dashboardUrl: link('dashboard'),
+    contentContent: !showAnswered?'is-active':'',
+    unanswered: unanswered,
+    showAnsweredContent: showAnswered?'is-active':'',
+    answered: answered,
+    lengthContent: list.length?renderTemplate("shop-aftersales-questions-6", {
+      showAnsweredContent: showAnswered?'CÂU TRẢ LỜI':'GỪI CÂU TRẢ LỜI',
+      listRows: list.map(q=>renderTemplate("shop-aftersales-questions-5", {
+        buyerName: esc(q.buyerName),
+        productName: esc(q.productName),
+        question: esc(q.question),
+        toLocaleString: new Date(q.createdAt).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+        answeredContent: q.answered
+                  ?renderTemplate("shop-aftersales-questions-3", {
+          answer: esc(q.answer),
+          id: esc(q.id)
+        })
+                  :renderTemplate("shop-aftersales-questions-4", {
+          id: esc(q.id)
+        })
+      })).join('')
+    }):renderTemplate("shop-aftersales-questions-1", {
+      showAnsweredContent: showAnswered?'Chưa có câu hỏi nào được trả lời':'Không có câu hỏi mới',
+      showAnsweredContent2: showAnswered?'Các câu hỏi đã trả lời sẽ xuất hiện ở đây.':'Tuyệt vời! Không có câu hỏi mới cần trả lời.'
+    })
+  }));
 
   document.querySelectorAll('[data-action="question-tab"]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -268,10 +184,14 @@ export function action(act,id){
   if(act==='edit-answer'){
     const q=mineSeller('shopQuestions').find(x=>x.id===id);
     if(!q)throw Error('Không tìm thấy câu hỏi.');
-    const el=document.querySelector(`[data-id="${id}"]`)?.closest('.shop-card');
+    const el=document.querySelector(`[data-action="edit-answer"][data-id="${id}"]`)?.closest('.sa-q-answered');
     if(el){
-      const old=el.querySelector('.btn');
-      old.insertAdjacentHTML('afterend',`${form('answer-question','<input type="hidden" name="id" value="'+esc(q.id)+'">'+`<label class="field"><span>Câu trả lời</span><textarea name="answer" required maxlength="500">${esc(q.answer||'')}</textarea></label>`+submit('Cập nhật câu trả lời'))}`);
+      const old=el.querySelector('[data-action="edit-answer"]');
+      old.insertAdjacentHTML('afterend',`${form('answer-question',renderTemplate("shop-aftersales-action-1", {
+        id: esc(q.id),
+        answer: esc(q.answer||''),
+        content: submit('Cập nhật câu trả lời')
+      }))}`);
       old.remove();
     }
     return true;

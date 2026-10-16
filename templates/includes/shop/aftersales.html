@@ -1,0 +1,236 @@
+<template data-shop-template="shop-aftersales-aftersales-1">
+<p style="margin:4px 0;color:#94a3b8;font-size:12px">[[text]]</p>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersales-2">
+<div class="shop-card">
+  <div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">[[statusBadge]] [[content]] <span style="color:#94a3b8;font-size:11px">[[toLocaleString]]</span></div>
+    <strong style="font-size:14px">[[buyerName]]</strong>
+    <p style="margin:4px 0;color:#475569;font-size:13px">Sản phẩm: <strong>[[productName]]</strong></p>
+    <p style="margin:4px 0;color:#475569;font-size:13px">Lý do: [[reason]]</p>
+    [[sliceRows]]
+  </div>
+  <div class="stack">
+    [[aftersalesLink]]
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersales-3">
+<div class="sa-empty-table">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <h3>Không có hồ sơ hậu mãi</h3>
+          <p>Khách hàng chưa gửi yêu cầu đổi trả hoặc bảo hành.[[statusFilterContent]]</p>
+        </div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersales-4">
+<section class="sa-page-heading">
+  <div>
+    <div class="sa-breadcrumbs">
+      <a href="[[dashboardUrl]]">Kênh bán</a>
+      <span>/</span>
+      <span>Hậu mãi</span>
+    </div>
+    <h1>Quản lý hậu mãi</h1>
+    <p>Xử lý các yêu cầu đổi trả và bảo hành từ khách hàng</p>
+  </div>
+</section>
+
+<div class="sa-table-card">
+  <div class="sa-filter-tabs">
+    <button class="sa-tab [[contentContent]]" data-action="aftersale-tab" data-status="">Tất cả <span>[[totalAll]]</span></button>
+    [[entriesRows]]
+  </div>
+
+  [[lengthContent]]
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-1">
+<div class="sa-empty-table"><h3>Không tìm thấy hồ sơ</h3><p>Hồ sơ không tồn tại.</p>[[aftersalesLink]]</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-2">
+<div class="shop-case-result">
+          <span>[[statusBadge]]</span>
+          <p>Hồ sơ đã được xử lý xong.</p>
+        </div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-3">
+<div class="shop-aftersales-resolution">
+  <p><strong>Đổi/trả:</strong> Xác nhận lý do hợp lệ → Hướng dẫn gửi hàng → Duyệt hoàn tiền hoặc gửi hàng mới.</p>
+  <p><strong>Bảo hành:</strong> Tiếp nhận kiểm tra → Sửa chữa hoặc thay thế → Gửi lại cho khách.</p>
+  <p class="muted">Thời gian xử lý mô phỏng, không ràng buộc nghĩa vụ thương mại.</p>
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-4">
+<section class="sa-page-heading">
+  <div>
+    <div class="sa-breadcrumbs">
+      <a href="[[dashboardUrl]]">Kênh bán</a>
+      <span>/</span>
+      <a href="[[aftersalesUrl]]">Hậu mãi</a>
+      <span>/</span>
+      <span>[[id]]</span>
+    </div>
+    <h1>[[id2]]</h1>
+    <p>[[type]] · [[buyerName]]</p>
+  </div>
+  <div class="sa-page-actions">
+    [[aftersalesLink]]
+  </div>
+</section>
+
+<div class="shop-grid">
+  <div class="stack">
+    [[ThongTinHoSoPanel]]
+
+    [[LichSuXuLyPanel]]
+
+    [[canProcessContent]]
+  </div>
+
+  <div>
+    [[HuongDanXuLyPanel]]
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-1">
+<div class="sa-empty-table">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M8 10h8M8 14h4m-7 5h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <h3>[[showAnsweredContent]]</h3>
+          <p>[[showAnsweredContent2]]</p>
+        </div>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-2">
+<section class="sa-page-heading">
+  <div>
+    <div class="sa-breadcrumbs">
+      <a href="[[dashboardUrl]]">Kênh bán</a>
+      <span>/</span>
+      <span>Câu hỏi</span>
+    </div>
+    <h1>Câu hỏi từ khách hàng</h1>
+    <p>Trả lời câu hỏi để tăng tỷ lệ chuyển đổi</p>
+  </div>
+</section>
+
+<div class="sa-table-card">
+  <div class="sa-filter-tabs">
+    <button class="sa-tab [[contentContent]]" data-action="question-tab" data-answered="">Chưa trả lời <span>[[unanswered]]</span></button>
+    <button class="sa-tab [[showAnsweredContent]]" data-action="question-tab" data-answered="1">Đã trả lời <span>[[answered]]</span></button>
+  </div>
+
+  [[lengthContent]]
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersales-5">
+<button class="sa-tab [[statusFilterContent]]" data-action="aftersale-tab" data-status="[[s]]">[[s2]] <span>[[c]]</span></button>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersales-6">
+<div style="padding:16px;display:grid;gap:12px">
+  [[listRows]]
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-5">
+<dl class="info-dl">
+  <dt>Khách hàng</dt><dd>[[buyerName]]</dd>
+  <dt>Loại yêu cầu</dt><dd>[[content]]</dd>
+  <dt>Sản phẩm</dt><dd>[[productName]]</dd>
+  <dt>Lý do</dt><dd>[[reason]]</dd>
+  <dt>Trạng thái</dt><dd>[[statusBadge]]</dd>
+  <dt>Ngày gửi</dt><dd>[[toLocaleString]]</dd>
+</dl>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-6">
+<li><strong>[[toLocaleString]]</strong><span>[[text]]</span></li>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-7">
+<ul class="shop-timeline">
+  [[logsRows]]
+</ul>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-8">
+<input type="hidden" name="id" value="[[id]]">
+[[replyField]]
+<div class="cluster">
+  [[content]]
+  [[caseInspectButton]]
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-aftersaleDetail-9">
+<div class="shop-aftersales-actions">
+  <section class="shop-action-form">
+    <h3>Tiếp nhận & trả lời khách</h3>
+    [[aftersaleReplyForm]]
+  </section>
+  <section class="shop-action-form">
+    <h3>Kết quả xử lý</h3>
+    <div class="cluster">
+      [[caseApproveButton]]
+      [[caseRepairButton]]
+      [[caseRejectButton]]
+    </div>
+  </section>
+</div>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-3">
+<div class="sa-q-answered">[[answer]]<br><button type="button" class="sa-detail-btn" style="margin-top:6px" data-action="edit-answer" data-id="[[id]]">Sửa</button></div>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-4">
+<form data-form="answer-question" class="sa-q-reply-form"><input type="hidden" name="id" value="[[id]]"><input type="text" name="answer" required maxlength="500" placeholder="Nhập câu trả lời ngắn gọn, rõ ràng..."><button type="submit" class="inv-update-btn">Gửi trả lời</button></form>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-5">
+<tr>
+              <td>
+                <div class="sa-product-cell">
+                  <div class="sa-product-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <div>
+                    <strong>[[buyerName]]</strong>
+                    <small>[[productName]]</small>
+                  </div>
+                </div>
+              </td>
+              <td class="sa-q-text">[[question]]</td>
+              <td class="sa-q-time">[[toLocaleString]]</td>
+              <td>
+                [[answeredContent]]
+              </td>
+            </tr>
+</template>
+
+<template data-shop-template="shop-aftersales-questions-6">
+<div class="table-scroll"><table>
+  <thead><tr>
+    <th>KHÁCH / SẢN PHẨM</th>
+    <th>CÂU Hỏi</th>
+    <th>THỜI GIAN</th>
+    <th>[[showAnsweredContent]]</th>
+  </tr></thead>
+  <tbody>
+    [[listRows]]
+  </tbody>
+</table></div>
+</template>
+
+<template data-shop-template="shop-aftersales-action-1">
+<input type="hidden" name="id" value="[[id]]"><label class="field"><span>Câu trả lời</span><textarea name="answer" required maxlength="500">[[answer]]</textarea></label>[[content]]
+</template>

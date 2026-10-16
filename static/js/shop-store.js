@@ -1,4 +1,5 @@
-import {models,shops,offers,money} from './data.js';
+import {models,shops,money} from './shop-data.js';
+
 const KEY='pcmatch-shop-v1';
 export {money,shops};
 export const uid=prefix=>prefix+'-'+crypto.randomUUID().slice(0,8).toUpperCase();
@@ -18,7 +19,13 @@ const initial=()=>({
 });
 
 let state;
-try{state=JSON.parse(localStorage.getItem(KEY))||initial();if(state.version!==1)throw Error();}
+try{
+  state=JSON.parse(localStorage.getItem(KEY))||initial();
+  if(state.version!==1)throw Error();
+  for(const key of Object.keys(initial()).filter(key=>key!=='version')){
+    if(!Array.isArray(state[key]))throw Error();
+  }
+}
 catch{state=initial();}
 try{localStorage.setItem(KEY,JSON.stringify(state));}catch{}
 
@@ -43,8 +50,6 @@ export async function fingerprint(text){
   return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 export const mineSeller=collection=>state[collection].filter(x=>x.sellerId===seller()?.id);
-
-const STATUSES_ALL=['Chờ xác nhận','Đang xử lý','Đang giao','Đã giao','Đã hủy','Chờ hoàn hàng','Đã hoàn hàng'];
 
 function seedShopData(sel){
   const shopId=sel.shopId;

@@ -1,6 +1,6 @@
-import {mineSeller,sdb,stx,seller,uid,money,clone} from './shop-store.js';
-import {esc,params,go,link,a,btn,field,select,textarea,submit,form,notice,empty,panel,head,badge,statusBadge,mount,toast,dialog,operation,requireSeller} from './shop-ui.js';
-import {models,categories,model as getModel} from './data.js';
+import {renderTemplate,esc,params,go,link,a,btn,field,select,textarea,submit,form,mount,toast,dialog,requireSeller} from './shop-ui.js';
+import {mineSeller,stx,seller,uid,money} from './shop-store.js';
+import {categories} from './shop-data.js';
 
 const CAT_OPTS=Object.fromEntries(Object.entries(categories));
 
@@ -30,135 +30,56 @@ export function offers(){
   const outCount=mineSeller('shopProducts').filter(p=>p.stock===0&&p.active).length;
   const hiddenCount=mineSeller('shopProducts').filter(p=>!p.active).length;
 
-  mount('Sản phẩm bán',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <span>Quản lý sản phẩm</span>
-        </div>
-        <h1>Quản lý sản phẩm</h1>
-        <p>Theo dõi sản phẩm shop đang bán, tồn kho và tình trạng bán hàng.</p>
-        <div class="sa-pending-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" width="14" height="14"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          <span>${total} sản phẩm trong danh mục hiện tại</span>
-        </div>
-      </div>
-      <div class="sa-page-actions">
-        ${a('+ Thêm sản phẩm','offers',{new:'1'},'primary')}
-      </div>
-    </section>
-
-    <section class="sa-kpi-grid" aria-label="Số liệu sản phẩm">
-      <article class="sa-kpi-card sa-kpi-card--blue">
-        <h2>Tổng sản phẩm</h2>
-        <div class="sa-kpi-value"><strong>${total}</strong><span>sản phẩm</span></div>
-        <p>Toàn bộ linh kiện và module đang được đăng bán trên sàn</p>
-      </article>
-      <article class="sa-kpi-card sa-kpi-card--amber">
-        <h2>Hết hàng</h2>
-        <div class="sa-kpi-value"><strong>${outOfStock}</strong><span>sản phẩm</span></div>
-        <p>Sản phẩm hết tồn kho hoặc được đánh dấu hết hàng</p>
-      </article>
-      <article class="sa-kpi-card sa-kpi-card--sky">
-        <h2>Đang bán</h2>
-        <div class="sa-kpi-value"><strong>${selling}</strong><span>sản phẩm</span></div>
-        <p>Sản phẩm đang hoạt động và còn hàng trong kho</p>
-      </article>
-      <article class="sa-kpi-card sa-kpi-card--rose">
-        <h2>Tạm ẩn</h2>
-        <div class="sa-kpi-value"><strong>${hidden}</strong><span>sản phẩm</span></div>
-        <p>Sản phẩm đang được đặt ở trạng thái tạm ẩn</p>
-      </article>
-    </section>
-
-    ${isNew||editProduct?renderProductForm(editProduct):`
-      <div class="sa-table-card">
-        <div class="sa-table-toolbar">
-          <div class="sa-table-filters">
-            <label class="sa-table-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" id="sa-search-input" placeholder="Tìm theo tên sản phẩm hoặc thương hiệu..." value="${esc(params.get('q')||'')}">
-            </label>
-            <select class="sa-filter-select" id="sa-cat-select">
-              <option value="">Tất cả danh mục</option>
-              ${Object.entries(CAT_OPTS).map(([k,v])=>`<option value="${esc(k)}" ${k===cat?'selected':''}>${esc(v)}</option>`).join('')}
-            </select>
-          </div>
-          <span class="sa-result-count"><strong>${products.length}</strong> sản phẩm khớp bộ lọc</span>
-        </div>
-
-        <div class="sa-filter-tabs">
-          <button class="sa-tab ${!statusFilter?'is-active':''}" data-action="sa-filter" data-status="">Tất cả <span>${allCount}</span></button>
-          <button class="sa-tab ${statusFilter==='active'?'is-active':''}" data-action="sa-filter" data-status="active">Đang bán <span>${activeCount}</span></button>
-          <button class="sa-tab ${statusFilter==='out'?'is-active':''}" data-action="sa-filter" data-status="out">Hết hàng <span>${outCount}</span></button>
-          <button class="sa-tab ${statusFilter==='inactive'?'is-active':''}" data-action="sa-filter" data-status="inactive">Tạm ẩn <span>${hiddenCount}</span></button>
-        </div>
-
-        <div class="table-scroll">
-          ${products.length?`<table>
-            <thead><tr>
-              <th class="checkbox-cell"><input type="checkbox" aria-label="Chọn tất cả"></th>
-              <th>SẢN PHẨM</th>
-              <th>DANH MỤC</th>
-              <th>GIÁ BÁN</th>
-              <th class="center">TỒN KHO</th>
-              <th class="center">ĐÃ BÁN</th>
-              <th class="center">TRẠNG THÁI</th>
-              <th class="center">THAO TÁC</th>
-            </tr></thead>
-            <tbody>
-              ${products.map(p=>`<tr>
-                <td class="checkbox-cell"><input type="checkbox" aria-label="Chọn ${esc(p.name)}"></td>
-                <td>
-                  <div class="sa-product-cell">
-                    <div class="sa-product-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6m-6 4h6m-6 4h4"/></svg>
-                    </div>
-                    <div>
-                      <strong>${esc(p.name)}</strong>
-                      <small>Mã SP: #${esc(p.id)}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>${esc(categories[p.category]||p.category)}</td>
-                <td class="sa-product-price"><strong>${money(p.price)}</strong></td>
-                <td class="center sa-product-number ${p.stock===0?'text-danger':p.stock<=3?'text-warn':''}">${p.stock}</td>
-                <td class="center sa-product-number">${p.sold||0}</td>
-                <td class="center">${_productStatus(p)}</td>
-                <td class="center">
-                  <div class="sa-table-actions">
-                    ${a('✎ Sửa','offers',{edit:p.id},'sa-detail-btn')}
-                    <button type="button" class="sa-detail-btn ${p.active?'sa-detail-btn--warn':''}" data-action="toggle-product" data-id="${esc(p.id)}">${p.active?'Ẩn':'Hiện'}</button>
-                    <button type="button" class="sa-detail-btn sa-detail-btn--danger" data-action="delete-product" data-id="${esc(p.id)}">Xóa</button>
-                  </div>
-                </td>
-              </tr>`).join('')}
-            </tbody>
-          </table>`:`<div class="sa-empty-table">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" width="48" height="48"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6m-6 4h6m-6 4h4"/></svg>
-            <h3>Không có sản phẩm</h3>
-            <p>Thêm sản phẩm đầu tiên hoặc thay đổi bộ lọc.</p>
-            ${a('+ Thêm sản phẩm','offers',{new:'1'},'primary')}
-          </div>`}
-        </div>
-
-        ${products.length?`<footer class="sa-table-pagination">
-          <p>Hiển thị <strong>1 - ${products.length}</strong> trên <strong>${products.length}</strong> bản ghi</p>
-          <nav aria-label="Phân trang">
-            <button type="button" disabled aria-label="Trang trước">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round"/></svg>
-            </button>
-            <span>Trang 1 / 1</span>
-            <button type="button" disabled aria-label="Trang sau">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round"/></svg>
-            </button>
-          </nav>
-        </footer>`:''}
-      </div>
-    `}
-  `);
+  mount('Sản phẩm bán',renderTemplate("shop-products-offers-3", {
+    dashboardUrl: link('dashboard'),
+    total: total,
+    offersLink: a('+ Thêm sản phẩm','offers',{new:'1'},'primary'),
+    total2: total,
+    outOfStock: outOfStock,
+    selling: selling,
+    hidden: hidden,
+    isNewContent: isNew||editProduct?renderProductForm(editProduct):renderTemplate("shop-products-offers-7", {
+      get: esc(params.get('q')||''),
+      entriesRows: Object.entries(CAT_OPTS).map(([k,v])=>renderTemplate("shop-products-offers-4", {
+        k: esc(k),
+        kContent: k===cat?'selected':'',
+        v: esc(v)
+      })).join(''),
+      length: products.length,
+      contentContent: !statusFilter?'is-active':'',
+      allCount: allCount,
+      statusFilterContent: statusFilter==='active'?'is-active':'',
+      activeCount: activeCount,
+      statusFilterContent2: statusFilter==='out'?'is-active':'',
+      outCount: outCount,
+      statusFilterContent3: statusFilter==='inactive'?'is-active':'',
+      hiddenCount: hiddenCount,
+      lengthContent: products.length?renderTemplate("shop-products-offers-6", {
+        productsRows: products.map(p=>renderTemplate("shop-products-offers-5", {
+          name: esc(p.name),
+          name2: esc(p.name),
+          id: esc(p.id),
+          value: esc(categories[p.category]||p.category),
+          priceMoney: money(p.price),
+          stockContent: p.stock===0?'text-danger':p.stock<=3?'text-warn':'',
+          stock: p.stock,
+          sold: p.sold||0,
+          content: _productStatus(p),
+          offersLink: a('✎ Sửa','offers',{edit:p.id},'sa-detail-btn'),
+          activeContent: p.active?'sa-detail-btn--warn':'',
+          id2: esc(p.id),
+          activeContent2: p.active?'Ẩn':'Hiện',
+          id3: esc(p.id)
+        })).join('')
+      }):renderTemplate("shop-products-offers-1", {
+        offersLink: a('+ Thêm sản phẩm','offers',{new:'1'},'primary')
+      }),
+      lengthContent2: products.length?renderTemplate("shop-products-offers-2", {
+        length: products.length,
+        length2: products.length
+      }):''
+    })
+  }));
 
   // Gắn filter tabs
   document.querySelectorAll('[data-action="sa-filter"]').forEach(btn=>{
@@ -191,36 +112,28 @@ export function offers(){
 }
 
 function _productStatus(p){
-  if(p.active&&p.stock>0)return '<span class="sa-product-status sa-product-status--selling">Đang bán</span>';
-  if(p.active&&p.stock===0)return '<span class="sa-product-status sa-product-status--out">Hết hàng</span>';
-  return '<span class="sa-product-status sa-product-status--hidden">Tạm ẩn</span>';
+  if(p.active&&p.stock>0)return renderTemplate("shop-products-_productStatus-1");
+  if(p.active&&p.stock===0)return renderTemplate("shop-products-_productStatus-2");
+  return renderTemplate("shop-products-_productStatus-3");
 }
 
 function renderProductForm(product){
   const isEdit=!!product;
-  return `<section class="panel panel--padded sa-form-panel">
-    <h2>${isEdit?'Sửa sản phẩm: '+esc(product.name):'Thêm sản phẩm mới'}</h2>
-    ${form('product-form',`
-      <input type="hidden" name="id" value="${isEdit?esc(product.id):''}">
-      <div class="two-col">
-        ${select('Danh mục sản phẩm','category',CAT_OPTS,isEdit?product.category:'CPU')}
-        ${field('Tên sản phẩm','name',isEdit?product.name:'','text','required maxlength="200"')}
-      </div>
-      <div class="two-col">
-        ${field('Thương hiệu','brand',isEdit?product.brand||'':'','text','required maxlength="60"')}
-        ${field('Giá bán (VND)','price',isEdit?product.price:'','number','required min="1000" step="1000"')}
-      </div>
-      <div class="two-col">
-        ${field('Số lượng tồn kho','stock',isEdit?product.stock:'','number','required min="0" step="1"')}
-        ${field('Thời gian bảo hành (tháng)','warranty',isEdit?product.warranty||36:'36','number','required min="0" max="120"')}
-      </div>
-      ${textarea('Mô tả sản phẩm','description',isEdit?product.description||'':'')}
-      <div class="cluster">
-        ${submit(isEdit?'Lưu thay đổi':'Thêm sản phẩm')}
-        ${a('Hủy','offers')}
-      </div>
-    `)}
-  </section>`;
+  return renderTemplate("shop-products-renderProductForm-2", {
+    isEditContent: isEdit?'Sửa sản phẩm: '+esc(product.name):'Thêm sản phẩm mới',
+    productFormForm: form('product-form',renderTemplate("shop-products-renderProductForm-1", {
+      isEditContent: isEdit?esc(product.id):'',
+      categoryField: select('Danh mục sản phẩm','category',CAT_OPTS,isEdit?product.category:'CPU'),
+      nameField: field('Tên sản phẩm','name',isEdit?product.name:'','text','required maxlength="200"'),
+      brandField: field('Thương hiệu','brand',isEdit?product.brand||'':'','text','required maxlength="60"'),
+      priceField: field('Giá bán (VND)','price',isEdit?product.price:'','number','required min="1000" step="1000"'),
+      stockField: field('Số lượng tồn kho','stock',isEdit?product.stock:'','number','required min="0" step="1"'),
+      warrantyField: field('Thời gian bảo hành (tháng)','warranty',isEdit?product.warranty||36:'36','number','required min="0" max="120"'),
+      descriptionField: textarea('Mô tả sản phẩm','description',isEdit?product.description||'':''),
+      content: submit(isEdit?'Lưu thay đổi':'Thêm sản phẩm'),
+      offersLink: a('Hủy','offers')
+    }))
+  });
 }
 
 export function inventory(){
@@ -229,56 +142,35 @@ export function inventory(){
   const low=products.filter(p=>p.active&&p.stock<=3);
   const out=products.filter(p=>p.active&&p.stock===0);
   const ok=products.filter(p=>p.active&&p.stock>3);
-  const inactive=products.filter(p=>!p.active);
 
-  mount('Tồn kho',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs"><a href="${link('dashboard')}">Kênh bán</a><span>/</span><span>Tồn kho</span></div>
-        <h1>Quản lý tồn kho</h1>
-        <p>Theo dõi và cập nhật số lượng hàng trong kho.</p>
-      </div>
-    </section>
-
-    <section class="sa-kpi-grid">
-      <article class="sa-kpi-card sa-kpi-card--blue"><h2>Tổng sản phẩm</h2><div class="sa-kpi-value"><strong>${products.length}</strong><span>sản phẩm</span></div><p>Tổng số sản phẩm đang quản lý</p></article>
-      <article class="sa-kpi-card sa-kpi-card--sky"><h2>Tồn ổn định</h2><div class="sa-kpi-value"><strong>${ok.length}</strong><span>sản phẩm</span></div><p>Sản phẩm còn đủ hàng trong kho</p></article>
-      <article class="sa-kpi-card sa-kpi-card--amber"><h2>Sắp hết (&le;3)</h2><div class="sa-kpi-value"><strong>${low.length}</strong><span>sản phẩm</span></div><p>Cần nhập thêm hàng sớm</p></article>
-      <article class="sa-kpi-card sa-kpi-card--rose"><h2>Hết hàng</h2><div class="sa-kpi-value"><strong>${out.length}</strong><span>sản phẩm</span></div><p>Sản phẩm cần nhập hàng ngay</p></article>
-    </section>
-
-    ${low.length?`<div class="sa-table-card sa-table-card--compact" style="margin-bottom:20px">
-      <div class="sa-table-toolbar"><h3 style="margin:0;font-size:14px;font-weight:600;">⚠️ Cần nhập thêm hàng</h3></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>SẢN PHẨM</th><th class="center">TỒN</th><th class="center">ĐÃ BÁN</th><th>CẬP NHẬT TỒN</th></tr></thead>
-        <tbody>
-          ${low.map(p=>`<tr class="${p.stock===0?'sa-row--danger':'sa-row--warn'}">
-            <td><strong>${esc(p.name)}</strong></td>
-            <td class="center"><strong style="color:${p.stock===0?'var(--color-red)':'var(--color-amber)'}">${p.stock}</strong></td>
-            <td class="center">${p.sold||0}</td>
-            <td><form data-form="update-stock" class="inv-update-form"><input type="hidden" name="id" value="${esc(p.id)}"><input type="number" name="qty" value="${p.stock}" min="0" step="1"><button type="submit" class="inv-update-btn">Cập nhật</button></form></td>
-          </tr>`).join('')}
-        </tbody>
-      </table></div>
-    </div>`:''}
-
-    <div class="sa-table-card sa-table-card--compact">
-      <div class="sa-table-toolbar"><h3 style="margin:0;font-size:14px;font-weight:600;">Toàn bộ sản phẩm đang bán</h3></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>SẢN PHẨM</th><th>DANH MỤC</th><th>GIÁ</th><th class="center">TỒN</th><th class="center">ĐÃ BÁN</th><th>CẬP NHẬT</th></tr></thead>
-        <tbody>
-          ${products.filter(p=>p.active).map(p=>`<tr>
-            <td><strong>${esc(p.name)}</strong></td>
-            <td>${esc(categories[p.category]||p.category)}</td>
-            <td>${money(p.price)}</td>
-            <td class="center ${p.stock===0?'text-danger':p.stock<=3?'text-warn':''}">${p.stock}</td>
-            <td class="center">${p.sold||0}</td>
-            <td><form data-form="update-stock" class="inv-update-form"><input type="hidden" name="id" value="${esc(p.id)}"><input type="number" name="qty" value="${p.stock}" min="0" step="1"><button type="submit" class="inv-update-btn">Cập nhật</button></form></td>
-          </tr>`).join('')}
-        </tbody>
-      </table></div>
-    </div>
-  `);
+  mount('Tồn kho',renderTemplate("shop-products-inventory-1", {
+    dashboardUrl: link('dashboard'),
+    length: products.length,
+    length2: ok.length,
+    length3: low.length,
+    length4: out.length,
+    lengthContent: low.length?renderTemplate("shop-products-inventory-3", {
+      lowRows: low.map(p=>renderTemplate("shop-products-inventory-2", {
+        stockContent: p.stock===0?'sa-row--danger':'sa-row--warn',
+        name: esc(p.name),
+        stockContent2: p.stock===0?'var(--color-red)':'var(--color-amber)',
+        stock: p.stock,
+        sold: p.sold||0,
+        id: esc(p.id),
+        stock2: p.stock
+      })).join('')
+    }):'',
+    filterRows: products.filter(p=>p.active).map(p=>renderTemplate("shop-products-inventory-4", {
+      name: esc(p.name),
+      value: esc(categories[p.category]||p.category),
+      priceMoney: money(p.price),
+      stockContent: p.stock===0?'text-danger':p.stock<=3?'text-warn':'',
+      stock: p.stock,
+      sold: p.sold||0,
+      id: esc(p.id),
+      stock2: p.stock
+    })).join('')
+  }));
 }
 
 export function action(act,id){
@@ -312,7 +204,10 @@ export async function submitForm(name,f,d){
   if(name==='product-form'){
     if(!d.name.trim())throw Error('Nhập tên sản phẩm.');
     if(!d.brand.trim())throw Error('Nhập thương hiệu.');
-    if(!d.price||+d.price<1000)throw Error('Giá cần ít nhất 1.000 đ.');
+    if(!Number.isFinite(+d.price)||+d.price<1000)throw Error('Giá cần ít nhất 1.000 đ.');
+    if(!Number.isSafeInteger(+d.stock)||+d.stock<0)throw Error('Tồn kho phải là số nguyên không âm.');
+    if(!Number.isSafeInteger(+d.warranty)||+d.warranty<0||+d.warranty>120)throw Error('Bảo hành phải từ 0 đến 120 tháng.');
+    if(!Object.hasOwn(CAT_OPTS,d.category))throw Error('Danh mục không hợp lệ.');
     if(d.id){
       const p=mineSeller('shopProducts').find(x=>x.id===d.id);
       if(!p)throw Error('Không có quyền sửa sản phẩm này.');
@@ -328,9 +223,9 @@ export async function submitForm(name,f,d){
     return true;
   }
   if(name==='update-stock'){
+    if(!Number.isSafeInteger(+d.qty)||+d.qty<0)throw Error('Tồn kho phải là số nguyên không âm.');
     const p=mineSeller('shopProducts').find(x=>x.id===d.id);
     if(!p)throw Error('Không tìm thấy sản phẩm.');
-    if(!Number.isInteger(+d.qty)||+d.qty<0)throw Error('Số lượng không hợp lệ.');
     stx(()=>p.stock=+d.qty);
     inventory();
     toast(`Đã cập nhật tồn kho: ${p.name} → ${d.qty} sản phẩm`);

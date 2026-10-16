@@ -1,0 +1,82 @@
+
+    <a class="skip-link" href="#shop-main">Bỏ qua điều hướng</a>
+
+    <div class="sa-service-bar">
+      PCMatch Kênh bán &bull; Demo: dữ liệu mẫu được lưu trên trình duyệt
+    </div>
+
+    <header class="sa-topbar" id="shop-topbar">
+      <button class="sa-menu-btn" type="button" data-action="shop-menu" aria-label="Mở menu" aria-controls="shop-sidebar" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="sa-logo" href="/">
+        <i class="sa-logo__mark"></i>
+        <span>PC Match</span>
+        <em>Kênh bán</em>
+      </a>
+      <label class="sa-search">
+        <span class="sr-only">Tìm kiếm</span>
+        <input type="text" placeholder="Tìm sản phẩm, đơn hàng hoặc khách hàng...">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </label>
+      <div class="sa-topbar__right" id="shop-topbar-right" hidden>
+      <a class="sa-topbar-help" href="{% url 'buyer_help' %}">Trợ giúp</a>
+      <div class="sa-user-dropdown" id="shop-user-dropdown">
+        <button class="sa-user-btn" type="button" id="shop-user-btn" aria-haspopup="true" aria-expanded="false"><span data-shop-user-name></span><span aria-hidden="true">⌄</span></button>
+        <div class="sa-user-menu" id="shop-user-menu" hidden>
+          <div class="sa-udm-header"><div class="sa-udm-name" data-shop-user-name></div><div class="sa-udm-email" data-shop-user-email></div><span class="sa-udm-badge">Kênh bán</span></div>
+          <div class="sa-udm-links"><a href="#" class="sa-udm-logout" data-action="shop-logout">Đăng xuất</a></div>
+        </div>
+      </div>
+    </div>
+    </header>
+
+    <div class="sa-shell" id="shop-shell">
+      <aside class="sa-sidebar" id="shop-sidebar">
+        <div class="sa-sidebar__brand">
+          <strong>Kênh bán</strong>
+          <small>Quản lý shop của bạn</small>
+        </div>
+        <nav id="shop-nav">
+          <p class="sa-sidebar__group">Tổng quan</p>
+          <a href="{% url 'shop_dashboard' %}" {% if page_name == 'dashboard' %}aria-current="page"{% endif %}><span>Dashboard</span></a>
+          <a href="{% url 'shop_revenue' %}" {% if page_name == 'revenue' %}aria-current="page"{% endif %}><span>Doanh thu</span></a>
+
+          <p class="sa-sidebar__group">Sản phẩm</p>
+          <a href="{% url 'shop_offers' %}" {% if page_name == 'offers' %}aria-current="page"{% endif %}><span>Sản phẩm bán</span></a>
+          <a href="{% url 'shop_inventory' %}" {% if page_name == 'inventory' %}aria-current="page"{% endif %}><span>Tồn kho</span></a>
+
+          <p class="sa-sidebar__group">Đơn hàng</p>
+          <a href="{% url 'shop_orders' %}" {% if page_name == 'orders' %}aria-current="page"{% endif %}><span>Đơn hàng</span></a>
+          <a href="{% url 'shop_fulfillment' %}" {% if page_name == 'fulfillment' %}aria-current="page"{% endif %}><span>Giao nhận</span></a>
+
+          <p class="sa-sidebar__group">Báo giá &amp; Hỗ trợ</p>
+          <a href="{% url 'shop_build_requests' %}" {% if page_name == 'build-requests' %}aria-current="page"{% endif %}><span>Yêu cầu build</span></a>
+          <a href="{% url 'shop_proposal_list' %}" {% if page_name == 'proposal-list' %}aria-current="page"{% endif %}><span>Báo giá đã gửi</span></a>
+          <a href="{% url 'shop_aftersales' %}" {% if page_name == 'aftersales' %}aria-current="page"{% endif %}><span>Hậu mãi</span></a>
+          <a href="{% url 'shop_questions' %}" {% if page_name == 'questions' %}aria-current="page"{% endif %}><span>Câu hỏi</span></a>
+        </nav>
+        <div class="sa-sidebar__footer" id="shop-sidebar-footer" hidden><div class="sa-sidebar__seller"><div><strong data-shop-user-name></strong><small data-shop-user-email></small></div></div></div>
+      </aside>
+      <div class="shop-overlay" id="shop-overlay"></div>
+      <main class="sa-main" id="shop-main" tabindex="-1">
+        <div class="sa-main-inner"><p role="status">Đang tải giao diện...</p><noscript>Vui lòng bật JavaScript để dùng demo Shop.</noscript></div>
+      </main>
+    </div>
+
+    <div id="shop-toast" role="status" hidden></div>
+    <dialog id="shop-confirm" class="demo-dialog" aria-labelledby="sc-title">
+      <form class="stack"><h2 id="sc-title"></h2><div data-confirm-message></div><p class="form-error" role="alert"></p>
+        <div class="cluster"><button type="button" class="btn btn--secondary" value="cancel">Quay lại</button><button type="submit" class="btn btn--primary" value="ok">Xác nhận</button></div>
+      </form>
+    </dialog>
+    <form id="shop-logout-form" method="post" action="{% url 'auth_logout' %}" hidden>{% csrf_token %}</form>
+    <dialog id="shop-demo-tools" class="demo-dialog">
+      <h2>Công cụ Kênh bán</h2>
+      <div class="stack">
+        <button type="button" class="btn btn--secondary" data-action="shop-logout">Đăng xuất</button>
+        <button type="button" class="btn btn--secondary" data-action="shop-reset">Reset dữ liệu demo</button>
+        <button type="button" class="btn btn--secondary" data-action="shop-close-demo">Đóng</button>
+      </div>
+    </dialog>
+

@@ -1,0 +1,110 @@
+<template data-shop-template="shop-auth-loginPage-1">
+<div class="shop-auth__form">
+  [[emailField]]
+  <label class="field"><span>Mật khẩu</span><span class="password-wrap"><input name="password" type="password" value="Demo123456" required autocomplete="current-password"><button type="button" class="password-eye" data-action="shop-eye" aria-label="Hiện mật khẩu">👁</button></span></label>
+  <div class="shop-auth__row">
+    <label class="shop-auth__remember check"><input type="checkbox" name="remember"> <span>Ghi nhớ</span></label>
+    <a href="[[forgotUrl]]" class="linklike">Quên mật khẩu?</a>
+  </div>
+  [[content]]
+</div>
+</template>
+
+<template data-shop-template="shop-auth-loginPage-2">
+<div class="shop-auth-page">
+  <div class="shop-auth">
+    <div class="shop-auth__card">
+      <div class="shop-auth__brand">
+        <a class="logo" href="/">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1e40af"/><path d="M8 24V10l8-4 8 4v14M12 24v-8h8v8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+          PCMatch
+        </a>
+        <h1>Kênh bán</h1>
+        <p>Tài khoản demo dùng dữ liệu trên trình duyệt. Đăng nhập PCMatch để mở Kênh bán.</p>
+      </div>
+      <div id="shop-auth-error" class="shop-auth__error" hidden></div>
+      [[shopLoginForm]]
+      <button type="button" class="btn btn--secondary" style="width:100%" data-action="shop-demo-login">Vào luôn shop demo</button>
+      <p class="shop-auth__switch">Chưa có tài khoản? <a href="[[registerUrl]]">Đăng ký người bán</a></p>
+      <div class="shop-auth__footer">
+        <span>PCMatch</span><span>·</span>
+        <a href="/">Trang mua hàng</a>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-auth-registerPage-1">
+<div class="shop-auth-page">
+  <div class="shop-reg">
+    <div class="shop-reg__card">
+      <div class="shop-reg__brand">
+        <h1 id="reg-title">Đăng ký Kênh bán</h1>
+        <p>Tạo tài khoản shop để bắt đầu bán hàng trên PCMatch</p>
+      </div>
+      <ol class="reg-steps">
+        [[contentRows]]
+      </ol>
+      <div class="reg-progress"><i style="width:[[min]]%"></i></div>
+      [[content]]
+    </div>
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-auth-renderRegStep-1">
+<div class="reg-pane">
+  <h2>Thông tin tài khoản đăng nhập</h2>
+  [[nameField]]
+  [[emailField]]
+  <label class="field"><span>Mật khẩu</span><span class="password-wrap"><input name="password" type="password" required minlength="8"><button type="button" class="password-eye" data-action="shop-eye" aria-label="Hiện mật khẩu">👁</button></span></label>
+  <div class="pw-meter" id="pw-meter" data-level="0"><i></i><i></i><i></i><i></i></div>
+  <label class="field"><span>Nhập lại mật khẩu</span><span class="password-wrap"><input name="confirm" type="password" required minlength="8"><button type="button" class="password-eye" data-action="shop-eye" aria-label="Hiện mật khẩu">👁</button></span></label>
+  [[phoneField]]
+  <div class="reg-nav"><a href="[[loginUrl]]" class="btn btn--secondary">Đã có tài khoản</a>[[content]]</div>
+</div>
+</template>
+
+<template data-shop-template="shop-auth-renderRegStep-2">
+<div class="reg-pane reg-success">
+    <div class="reg-success__icon">✓</div>
+    <h2>Đăng ký thành công!</h2>
+    <p>Tài khoản demo của bạn đã được tạo. Đăng nhập để bắt đầu quản lý shop.</p>
+    <a href="[[loginUrl]]" class="btn btn--primary">Đăng nhập ngay</a>
+  </div>
+</template>
+
+<template data-shop-template="shop-auth-forgotPage-1">
+<div class="shop-auth-page">
+  <div class="shop-auth">
+    <div class="shop-auth__card">
+      <div class="shop-auth__brand">
+        <h1>Khôi phục mật khẩu</h1>
+        <p>Bản demo chưa hỗ trợ khôi phục mật khẩu hoặc gửi email.</p>
+      </div>
+      [[shopForgotForm]]
+      <p style="text-align:center"><a href="[[loginUrl]]">Quay lại đăng nhập</a></p>
+    </div>
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-auth-registerPage-2">
+<li class="reg-steps__item[[stepContent]]"><div class="reg-steps__num">[[stepContent2]]</div><span>[[s]]</span></li>
+</template>
+
+<template data-shop-template="shop-auth-renderRegStep-3">
+<div class="reg-pane">
+  <h2>Thông tin shop</h2>
+  [[shopNameField]]
+  <div class="biz-types">
+    <label class="check"><input type="radio" name="businessType" value="Cá nhân kinh doanh" required checked> <span>Cá nhân kinh doanh</span></label>
+    <label class="check"><input type="radio" name="businessType" value="Công ty / Doanh nghiệp"> <span>Công ty / Doanh nghiệp</span></label>
+  </div>
+  [[taxCodeField]]
+  [[categoryField]]
+  [[addressField]]
+  <div class="reg-nav"><button type="button" class="btn btn--secondary" data-action="reg-back">Quay lại</button>[[content]]</div>
+</div>
+</template>

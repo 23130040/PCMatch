@@ -2,8 +2,8 @@
 
 Django marketplace with database-backed buyer sign-in, registration, home page,
 product catalog and cart. Business operations belong to Python views and services.
-The remaining screens retain their HTML layouts without simulated transactions
-or browser-stored users, orders and payments.
+Buyer and staff screens retain their HTML layouts without simulated transactions.
+Shop preserves the separate browser-based demo imported from main.
 
 ## Run Locally (PowerShell)
 
@@ -37,8 +37,8 @@ Buyer sign-in uses Django users and sessions. Adding a product requires sign-in;
 an interrupted add resumes after successful sign-in or registration. Cart rows are
 stored in `Cart`/`CartItem`, with one cart per user and one row per product.
 The cart is rendered in Django HTML templates and works with JavaScript disabled.
-Quantity changes and removal use CSRF-protected POST forms. Screens without a
-backend implementation keep their original layouts with disabled business actions.
+Quantity changes and removal use CSRF-protected POST forms. Buyer and staff screens
+without a backend implementation keep their layouts with disabled business actions.
 The cart's checkout button opens a Django-rendered review of the signed-in user's
 profile, default delivery address (or first saved address), and current cart prices
 and quantities. This review does not create an order or initiate a payment.
@@ -50,9 +50,10 @@ with named URLs and page metadata. The frontend context processor publishes URLs
 using Django `reverse()` and the configured static asset prefix as JSON in the head.
 The original banners, category tiles, chat layout and other presentation content
 are written directly in HTML templates. Product lists and cart previews use real
-database data. JavaScript is limited to presentation, such as menus, carousels,
-password visibility, drawers and selecting table rows. No script replaces the
-document body, intercepts business forms or simulates successful transactions.
+database data. Outside the Shop demo, JavaScript is limited to presentation, such
+as menus, carousels, password visibility, drawers and selecting table rows. No
+script replaces the document body. Buyer and staff scripts do not intercept
+business forms or simulate successful transactions.
 
 Comparison uses “Thêm so sánh” buttons and the original selection tray. Python
 stores up to four products from one category in the Django session. The comparison
@@ -60,8 +61,23 @@ script submits only comparison forms to that backend and displays HTML rendered
 by Django, so selections persist through filters and pagination. Native POST forms
 also work when JavaScript is disabled.
 
-Keep static presentation content in HTML when extending a screen. Implement
-authentication, payments, orders, account updates, comments, reports and
+Shop pages load `shop.js` and the `shop-*` modules from main, including their
+product, inventory, order, fulfillment, revenue, build/proposal, aftersales and
+question demos. Layout markup lives in `templates/includes/shop/*.html`; each
+page in `templates/shop/` extends the common base and loads its template group.
+`shell.html` contains the navigation, user menu and confirmation dialog. Named
+slots such as `[[buyerName]]` are filled by the corresponding JS module. The
+`shop_templates` Django tag publishes these HTML fragments as inert JSON; the
+browser renderer substitutes values without evaluating code. Use `esc()` when
+passing user-provided text into an HTML fragment. Sample catalog data lives in
+`shop-data.js`. Shop demo records use `pcmatch-shop-v1` in browser
+storage, independently of Django marketplace data. Demo seller credentials do
+not authenticate a Django user: private Shop URLs still require the existing
+PCMatch sign-in. Leaving Shop signs out of Django as well. Reset demo data only
+clears the Shop demo keys. JavaScript is required for these demo screens.
+
+Keep static presentation content in HTML when extending Buyer or staff screens.
+Implement authentication, payments, orders, account updates, comments, reports and
 recommendations in Python before enabling their business actions.
 
 Use `{% url %}` for template links, `{% static %}` for template assets, and
@@ -96,3 +112,11 @@ comparison pages also render directly from Django data.
 
 The tests cover page rendering, route coverage, internal links, static assets,
 shared staff components, and redirects that preserve search parameters.
+
+Optional Shop browser checks require Node.js with Playwright and Chrome. From
+the project root, start `.venv\Scripts\python.exe shops/browser_checks/serve_shop_demo.py`
+in one terminal, then run `node shops/browser_checks/verify_shop_demo.cjs` in
+another. The server uses a copy at `artifacts/shop_browser.sqlite3` with a test
+account; it leaves the working database untouched. Checks cover all Shop routes,
+demo product/stock changes, order transitions, questions, proposals, aftersales,
+registration/sign-in, mobile layouts, and Django logout.

@@ -1,0 +1,298 @@
+<template data-shop-template="shop-dashboard-dashboard-1">
+<div class="dash-order-row" style="padding:12px 16px">
+  <div><strong>[[buyerName]]</strong><p>[[totalMoney]] · [[statusBadge]]</p></div>
+  [[orderLink]]
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-2">
+<p style="padding:16px;color:#94a3b8;margin:0;font-size:13px">Không có đơn chờ xử lý.</p>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-3">
+<div class="dash-order-row" style="padding:12px 16px">
+  <div><strong>[[buyerName]]</strong><p style="color:#94a3b8;font-size:12px;margin:2px 0 0">[[slice]]…</p></div>
+  [[questionsLink]]
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-4">
+<p style="padding:16px;color:#94a3b8;margin:0;font-size:13px">Không có câu hỏi mới.</p>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-5">
+<div class="dash-order-row" style="padding:10px 16px">
+  <div>
+    <strong style="font-size:12px;color:#0f172a">[[id]]</strong>
+    <p style="color:#94a3b8;font-size:11px;margin:2px 0 0">[[buyerName]] · [[totalMoney]]</p>
+  </div>
+  [[statusBadge]]
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-6">
+<p style="padding:16px;color:#94a3b8;margin:0;font-size:13px">Chưa có đơn hàng.</p>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-7">
+<section class="sa-page-heading">
+  <div>
+    <div class="sa-breadcrumbs">
+      <a href="[[dashboardUrl]]">Kênh bán</a>
+      <span>/</span>
+      <span>Dashboard</span>
+    </div>
+    <h1>Xin chào, [[shopName]]</h1>
+    <p>Tổng quan hoạt động shop hôm nay</p>
+  </div>
+  <div class="sa-page-actions">
+    [[offersLink]]
+    <button type="button" class="btn btn--secondary" data-action="shop-demo">Công cụ demo</button>
+  </div>
+</section>
+
+<section class="sa-kpi-grid" aria-label="Chỉ số tổng quan">
+  <article class="sa-kpi-card sa-kpi-card--blue">
+    <h2>DOANH THU THÁNG NÀY</h2>
+    <div class="sa-kpi-value"><strong>[[totalMoney]]</strong></div>
+    <p>[[orders]] đơn · Trung bình [[avgMoney]]/ngày</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--amber">
+    <h2>ĐƠN CHỜ XỬ LÝ</h2>
+    <div class="sa-kpi-value"><strong>[[pending]]</strong></div>
+    <p>[[pending2]] chờ xác nhận · [[processing]] đang xử lý</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--sky">
+    <h2>SẢN PHẨM ĐANG BÁN</h2>
+    <div class="sa-kpi-value"><strong>[[active]]</strong></div>
+    <p>[[lowStock]] sắp hết hàng · [[inactive]] đã ẩn</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--rose">
+    <h2>CẦN PHẢN HỒI</h2>
+    <div class="sa-kpi-value"><strong>[[pendingQs]]</strong></div>
+    <p>[[pendingQs2]] câu hỏi · [[pendingAf]] hậu mãi · [[pendingBr]] build</p>
+  </article>
+</section>
+
+<div class="shop-report-grid shop-report-grid--wide">
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">Doanh thu 14 ngày gần nhất</h2>
+      [[revenueLink]]
+    </div>
+    <div style="padding:20px 16px 16px">
+      <div class="dash-bar-chart">[[barChart]]</div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="sa-table-card">
+      <div class="sa-table-toolbar">
+        <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Đơn hàng cần xử lý</h2>
+        [[lengthContent]]
+      </div>
+      <div style="padding:0 0 4px">
+        [[sliceRows]]
+      </div>
+    </div>
+    <div class="sa-table-card">
+      <div class="sa-table-toolbar">
+        <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Câu hỏi chưa trả lời</h2>
+        [[pendingQsContent]]
+      </div>
+      <div style="padding:0 0 4px">
+        [[sliceRows2]]
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shop-report-grid shop-report-grid--three">
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Đơn hàng gần nhất</h2>
+      [[ordersLink]]
+    </div>
+    <div style="padding:0 0 4px">
+      [[recentOrdersRows]]
+    </div>
+  </div>
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Tình trạng tồn kho</h2>
+      [[inventoryLink]]
+    </div>
+    <div style="padding:12px 16px;display:grid;gap:10px">
+      [[content]]
+    </div>
+  </div>
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Trạng thái đơn hàng</h2>
+      [[ordersLink2]]
+    </div>
+    <div style="padding:12px 16px;display:grid;gap:10px">
+      [[content2]]
+    </div>
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-1">
+<div class="shop-revenue-bar">
+                <div class="shop-revenue-bar__value">[[trim]]</div>
+                <div class="shop-revenue-bar__track"><i style="--bar:[[h]]%"></i></div>
+                <small>[[label]]</small>
+              </div>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-2">
+<div><i style="background:[[color]]"></i><span>[[label]]</span><strong>[[pct]]%</strong><small>[[roundMoney]]</small></div>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-3">
+<section class="sa-page-heading">
+  <div>
+    <div class="sa-breadcrumbs">
+      <a href="[[dashboardUrl]]">Kênh bán</a>
+      <span>/</span>
+      <span>Báo cáo doanh thu</span>
+    </div>
+    <h1>Báo cáo doanh thu</h1>
+    <p>Thống kê doanh số và đơn hàng của shop</p>
+  </div>
+  <div class="sa-page-actions">
+    [[revFilterForm]]
+  </div>
+</section>
+
+<section class="sa-kpi-grid">
+  <article class="sa-kpi-card sa-kpi-card--blue">
+    <h2>TỔNG DOANH THU</h2>
+    <div class="sa-kpi-value"><strong>[[totalRevenueMoney]]</strong></div>
+    <p>[[days]] ngày vừa qua</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--sky">
+    <h2>TỔNG ĐƠN HÀNG</h2>
+    <div class="sa-kpi-value"><strong>[[totalOrders]]</strong><span>đơn</span></div>
+    <p>Đã hoàn thành trong kỳ</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--amber">
+    <h2>GIÁ TRỊ TB/ĐƠN</h2>
+    <div class="sa-kpi-value"><strong>[[avgOrderMoney]]</strong></div>
+    <p>Trung bình mỗi đơn</p>
+  </article>
+  <article class="sa-kpi-card sa-kpi-card--rose">
+    <h2>TỶ LỆ GIAO THÀNH CÔNG</h2>
+    <div class="sa-kpi-value"><strong>[[successRate]]%</strong></div>
+    <p>[[deliveredCount]] đã giao / [[length]] tổng đơn</p>
+  </article>
+</section>
+
+<div class="shop-report-grid shop-report-grid--wide">
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">Doanh thu theo ngày</h2>
+      <span style="font-size:12px;color:#64748b">Đơn vị: VNĐ</span>
+    </div>
+    <div style="padding:16px">
+      <div class="shop-revenue-bars" style="--days:[[length2]]">
+        [[dataRows]]
+      </div>
+    </div>
+  </div>
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">Cơ cấu theo ngành</h2>
+    </div>
+    <div style="padding:16px">
+      <div class="shop-revenue-pie" style="grid-template-columns:1fr">
+        <div class="shop-revenue-donut" style="--donut:[[donutGrad]];width:160px;height:160px;margin:0 auto 16px">
+          <div><strong style="font-size:14px">[[trim]]</strong><span>tổng</span></div>
+        </div>
+        <div class="shop-revenue-legend">
+          [[categoriesRows]]
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shop-report-grid shop-report-grid--wide">
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Sản phẩm bán chạy nhất</h2>
+      [[offersLink]]
+    </div>
+    <div class="table-scroll">
+      <table style="min-width:0">
+        <thead><tr>
+          <th>#</th><th>SẢN PHẨM</th><th class="center">ĐÃ BÁN</th><th>GIÁ</th><th class="center">TỒN</th>
+        </tr></thead>
+        <tbody>
+          [[lengthContent]]
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="sa-table-card">
+    <div class="sa-table-toolbar">
+      <h2 style="margin:0;font-size:14px;font-weight:700;color:#0f172a">Tổng kết đơn hàng</h2>
+    </div>
+    <div style="padding:16px;display:grid;gap:12px">
+      [[contentRows]]
+      <div style="padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #dbeafe">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:#1e40af;font-weight:600">Tỷ lệ giao thành công</span>
+          <strong style="font-size:20px;color:#1e40af">[[successRate2]]%</strong>
+        </div>
+        <div style="margin-top:8px;height:6px;border-radius:99px;background:#dbeafe;overflow:hidden">
+          <div style="height:100%;width:[[successRate3]]%;background:#2563eb;border-radius:99px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-barChart-1">
+<div class="dash-bar" style="--h:[[h]]%" title="[[label]]: [[revenueMoney]]"><div class="dash-bar__fill"></div><small>[[label2]]</small></div>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-8">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;background:[[bg]]">
+  <span style="font-size:13px;color:[[color]];font-weight:500">[[label]]</span>
+  <strong style="font-size:16px;color:[[color2]]">[[count]]</strong>
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-dashboard-9">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:[[bg]]">
+  <span style="font-size:12px;color:[[color]];font-weight:500">[[label]]</span>
+  <strong style="font-size:15px;color:[[color2]]">[[count]]</strong>
+</div>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-4">
+<div style="display:flex;gap:8px;align-items:center">[[periodField]][[content]]</div>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-5">
+<tr>
+                <td><strong style="color:#94a3b8;font-size:13px">[[i]]</strong></td>
+                <td><strong>[[name]]</strong><small>[[brand]]</small></td>
+                <td class="center"><strong>[[sold]]</strong></td>
+                <td>[[priceMoney]]</td>
+                <td class="center"><span style="color:[[stockContent]]">[[stock]]</span></td>
+              </tr>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-6">
+<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:32px">Chưa có dữ liệu bán hàng</td></tr>
+</template>
+
+<template data-shop-template="shop-dashboard-revenue-7">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:[[bg]]">
+  <span style="font-size:13px;color:[[color]];font-weight:500">[[label]]</span>
+  <strong style="font-size:18px;color:[[color2]];font-variant-numeric:tabular-nums">[[count]]</strong>
+</div>
+</template>

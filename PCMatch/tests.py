@@ -1,4 +1,5 @@
 import json
+import re
 from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
 
@@ -163,6 +164,7 @@ class FrontendPagesTests(TestCase):
             'includes/compare_button.html', 'includes/compare_tray.html',
         }
         root = settings.BASE_DIR / 'templates'
+        partials.update(path.relative_to(root).as_posix() for path in (root / 'includes/shop').glob('*.html'))
         existing = {path.relative_to(root).as_posix() for path in root.rglob('*.html')}
         self.assertEqual(existing - partials, page_templates)
 
@@ -170,21 +172,67 @@ class FrontendPagesTests(TestCase):
         self.assertEqual(reverse('admin:index'), '/django-admin/')
         self.assertEqual(self.client.get('/buyer/not-a-page/').status_code, 404)
 
-    def test_prototype_state_and_form_interception_are_removed(self):
+    def test_buyer_and_staff_do_not_use_shop_demo_state(self):
         scripts = settings.BASE_DIR / 'static' / 'js'
-        for name in ['buyer.js', 'shop.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js']:
+        for name in ['buyer.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js']:
             self.assertFalse((scripts / name).exists(), name)
         self.assertFalse((settings.BASE_DIR / 'templates' / 'index.html').exists())
         for path in scripts.glob('*.js'):
             content = path.read_text(encoding='utf-8')
-            for forbidden in ['localStorage', 'sessionStorage', 'document.body.innerHTML']:
+            self.assertNotIn('document.body.innerHTML', content, path.name)
+            # Shop intentionally retains the isolated prototype imported from main.
+            for forbidden in ([] if path.name in {'shop-store.js', 'shop-auth.js', 'shop-ui.js'}
+                              else ['localStorage', 'sessionStorage']):
                 self.assertNotIn(forbidden, content, path.name)
-            # Comparison enhances only its own POST forms; transaction forms stay native.
-            if path.name != 'comparison.js':
+            # Only comparison forms and isolated Shop demo forms use submit handlers.
+            if path.name not in {'comparison.js', 'shop.js'}:
                 for forbidden in ["addEventListener('submit'", 'addEventListener("submit"']:
                     self.assertNotIn(forbidden, content, path.name)
         for path in (settings.BASE_DIR / 'templates' / 'buyer').glob('*.html'):
             self.assertNotIn('<template data-page=', path.read_text(encoding='utf-8'), path.name)
+
+    def test_shop_demo_modules_have_all_local_dependencies(self):
+        scripts = settings.BASE_DIR / 'static/js'
+        pending = [scripts / 'shop.js']
+        visited = set()
+        while pending:
+            path = pending.pop()
+            if path in visited:
+                continue
+            visited.add(path)
+            self.assertTrue(path.is_file(), path.name)
+            for dependency in re.findall(r"from\s+['\"](\./[^'\"]+)['\"]", path.read_text(encoding='utf-8')):
+                pending.append(path.parent / dependency)
+        for section in ('buyer', 'admin', 'auth'):
+            for path in (settings.BASE_DIR / 'templates' / section).glob('*.html'):
+                self.assertNotIn("js/shop.js", path.read_text(encoding='utf-8'), path.name)
+
+    def test_shop_templates_have_one_document_head_and_demo_root(self):
+        for page in PAGE_GROUPS['shop']:
+            with self.subTest(page=page):
+                response = self.client.get(reverse(route_name('shop', page)))
+                content = response.content.decode()
+                self.assertEqual(content.count('<head>'), 1)
+                self.assertEqual(content.count('</head>'), 1)
+                self.assertEqual(content.count('<title>'), 1)
+                self.assertContains(response, 'id="shop-app-root"', count=1)
+                self.assertContains(response, 'js/shop.js', count=1)
+
+    def test_shop_markup_is_in_html_templates(self):
+        root = settings.BASE_DIR
+        definitions = set()
+        for path in (root / 'templates/includes/shop').glob('*.html'):
+            content = path.read_text(encoding='utf-8')
+            definitions.update(re.findall(r'<template data-shop-template="([^"]+)">', content))
+            self.assertNotIn('onclick=', content, path.name)
+            self.assertNotIn('onsubmit=', content, path.name)
+        for path in (root / 'static/js').glob('shop*.js'):
+            content = path.read_text(encoding='utf-8')
+            self.assertIsNone(re.search(r'</?[A-Za-z][A-Za-z0-9:-]*[\s/>]', content), path.name)
+            for reference in re.findall(r'renderTemplate\([\'"]([^\'"]+)[\'"]', content):
+                self.assertIn(reference, definitions, f'{path.name}: {reference}')
+        self.assertFalse((root / 'static/js/routing.js').exists())
+        self.assertFalse((root / 'static/js/shop-merchandising-data.js').exists())
 
     def test_private_layouts_use_django_authentication(self):
         self.client.logout()

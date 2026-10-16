@@ -1,5 +1,5 @@
-﻿import {mineSeller,sdb,stx,seller,uid,money} from './shop-store.js';
-import {esc,params,go,link,a,btn,field,select,textarea,submit,form,notice,empty,panel,head,badge,statusBadge,mount,toast,dialog,operation,requireSeller} from './shop-ui.js';
+import {renderTemplate,esc,page,params,go,link,a,btn,field,textarea,submit,form,notice,panel,statusBadge,mount,toast,dialog,requireSeller} from './shop-ui.js';
+import {mineSeller,stx,uid,money} from './shop-store.js';
 
 const ORDER_STATUSES=['Chờ xác nhận','Đang xử lý','Đang giao','Đã giao','Đã hủy','Chờ hoàn hàng','Đã hoàn hàng'];
 const NEXT_ACTIONS={
@@ -21,72 +21,38 @@ export function orders(){
   const countByStatus=Object.fromEntries(ORDER_STATUSES.map(s=>[s,mineSeller('shopOrders').filter(o=>o.status===s).length]));
   const totalAll=mineSeller('shopOrders').length;
 
-  mount('Đơn hàng',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <span>Quản lý đơn hàng</span>
-        </div>
-        <h1>Quản lý đơn hàng</h1>
-        <p>Theo dõi và xử lý tất cả đơn hàng của shop</p>
-      </div>
-    </section>
-
-    <div class="sa-table-card">
-      <div class="sa-table-toolbar">
-        <div class="sa-table-filters">
-          <label class="sa-table-search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" id="order-search-input" placeholder="Tìm mã đơn hoặc tên khách..." value="${esc(params.get('q')||'')}">
-          </label>
-        </div>
-        <span class="sa-result-count"><strong>${list.length}</strong> đơn khớp bộ lọc</span>
-      </div>
-
-      <div class="sa-filter-tabs">
-        <button class="sa-tab ${!statusFilter?'is-active':''}" data-action="order-filter-tab" data-status="">Tất cả <span>${totalAll}</span></button>
-        ${ORDER_STATUSES.map(s=>`<button class="sa-tab ${statusFilter===s?'is-active':''}" data-action="order-filter-tab" data-status="${esc(s)}">${esc(s)} <span>${countByStatus[s]||0}</span></button>`).join('')}
-      </div>
-
-      <div class="table-scroll">
-        ${list.length?`<table>
-          <thead><tr>
-            <th>MÃ ĐƠN</th><th>KHÁCH HÀNG</th><th>TỔNG TIỀN</th><th>GIAO HÀNG</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>THAO TÁC</th>
-          </tr></thead>
-          <tbody>
-            ${list.map(o=>`<tr>
-              <td><strong>${esc(o.id)}</strong></td>
-              <td><strong>${esc(o.buyerName)}</strong><small>${esc(o.buyerPhone)}</small></td>
-              <td><strong>${money(o.total)}</strong></td>
-              <td><small>${esc(o.shippingService)}</small>${o.tracking?'<br><small>'+esc(o.tracking)+'</small>':''}</td>
-              <td>${statusBadge(o.status)}</td>
-              <td><small>${new Date(o.createdAt).toLocaleDateString('vi-VN')}</small></td>
-              <td><div class="sa-table-actions">${a('Chi tiết','order',{id:o.id},'sa-detail-btn')}</div></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`:`<div class="sa-empty-table">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6m-6 4h6m-6 4h4"/></svg>
-          <h3>Không có đơn hàng</h3>
-          <p>Chưa có đơn nào phù hợp bộ lọc.</p>
-        </div>`}
-      </div>
-
-      ${list.length?`<footer class="sa-table-pagination">
-        <p>Hiển thị <strong>1 - ${list.length}</strong> trên <strong>${list.length}</strong> bản ghi</p>
-        <nav aria-label="Phân trang">
-          <button type="button" disabled aria-label="Trang trước">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round"/></svg>
-          </button>
-          <span>Trang 1 / 1</span>
-          <button type="button" disabled aria-label="Trang sau">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round"/></svg>
-          </button>
-        </nav>
-      </footer>`:''}
-    </div>
-  `);
+  mount('Đơn hàng',renderTemplate("shop-orders-orders-3", {
+    dashboardUrl: link('dashboard'),
+    get: esc(params.get('q')||''),
+    length: list.length,
+    contentContent: !statusFilter?'is-active':'',
+    totalAll: totalAll,
+    ORDERSTATUSESRows: ORDER_STATUSES.map(s=>renderTemplate("shop-orders-orders-4", {
+      statusFilterContent: statusFilter===s?'is-active':'',
+      s: esc(s),
+      s2: esc(s),
+      value: countByStatus[s]||0
+    })).join(''),
+    lengthContent: list.length?renderTemplate("shop-orders-orders-7", {
+      listRows: list.map(o=>renderTemplate("shop-orders-orders-6", {
+        id: esc(o.id),
+        buyerName: esc(o.buyerName),
+        buyerPhone: esc(o.buyerPhone),
+        totalMoney: money(o.total),
+        shippingService: esc(o.shippingService),
+        trackingContent: o.tracking?renderTemplate("shop-orders-orders-5", {
+          tracking: esc(o.tracking)
+        }):'',
+        statusBadge: statusBadge(o.status),
+        toLocaleDateString: new Date(o.createdAt).toLocaleDateString('vi-VN'),
+        orderLink: a('Chi tiết','order',{id:o.id},'sa-detail-btn')
+      })).join('')
+    }):renderTemplate("shop-orders-orders-1"),
+    lengthContent2: list.length?renderTemplate("shop-orders-orders-2", {
+      length: list.length,
+      length2: list.length
+    }):''
+  }));
 
   // Filter tabs
   document.querySelectorAll('[data-action="order-filter-tab"]').forEach(btn=>{
@@ -114,81 +80,67 @@ export function orders(){
 export function order(){
   if(!requireSeller())return;
   const o=mineSeller('shopOrders').find(x=>x.id===params.get('id'));
-  if(!o){mount('Đơn hàng',`<div class="sa-empty-table" style="padding:60px 20px"><h3>Không tìm thấy đơn hàng</h3><p>Đơn không tồn tại hoặc không thuộc shop của bạn.</p>${a('Quay lại','orders')}</div>`);return;}
+  if(!o){mount('Đơn hàng',renderTemplate("shop-orders-order-1", {
+    ordersLink: a('Quay lại','orders')
+  }));return;}
 
   const nextActions=NEXT_ACTIONS[o.status]||[];
 
-  mount('Đơn '+o.id,`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <a href="${link('orders')}">Đơn hàng</a>
-          <span>/</span>
-          <span>${esc(o.id)}</span>
-        </div>
-        <h1>${esc(o.id)}</h1>
-        <p>${new Date(o.createdAt).toLocaleString('vi-VN')}</p>
-      </div>
-      <div class="sa-page-actions">
-        ${a('← Tất cả đơn','orders')}
-      </div>
-    </section>
-
-    ${notice('Trạng thái hiện tại: '+o.status+(o.status==='Chờ xác nhận'?' · Vui lòng xác nhận hoặc hủy đơn sớm.':''),'info')}
-
-    <div class="shop-grid">
-      <div class="stack">
-        ${panel('Thông tin người mua',`
-          <dl class="info-dl">
-            <dt>Khách hàng</dt><dd>${esc(o.buyerName)}</dd>
-            <dt>Điện thoại</dt><dd>${esc(o.buyerPhone)}</dd>
-            <dt>Địa chỉ</dt><dd>${esc(o.address)}</dd>
-            <dt>Dịch vụ giao</dt><dd>${esc(o.shippingService)}</dd>
-            ${o.tracking?`<dt>Mã vận đơn</dt><dd>${esc(o.tracking)}</dd>`:''}
-          </dl>
-        `)}
-
-        ${panel('Sản phẩm trong đơn',`
-          <div class="shop-order-items">
-            ${o.items.map(i=>`<div class="shop-order-item">
-              <div><strong>${esc(i.name)}</strong><p>${i.qty} × ${money(i.price)} = ${money(i.qty*i.price)}</p></div>
-            </div>`).join('')}
-          </div>
-          <div class="shop-total shop-total--grand"><span>Tổng đơn</span><strong>${money(o.total)}</strong></div>
-          <p><small>Thanh toán: ${esc(o.payment)}</small></p>
-        `)}
-
-        ${panel('Lịch sử đơn hàng',`
-          <ul class="shop-timeline">
-            ${o.timeline.map(t=>`<li><strong>${new Date(t.at).toLocaleString('vi-VN')}</strong><span>${esc(t.text)}</span></li>`).join('')}
-          </ul>
-        `)}
-      </div>
-
-      <div class="shop-summary stack">
-        ${panel('Xử lý đơn hàng',`
-          <p>Trạng thái: ${statusBadge(o.status)}</p>
-          ${nextActions.length?`<div class="stack">
-            ${nextActions.map(action=>`<button type="button" class="btn ${action.action==='order-cancel'?'btn--danger':'btn--primary'}" data-action="${action.action}" data-id="${o.id}">${action.label}</button>`).join('')}
-          </div>`:'<p class="muted">Không có hành động tiếp theo.</p>'}
-        `)}
-
-        ${o.status==='Đang xử lý'||o.status==='Đang giao'?panel('Cập nhật vận đơn',form('update-tracking',`
-          <input type="hidden" name="orderId" value="${esc(o.id)}">
-          ${field('Mã vận đơn','tracking',o.tracking||'')}
-          ${submit('Lưu mã vận đơn')}
-        `)):''}
-
-        ${panel('Ghi chú nội bộ',form('order-note',`
-          <input type="hidden" name="orderId" value="${esc(o.id)}">
-          ${textarea('Ghi chú','note',o.note||'','maxlength="500" placeholder="Ghi chú nội bộ về đơn hàng..."')}
-          ${submit('Lưu ghi chú')}
-        `))}
-      </div>
-    </div>
-  `);
+  mount('Đơn '+o.id,renderTemplate("shop-orders-order-6", {
+    dashboardUrl: link('dashboard'),
+    ordersUrl: link('orders'),
+    id: esc(o.id),
+    id2: esc(o.id),
+    toLocaleString: new Date(o.createdAt).toLocaleString('vi-VN'),
+    ordersLink: a('← Tất cả đơn','orders'),
+    content: notice('Trạng thái hiện tại: '+o.status+(o.status==='Chờ xác nhận'?' · Vui lòng xác nhận hoặc hủy đơn sớm.':''),'info'),
+    ThongTinNguoiMuaPanel: panel('Thông tin người mua',renderTemplate("shop-orders-order-8", {
+      buyerName: esc(o.buyerName),
+      buyerPhone: esc(o.buyerPhone),
+      address: esc(o.address),
+      shippingService: esc(o.shippingService),
+      trackingContent: o.tracking?renderTemplate("shop-orders-order-7", {
+        tracking: esc(o.tracking)
+      }):''
+    })),
+    SanPhamTrongDonPanel: panel('Sản phẩm trong đơn',renderTemplate("shop-orders-order-3", {
+      itemsRows: o.items.map(i=>renderTemplate("shop-orders-order-2", {
+        name: esc(i.name),
+        qty: i.qty,
+        priceMoney: money(i.price),
+        qtyMoney: money(i.qty*i.price)
+      })).join(''),
+      totalMoney: money(o.total),
+      payment: esc(o.payment)
+    })),
+    LichSuDonHangPanel: panel('Lịch sử đơn hàng',renderTemplate("shop-orders-order-10", {
+      timelineRows: o.timeline.map(t=>renderTemplate("shop-orders-order-9", {
+        toLocaleString: new Date(t.at).toLocaleString('vi-VN'),
+        text: esc(t.text)
+      })).join('')
+    })),
+    XuLyDonHangPanel: panel('Xử lý đơn hàng',renderTemplate("shop-orders-order-5", {
+      statusBadge: statusBadge(o.status),
+      lengthContent: nextActions.length?renderTemplate("shop-orders-order-12", {
+        nextActionsRows: nextActions.map(action=>renderTemplate("shop-orders-order-11", {
+          actionContent: action.action==='order-cancel'?'btn--danger':'btn--primary',
+          action: action.action,
+          id: o.id,
+          label: action.label
+        })).join('')
+      }):renderTemplate("shop-orders-order-4")
+    })),
+    statusContent: o.status==='Đang xử lý'||o.status==='Đang giao'?panel('Cập nhật vận đơn',form('update-tracking',renderTemplate("shop-orders-order-13", {
+      id: esc(o.id),
+      trackingField: field('Mã vận đơn','tracking',o.tracking||''),
+      content: submit('Lưu mã vận đơn')
+    }))):'',
+    GhiChuNoiBoPanel: panel('Ghi chú nội bộ',form('order-note',renderTemplate("shop-orders-order-14", {
+      id: esc(o.id),
+      noteField: textarea('Ghi chú','note',o.note||'','maxlength="500" placeholder="Ghi chú nội bộ về đơn hàng..."'),
+      content: submit('Lưu ghi chú')
+    })))
+  }));
 }
 
 export function fulfillment(){
@@ -196,75 +148,44 @@ export function fulfillment(){
   const delivering=mineSeller('shopOrders').filter(o=>['Đang giao','Chờ hoàn hàng'].includes(o.status));
   const confirmed=mineSeller('shopOrders').filter(o=>o.status==='Đang xử lý');
 
-  mount('Giao nhận',`
-    <section class="sa-page-heading">
-      <div>
-        <div class="sa-breadcrumbs">
-          <a href="${link('dashboard')}">Kênh bán</a>
-          <span>/</span>
-          <span>Giao nhận</span>
-        </div>
-        <h1>Quản lý giao nhận</h1>
-        <p>Theo dõi các đơn đang trong quá trình giao hàng</p>
-      </div>
-    </section>
-
-    <section class="sa-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
-      ${[
+  mount('Giao nhận',renderTemplate("shop-orders-fulfillment-3", {
+    dashboardUrl: link('dashboard'),
+    contentRows: [
         {label:'Chờ lấy hàng',count:confirmed.length,cls:'sa-kpi-card--blue'},
         {label:'Đang giao',count:delivering.filter(o=>o.status==='Đang giao').length,cls:'sa-kpi-card--sky'},
         {label:'Chờ hoàn hàng',count:delivering.filter(o=>o.status==='Chờ hoàn hàng').length,cls:'sa-kpi-card--amber'},
         {label:'Đã giao hôm nay',count:mineSeller('shopOrders').filter(o=>o.status==='Đã giao'&&Date.now()-o.deliveredAt<86400000).length,cls:'sa-kpi-card--rose'}
-      ].map(s=>`<article class="sa-kpi-card ${s.cls}">
-        <h2>${esc(s.label).toUpperCase()}</h2>
-        <div class="sa-kpi-value"><strong>${s.count}</strong><span>đơn</span></div>
-      </article>`).join('')}
-    </section>
-
-    ${confirmed.length?`
-      <div class="sa-table-card" style="margin-bottom:20px">
-        <div class="sa-table-toolbar"><h3 style="margin:0;font-size:14px;font-weight:600;color:#0f172a">Cần chuẩn bị hàng (${confirmed.length})</h3></div>
-        <div style="padding:12px 16px;display:grid;gap:12px">
-          ${confirmed.map(o=>`
-            <div class="shop-card">
-              <div>
-                <h3>${esc(o.id)}</h3>
-                <p>${esc(o.buyerName)} · ${esc(o.address)}</p>
-                <p>${o.items.map(i=>esc(i.name)+' × '+i.qty).join(' · ')}</p>
-                <p>${money(o.total)} · ${esc(o.shippingService)}</p>
-              </div>
-              <div class="stack">
-                ${btn('Bắt đầu giao','order-ship',o.id,'primary')}
-                ${a('Chi tiết','order',{id:o.id})}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `:''}
-
-    ${delivering.filter(o=>o.status==='Đang giao').length?`
-      <div class="sa-table-card">
-        <div class="sa-table-toolbar"><h3 style="margin:0;font-size:14px;font-weight:600;color:#0f172a">Đang giao (${delivering.filter(o=>o.status==='Đang giao').length})</h3></div>
-        <div style="padding:12px 16px;display:grid;gap:12px">
-          ${delivering.filter(o=>o.status==='Đang giao').map(o=>`
-            <div class="shop-card">
-              <div>
-                <h3>${esc(o.id)}</h3>
-                <p>${esc(o.buyerName)} · ${esc(o.address)}</p>
-                <p>Vận đơn: ${o.tracking||'Chưa có'}</p>
-              </div>
-              <div class="stack">
-                ${btn('Đã giao','order-deliver',o.id,'primary')}
-                ${btn('Giao thất bại','order-fail',o.id,'danger')}
-                ${a('Chi tiết','order',{id:o.id})}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `:''}
-  `);
+      ].map(s=>renderTemplate("shop-orders-fulfillment-4", {
+      cls: s.cls,
+      toUpperCase: esc(s.label).toUpperCase(),
+      count: s.count
+    })).join(''),
+    lengthContent: confirmed.length?renderTemplate("shop-orders-fulfillment-5", {
+      length: confirmed.length,
+      confirmedRows: confirmed.map(o=>renderTemplate("shop-orders-fulfillment-1", {
+        id: esc(o.id),
+        buyerName: esc(o.buyerName),
+        address: esc(o.address),
+        itemsRows: o.items.map(i=>esc(i.name)+' × '+i.qty).join(' · '),
+        totalMoney: money(o.total),
+        shippingService: esc(o.shippingService),
+        orderShipButton: btn('Bắt đầu giao','order-ship',o.id,'primary'),
+        orderLink: a('Chi tiết','order',{id:o.id})
+      })).join('')
+    }):'',
+    lengthContent2: delivering.filter(o=>o.status==='Đang giao').length?renderTemplate("shop-orders-fulfillment-6", {
+      length: delivering.filter(o=>o.status==='Đang giao').length,
+      filterRows: delivering.filter(o=>o.status==='Đang giao').map(o=>renderTemplate("shop-orders-fulfillment-2", {
+        id: esc(o.id),
+        buyerName: esc(o.buyerName),
+        address: esc(o.address),
+        tracking: esc(o.tracking||'Chưa có'),
+        orderDeliverButton: btn('Đã giao','order-deliver',o.id,'primary'),
+        orderFailButton: btn('Giao thất bại','order-fail',o.id,'danger'),
+        orderLink: a('Chi tiết','order',{id:o.id})
+      })).join('')
+    }):''
+  }));
 }
 
 export function action(act,id){
@@ -289,7 +210,8 @@ export function action(act,id){
         if(t.delivered)o.deliveredAt=Date.now();
         o.timeline.push({at:Date.now(),text:t.text});
       });
-      if(location.href.includes('order='))orders();
+      if(page==='orders')orders();
+      else if(page==='fulfillment')fulfillment();
       else order();
       toast(t.text+'.');
     });
