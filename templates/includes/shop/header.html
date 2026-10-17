@@ -1,0 +1,61 @@
+<header class="sa-topbar" id="shop-topbar">
+    <button class="sa-menu-btn" type="button" data-sidebar-toggle aria-label="Mở menu" aria-controls="shop-sidebar" aria-expanded="false">
+        <span>
+        </span>
+        <span>
+        </span>
+        <span>
+        </span>
+    </button>
+    <a class="sa-logo" href="{% url 'home' %}">
+        <i class="sa-logo__mark">
+        </i>
+        <span>
+            PC Match
+        </span>
+        <em>
+            Kênh bán
+        </em>
+    </a>
+    <form class="sa-search" method="get" action="{% url 'shop_offers' %}">
+        <label class="sr-only" for="shop-search">
+            Tìm sản phẩm
+        </label>
+        <input id="shop-search" name="q" value="{{ q }}" placeholder="Tìm sản phẩm của gian hàng...">
+    </form>
+    {% if request.user.is_authenticated %}
+    <div class="sa-topbar__right">
+        <a class="sa-topbar-help" href="{% url 'buyer_help' %}">
+            Trợ giúp
+        </a>
+        <details class="sa-user-dropdown" id="shop-user-dropdown">
+            <summary class="sa-user-btn" id="shop-user-btn">
+                {{ shop.shop_name|default:request.user.full_name|default:request.user.username }}
+            </summary>
+            <div class="sa-user-menu" id="shop-user-menu">
+                <div class="sa-udm-header">
+                    <div class="sa-udm-name">
+                        {{ request.user.full_name }}
+                    </div>
+                    <div class="sa-udm-email">
+                        {{ request.user.email }}
+                    </div>
+                    <span class="sa-udm-badge">
+                        Kênh bán
+                    </span>
+                </div>
+                <form method="post" action="{% url 'auth_logout' %}">
+                    {% csrf_token %}
+                    <button class="sa-udm-logout btn" type="submit">
+                        Đăng xuất
+                    </button>
+                </form>
+            </div>
+        </details>
+    </div>
+    {% else %}
+    <a class="btn btn--secondary" href="{% url 'auth_login' %}?next={{ request.get_full_path|urlencode }}">
+        Đăng nhập
+    </a>
+    {% endif %}
+</header>

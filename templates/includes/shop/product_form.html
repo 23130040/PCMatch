@@ -1,0 +1,89 @@
+<section class="panel panel--padded sa-form-panel">
+    <h2>
+        {% if editing_product %}
+        Sửa sản phẩm: {{ editing_product.product_name }}
+        {% else %}
+        Thêm sản phẩm mới
+        {% endif %}
+    </h2>
+    <p class="message message--info">
+        Chức năng lưu thay đổi sản phẩm đang được phát triển.
+    </p>
+    <form method="post" class="stack">
+        {% csrf_token %}
+        <fieldset disabled class="stack">
+            <div class="two-col">
+                <label class="field">
+                    <span>
+                        Danh mục
+                    </span>
+                    <select name="category">
+                        {% for category in categories %}
+                        <option value="{{ category.pk }}" {% if category.pk == editing_product.category_id %}selected{% endif %}>
+                            {{ category.category_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field">
+                    <span>
+                        Tên sản phẩm
+                    </span>
+                    <input name="product_name" value="{{ editing_product.product_name }}" maxlength="255" required>
+                </label>
+            </div>
+            <div class="two-col">
+                <label class="field">
+                    <span>
+                        Thương hiệu
+                    </span>
+                    <input name="brand" value="{{ editing_product.brand.brand_name }}">
+                </label>
+                <label class="field">
+                    <span>
+                        Giá bán (VND)
+                    </span>
+                    <input name="price" type="number" min="1000" step="1000" value="{{ editing_product.price|floatformat:'0' }}">
+                </label>
+            </div>
+            <div class="two-col">
+                <label class="field">
+                    <span>
+                        Tồn kho
+                    </span>
+                    <input name="stock_quantity" type="number" min="0" value="{{ editing_product.stock_quantity|default_if_none:'0' }}">
+                </label>
+                <label class="field">
+                    <span>
+                        Trạng thái
+                    </span>
+                    <select name="status">
+                        <option value="ACTIVE">
+                            Đang bán
+                        </option>
+                        <option value="INACTIVE">
+                            Tạm ẩn
+                        </option>
+                        <option value="OUT_OF_STOCK">
+                            Hết hàng
+                        </option>
+                    </select>
+                </label>
+            </div>
+            <label class="field">
+                <span>
+                    Mô tả sản phẩm
+                </span>
+                <textarea name="description">
+                    {{ editing_product.description }}
+                </textarea>
+            </label>
+            <button class="btn btn--primary" type="submit">
+                Lưu sản phẩm
+            </button>
+        </fieldset>
+        <a class="btn btn--secondary" href="{% url 'shop_offers' %}">
+            Quay lại
+        </a>
+    </form>
+</section>

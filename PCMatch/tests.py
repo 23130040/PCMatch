@@ -68,7 +68,7 @@ class FrontendPagesTests(TestCase):
         self.client.force_login(self.staff)
 
     def test_staff_pages_require_login(self):
-        login_url = reverse('staff_login')
+        login_url = reverse('auth_login')
         dashboard = reverse('staff_dashboard')
         self.client.logout()
         response = self.client.get(dashboard)
@@ -78,14 +78,14 @@ class FrontendPagesTests(TestCase):
         response = self.client.get(dashboard)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response['Location'].startswith(login_url))
-        response = self.client.post(login_url, {'username': 'buyertest@pcmatch.vn', 'password': 'BuyerTest123!'})
+        response = self.client.post(login_url, {'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'không có quyền quản trị')
         self.client.logout()
-        response = self.client.post(login_url, {'username': 'stafftest', 'password': 'StaffTest123!'})
+        response = self.client.post(login_url, {'email': 'stafftest', 'password': 'StaffTest123!', 'next': dashboard})
         self.assertRedirects(response, dashboard, fetch_redirect_response=False)
         self.client.logout()
-        response = self.client.post(login_url, {'username': 'stafftest@pcmatch.vn', 'password': 'sai'})
+        response = self.client.post(login_url, {'email': self.staff.email, 'password': 'sai', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
         self.client.logout()
         response = self.client.get(login_url)
@@ -94,9 +94,9 @@ class FrontendPagesTests(TestCase):
     def test_staff_logout(self):
         logout_url = reverse('staff_logout')
         response = self.client.get(logout_url)
-        self.assertRedirects(response, reverse('staff_dashboard'), fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 405)
         response = self.client.post(logout_url)
-        self.assertRedirects(response, reverse('staff_login'), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse('auth_login'), fetch_redirect_response=False)
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 
@@ -109,10 +109,7 @@ class FrontendPagesTests(TestCase):
         ]
         for name, section, page in pages:
             with self.subTest(page=name):
-                if name == 'staff_login':
-                    self.client.logout()
-                else:
-                    self.client.force_login(self.staff)
+                self.client.force_login(self.staff)
                 path = reverse(name)
                 response = self.client.get(path)
                 if name in {'buyer_model', 'buyer_shop'}:
@@ -140,7 +137,7 @@ class FrontendPagesTests(TestCase):
                     self.assertTrue(url.path.startswith(settings.STATIC_URL), asset)
                     asset_path = unquote(url.path[len(settings.STATIC_URL):])
                     self.assertIsNotNone(finders.find(asset_path), asset)
-                if section == 'staff' and name != 'staff_login':
+                if section == 'staff':
                     self.assertEqual(parser.components, {
                         'sidebar': 1, 'topbar': 1, 'service-bar': 1,
                     })
@@ -172,42 +169,29 @@ class FrontendPagesTests(TestCase):
         self.assertEqual(reverse('admin:index'), '/django-admin/')
         self.assertEqual(self.client.get('/buyer/not-a-page/').status_code, 404)
 
-    def test_buyer_and_staff_do_not_use_shop_demo_state(self):
+    def test_frontend_does_not_use_prototype_storage_or_transaction_handlers(self):
         scripts = settings.BASE_DIR / 'static' / 'js'
-        for name in ['buyer.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js']:
+        for name in ['buyer.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js', 'shop.js', 'shop-store.js', 'shop-data.js']:
             self.assertFalse((scripts / name).exists(), name)
         self.assertFalse((settings.BASE_DIR / 'templates' / 'index.html').exists())
         for path in scripts.glob('*.js'):
             content = path.read_text(encoding='utf-8')
             self.assertNotIn('document.body.innerHTML', content, path.name)
-            # Shop intentionally retains the isolated prototype imported from main.
-            for forbidden in ([] if path.name in {'shop-store.js', 'shop-auth.js', 'shop-ui.js'}
-                              else ['localStorage', 'sessionStorage']):
+            for forbidden in ['localStorage', 'sessionStorage']:
                 self.assertNotIn(forbidden, content, path.name)
-            # Only comparison forms and isolated Shop demo forms use submit handlers.
-            if path.name not in {'comparison.js', 'shop.js'}:
+            # Comparison enhances only its own backend POST forms.
+            if path.name != 'comparison.js':
                 for forbidden in ["addEventListener('submit'", 'addEventListener("submit"']:
                     self.assertNotIn(forbidden, content, path.name)
         for path in (settings.BASE_DIR / 'templates' / 'buyer').glob('*.html'):
             self.assertNotIn('<template data-page=', path.read_text(encoding='utf-8'), path.name)
 
-    def test_shop_demo_modules_have_all_local_dependencies(self):
-        scripts = settings.BASE_DIR / 'static/js'
-        pending = [scripts / 'shop.js']
-        visited = set()
-        while pending:
-            path = pending.pop()
-            if path in visited:
-                continue
-            visited.add(path)
-            self.assertTrue(path.is_file(), path.name)
-            for dependency in re.findall(r"from\s+['\"](\./[^'\"]+)['\"]", path.read_text(encoding='utf-8')):
-                pending.append(path.parent / dependency)
-        for section in ('buyer', 'admin', 'auth'):
-            for path in (settings.BASE_DIR / 'templates' / section).glob('*.html'):
-                self.assertNotIn("js/shop.js", path.read_text(encoding='utf-8'), path.name)
+    def test_only_backend_template_groups_remain(self):
+        self.assertEqual(set(PAGE_GROUPS), {'buyer', 'shop', 'staff', 'auth'})
+        self.assertEqual(self.client.get('/states/index/').status_code, 404)
+        self.assertFalse((settings.BASE_DIR / 'templates/states').exists())
 
-    def test_shop_templates_have_one_document_head_and_demo_root(self):
+    def test_shop_content_is_in_the_server_response(self):
         for page in PAGE_GROUPS['shop']:
             with self.subTest(page=page):
                 response = self.client.get(reverse(route_name('shop', page)))
@@ -215,22 +199,25 @@ class FrontendPagesTests(TestCase):
                 self.assertEqual(content.count('<head>'), 1)
                 self.assertEqual(content.count('</head>'), 1)
                 self.assertEqual(content.count('<title>'), 1)
-                self.assertContains(response, 'id="shop-app-root"', count=1)
-                self.assertContains(response, 'js/shop.js', count=1)
+                self.assertContains(response, '<h1>', count=1)
+                self.assertContains(response, 'id="shop-main"', count=1)
+                self.assertContains(response, 'js/shop-interface.js', count=1)
+                for removed in ['shop-templates-', 'data-shop-template', '[[', 'Đang tải giao diện', 'js/shop.js']:
+                    self.assertNotContains(response, removed)
 
     def test_shop_markup_is_in_html_templates(self):
         root = settings.BASE_DIR
-        definitions = set()
-        for path in (root / 'templates/includes/shop').glob('*.html'):
+        for path in list((root / 'templates/includes/shop').glob('*.html')) + list((root / 'templates/shop').glob('*.html')):
             content = path.read_text(encoding='utf-8')
-            definitions.update(re.findall(r'<template data-shop-template="([^"]+)">', content))
+            self.assertNotIn('data-shop-template', content, path.name)
+            self.assertNotIn('shop_templates', content, path.name)
             self.assertNotIn('onclick=', content, path.name)
             self.assertNotIn('onsubmit=', content, path.name)
         for path in (root / 'static/js').glob('shop*.js'):
             content = path.read_text(encoding='utf-8')
             self.assertIsNone(re.search(r'</?[A-Za-z][A-Za-z0-9:-]*[\s/>]', content), path.name)
-            for reference in re.findall(r'renderTemplate\([\'"]([^\'"]+)[\'"]', content):
-                self.assertIn(reference, definitions, f'{path.name}: {reference}')
+            for forbidden in ['renderTemplate', 'innerHTML', 'insertAdjacentHTML', 'localStorage', 'sessionStorage']:
+                self.assertNotIn(forbidden, content, path.name)
         self.assertFalse((root / 'static/js/routing.js').exists())
         self.assertFalse((root / 'static/js/shop-merchandising-data.js').exists())
 

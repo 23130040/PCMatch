@@ -1,27 +1,57 @@
 {% extends 'includes/buyer_base.html' %}
 {% block title %}{% if mode == 'register' %}Đăng ký{% else %}Đăng nhập{% endif %} — PCMatch{% endblock %}
 {% block content %}
-<section class="auth-surface stack" aria-labelledby="auth-title">
-    <header class="auth-title"><h1 id="auth-title">{% if mode == 'register' %}Đăng ký{% else %}Đăng nhập PCMatch{% endif %}</h1><p>Giỏ hàng và nội dung đang làm sẽ được giữ sau đăng nhập.</p></header>
-    <form method="post" action="{% url 'auth_login' %}" class="stack">
-        {% csrf_token %}
-        <input type="hidden" name="mode" value="{{ mode }}">
-        <input type="hidden" name="next" value="{{ next }}">
-        {% if form.non_field_errors %}<div class="message message--error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-        {% for field in form %}
-            <label class="field" for="{{ field.id_for_label }}"><span>{{ field.label }}</span>{% if field.field.widget.input_type == 'password' %}<span class="password-wrap">{{ field }}<button class="password-eye" type="button" data-password-toggle="{{ field.id_for_label }}" aria-label="Hiện mật khẩu">👁</button></span>{% else %}{{ field }}{% endif %}</label>
-            {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
-        {% endfor %}
-        <button class="btn btn--primary" type="submit">{% if mode == 'register' %}Đăng ký{% else %}Đăng nhập{% endif %}</button>
-    </form>
-    {% if mode != 'register' %}
-    <div class="social-login">
-        <button class="social-btn social-btn--facebook" type="button" disabled data-backend-pending="facebook" title="Đăng nhập Facebook chưa được kết nối với backend"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z"/></svg><span>Facebook</span></button>
-        <button class="social-btn social-btn--google" type="button" disabled data-backend-pending="google" title="Đăng nhập Google chưa được kết nối với backend"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45c-.28 1.48-1.12 2.73-2.39 3.57v2.97h3.87c2.26-2.09 3.57-5.16 3.57-8.73z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-2.97c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.07C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.31c-.24-.72-.38-1.49-.38-2.31s.14-1.59.38-2.31V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.07z"/><path fill="#EA4335" d="M12 4.73c1.76 0 3.34.61 4.58 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.07c.95-2.85 3.6-4.96 6.73-4.96z"/></svg><span>Google</span></button>
-    </div>
-    <button class="linklike" type="button" disabled data-backend-pending="password-recovery" title="Khôi phục mật khẩu chưa được kết nối với backend">Quên mật khẩu?</button>
-    {% endif %}
-    {% if mode == 'register' %}<a href="{% url 'auth_login' %}?next={{ next|urlencode }}">Đã có tài khoản? Đăng nhập</a>
-    {% else %}<a href="{% url 'auth_login' %}?mode=register&amp;next={{ next|urlencode }}">Chưa có tài khoản? Đăng ký</a>{% endif %}
-</section>
+    <section class="auth-surface stack" aria-labelledby="auth-title">
+        <header class="auth-title"><h1 id="auth-title">{% if mode == 'register' %}Đăng ký{% else %}Đăng nhập
+            PCMatch{% endif %}</h1>
+            <p>Giỏ hàng và nội dung đang làm sẽ được giữ sau đăng nhập.</p></header>
+        <form method="post" action="{% url 'auth_login' %}" class="stack">
+            {% csrf_token %}
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if form.non_field_errors %}
+                <div class="message message--error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+                <label class="field" for="{{ field.id_for_label }}"><span>{{ field.label }}</span>
+                    {% if field.field.widget.input_type == 'password' %}<span class="password-wrap">{{ field }}
+                        <button class="password-eye" type="button" data-password-toggle="{{ field.id_for_label }}"
+                                aria-label="Hiện mật khẩu">👁</button></span>{% else %}{{ field }}{% endif %}</label>
+                {% if field.errors %}
+                    <div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+            {% endfor %}
+            <button class="btn btn--primary" type="submit">{% if mode == 'register' %}Đăng ký{% else %}Đăng
+                nhập{% endif %}</button>
+        </form>
+        {% if mode != 'register' %}
+            <div class="social-login">
+                <button class="social-btn social-btn--facebook" type="button" disabled data-backend-pending="facebook"
+                        title="Đăng nhập Facebook chưa được kết nối với backend">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#1877F2"
+                              d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z"/>
+                    </svg>
+                    <span>Facebook</span></button>
+                <button class="social-btn social-btn--google" type="button" disabled data-backend-pending="google"
+                        title="Đăng nhập Google chưa được kết nối với backend">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#4285F4"
+                              d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45c-.28 1.48-1.12 2.73-2.39 3.57v2.97h3.87c2.26-2.09 3.57-5.16 3.57-8.73z"/>
+                        <path fill="#34A853"
+                              d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-2.97c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.07C3.26 21.3 7.31 24 12 24z"/>
+                        <path fill="#FBBC05"
+                              d="M5.27 14.31c-.24-.72-.38-1.49-.38-2.31s.14-1.59.38-2.31V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.07z"/>
+                        <path fill="#EA4335"
+                              d="M12 4.73c1.76 0 3.34.61 4.58 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.07c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                    </svg>
+                    <span>Google</span></button>
+            </div>
+            <button class="linklike" type="button" disabled data-backend-pending="password-recovery"
+                    title="Khôi phục mật khẩu chưa được kết nối với backend">Quên mật khẩu?
+            </button>
+        {% endif %}
+        {% if mode == 'register' %}
+            <a href="{% url 'auth_login' %}?next={{ next|urlencode }}">Đã có tài khoản? Đăng nhập</a>
+        {% else %}<a href="{% url 'auth_login' %}?mode=register&amp;next={{ next|urlencode }}">Chưa có tài khoản? Đăng
+            ký</a>{% endif %}
+    </section>
 {% endblock %}

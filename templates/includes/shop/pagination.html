@@ -1,0 +1,22 @@
+{% if pagination.has_other_pages %}
+<footer class="sa-table-pagination">
+    <p>
+        Hiển thị {{ pagination.start_index }}–{{ pagination.end_index }} / {{ pagination.paginator.count }} bản ghi
+    </p>
+    <nav aria-label="Phân trang">
+        {% if pagination.has_previous %}
+        <a class="btn btn--secondary" href="{{ request.path }}?{{ filter_query }}&amp;page={{ pagination.previous_page_number }}">
+            Trang trước
+        </a>
+        {% endif %}
+        <span>
+            Trang {{ pagination.number }} / {{ pagination.paginator.num_pages }}
+        </span>
+        {% if pagination.has_next %}
+        <a class="btn btn--secondary" href="{{ request.path }}?{{ filter_query }}&amp;page={{ pagination.next_page_number }}">
+            Trang sau
+        </a>
+        {% endif %}
+    </nav>
+</footer>
+{% endif %}

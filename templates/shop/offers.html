@@ -1,5 +1,251 @@
 {% extends 'includes/shop/base.html' %}
-{% load shop_templates %}
-{% block shop_templates %}
-{% shop_templates 'products' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Quản lý sản phẩm
+            </span>
+            </div>
+            <h1>
+                Quản lý sản phẩm
+            </h1>
+            <p>
+                Theo dõi sản phẩm, tồn kho và tình trạng bán hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+            <a class="btn btn--primary" href="{% url 'shop_offers' %}?new=1">
+                + Thêm sản phẩm
+            </a>
+        </div>
+    </section>
+    <section class="sa-kpi-grid">
+        <article class="sa-kpi-card sa-kpi-card--blue">
+            <h2>
+                Tổng sản phẩm
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_total }}
+                </strong>
+            </div>
+            <p>
+                Toàn bộ sản phẩm trong gian hàng
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--amber">
+            <h2>
+                Hết hàng
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_out }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm cần nhập thêm hàng
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--sky">
+            <h2>
+                Đang bán
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_active }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm còn hàng và đang hiển thị
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--rose">
+            <h2>
+                Tạm ẩn
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_hidden }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm đang ngừng hiển thị
+            </p>
+        </article>
+    </section>
+    {% if show_product_form %}
+        {% include 'includes/shop/product_form.html' %}
+    {% else %}
+        <section class="sa-table-card">
+            <form class="sa-table-toolbar" method="get" action="{% url 'shop_offers' %}">
+                <div class="sa-table-filters">
+                    <label class="sa-table-search">
+                <span class="sr-only">
+                    Tìm sản phẩm
+                </span>
+                        <input name="q" value="{{ q }}" placeholder="Tìm theo tên hoặc thương hiệu...">
+                    </label>
+                    <label>
+                <span class="sr-only">
+                    Danh mục
+                </span>
+                        <select class="sa-filter-select" name="cat">
+                            <option value="">
+                                Tất cả danh mục
+                            </option>
+                            {% for category in categories %}
+                                <option value="{{ category.pk }}"
+                                        {% if category_filter == category.pk|stringformat:'s' %}selected{% endif %}>
+                                    {{ category.category_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <input type="hidden" name="status" value="{{ status }}">
+                    <button class="btn btn--secondary" type="submit">
+                        Lọc
+                    </button>
+                </div>
+                <span class="sa-result-count">
+            {{ products_page.paginator.count }} sản phẩm
+        </span>
+            </form>
+            <nav class="sa-filter-tabs" aria-label="Trạng thái sản phẩm">
+                <a class="sa-tab {% if not status %}is-active{% endif %}"
+                   href="{{ request.path }}?q={{ q|urlencode }}&amp;cat={{ category_filter|urlencode }}">
+                    Tất cả
+                    <span>
+                {{ product_total }}
+            </span>
+                </a>
+                <a class="sa-tab {% if status == 'active' %}is-active{% endif %}"
+                   href="{{ request.path }}?status=active&amp;q={{ q|urlencode }}&amp;cat={{ category_filter|urlencode }}">
+                    Đang bán
+                    <span>
+                {{ product_active }}
+            </span>
+                </a>
+                <a class="sa-tab {% if status == 'out' %}is-active{% endif %}"
+                   href="{{ request.path }}?status=out&amp;q={{ q|urlencode }}&amp;cat={{ category_filter|urlencode }}">
+                    Hết hàng
+                    <span>
+                {{ product_out }}
+            </span>
+                </a>
+                <a class="sa-tab {% if status == 'inactive' %}is-active{% endif %}"
+                   href="{{ request.path }}?status=inactive&amp;q={{ q|urlencode }}&amp;cat={{ category_filter|urlencode }}">
+                    Tạm ẩn
+                    <span>
+                {{ product_hidden }}
+            </span>
+                </a>
+            </nav>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" data-select-all aria-label="Chọn tất cả sản phẩm">
+                        </th>
+                        <th>
+                            SẢN PHẨM
+                        </th>
+                        <th>
+                            DANH MỤC
+                        </th>
+                        <th>
+                            GIÁ BÁN
+                        </th>
+                        <th>
+                            TỒN KHO
+                        </th>
+                        <th>
+                            ĐÃ BÁN
+                        </th>
+                        <th>
+                            TRẠNG THÁI
+                        </th>
+                        <th>
+                            THAO TÁC
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for product in products_page %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" data-select-row aria-label="Chọn {{ product.product_name }}">
+                            </td>
+                            <td>
+                                <div class="sa-product-cell">
+                                    <div class="sa-product-icon">
+                                        ▣
+                                    </div>
+                                    <div>
+                                        <strong>
+                                            {{ product.product_name }}
+                                        </strong>
+                                        <small>
+                                            Mã SP: #{{ product.pk }} · {{ product.brand.brand_name }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {{ product.category.category_name }}
+                            </td>
+                            <td class="sa-product-price">
+                                {{ product.price|vnd }}
+                            </td>
+                            <td>
+                                {{ product.stock_quantity }}
+                            </td>
+                            <td>
+                                {{ product.sold_quantity }}
+                            </td>
+                            <td>
+                                {% include 'includes/shop/product_status.html' %}
+                            </td>
+                            <td>
+                                <div class="sa-table-actions">
+                                    <a class="sa-detail-btn" href="{% url 'shop_offers' %}?edit={{ product.pk }}">
+                                        Sửa
+                                    </a>
+                                    <button class="sa-detail-btn" disabled>
+                                        Ẩn / hiện
+                                    </button>
+                                    <button class="sa-detail-btn sa-detail-btn--danger" disabled>
+                                        Xóa
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="sa-empty-table">
+                                    <h3>
+                                        Không có sản phẩm
+                                    </h3>
+                                    <p>
+                                        Gian hàng chưa có sản phẩm hoặc không có kết quả phù hợp bộ lọc.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include 'includes/shop/pagination.html' with pagination=products_page %}
+        </section>
+    {% endif %}
 {% endblock %}

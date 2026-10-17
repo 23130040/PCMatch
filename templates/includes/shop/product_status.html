@@ -1,0 +1,13 @@
+{% if product.status == 'INACTIVE' %}
+<span class="sa-product-status sa-product-status--hidden">
+    Tạm ẩn
+</span>
+{% elif product.stock_quantity == 0 %}
+<span class="sa-product-status sa-product-status--out">
+    Hết hàng
+</span>
+{% else %}
+<span class="sa-product-status sa-product-status--selling">
+    Đang bán
+</span>
+{% endif %}

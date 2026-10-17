@@ -1,5 +1,40 @@
 {% extends 'includes/shop/base.html' %}
-{% load shop_templates %}
-{% block shop_templates %}
-{% shop_templates 'builds' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Danh sách báo giá
+            </span>
+            </div>
+            <h1>
+                Danh sách báo giá
+            </h1>
+            <p>
+                Theo dõi báo giá đã gửi cho khách hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+        </div>
+    </section>
+    <section class="sa-table-card">
+        <div class="sa-empty-table">
+            <h2>
+                Chưa có báo giá
+            </h2>
+            <p>
+                Báo giá đã gửi sẽ xuất hiện tại đây khi chức năng được hoàn thiện.
+            </p>
+            <a class="btn btn--primary" href="{% url 'shop_build_requests' %}">
+                Xem yêu cầu build
+            </a>
+        </div>
+    </section>
 {% endblock %}
