@@ -1,17 +1,165 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Quản lý kho — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Quản lý tồn kho
+            </span>
+            </div>
+            <h1>
+                Quản lý tồn kho
+            </h1>
+            <p>
+                Theo dõi số lượng hàng của gian hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+        </div>
+    </section>
+    <section class="sa-kpi-grid">
+        <article class="sa-kpi-card sa-kpi-card--blue">
+            <h2>
+                Tổng sản phẩm
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_total }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm đang quản lý
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--sky">
+            <h2>
+                Tồn ổn định
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_ok }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm còn trên 3 đơn vị
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--amber">
+            <h2>
+                Sắp hết (≤3)
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_low }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm cần nhập hàng
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--rose">
+            <h2>
+                Hết hàng
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_out }}
+                </strong>
+            </div>
+            <p>
+                Sản phẩm đã hết tồn kho
+            </p>
+        </article>
+    </section>
+    <section class="sa-table-card">
+        <div class="sa-table-toolbar">
+            <h2>
+                Toàn bộ sản phẩm
+            </h2>
+            <p>
+                Cập nhật tồn kho đang được phát triển.
+            </p>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>
+                        SẢN PHẨM
+                    </th>
+                    <th>
+                        DANH MỤC
+                    </th>
+                    <th>
+                        GIÁ
+                    </th>
+                    <th>
+                        TỒN
+                    </th>
+                    <th>
+                        ĐÃ BÁN
+                    </th>
+                    <th>
+                        CẬP NHẬT
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for product in products_page %}
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ product.product_name }}
+                            </strong>
+                        </td>
+                        <td>
+                            {{ product.category.category_name }}
+                        </td>
+                        <td>
+                            {{ product.price|vnd }}
+                        </td>
+                        <td>
+                            {{ product.stock_quantity }}
+                        </td>
+                        <td>
+                            {{ product.sold_quantity }}
+                        </td>
+                        <td>
+                            <form method="post" class="inv-update-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="product_id" value="{{ product.pk }}">
+                                <input type="number" name="quantity" value="{{ product.stock_quantity }}" min="0"
+                                       disabled aria-label="Tồn kho {{ product.product_name }}">
+                                <button type="submit" class="inv-update-btn" disabled>
+                                    Cập nhật
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="sa-empty-table">
+                                <h3>
+                                    Chưa có dữ liệu tồn kho
+                                </h3>
+                                <p>
+                                    Sản phẩm của gian hàng sẽ xuất hiện tại đây.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/shop/pagination.html' with pagination=products_page %}
+    </section>
+{% endblock %}

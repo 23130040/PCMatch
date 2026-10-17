@@ -228,42 +228,9 @@
     </main>
 </div>
 
-<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 
-<script>
-    (function initCustomerTabs() {
-        const tablist = document.querySelector('.tabs[role="tablist"]');
-        const panel = document.getElementById('panel-customers');
-        if (!tablist || !panel) return;
-
-        const tabs = [...tablist.querySelectorAll('[role="tab"]')];
-        const rows = [...panel.querySelectorAll('tbody tr')];
-        const info = document.querySelector('[data-table-info]');
-        const defaultInfo = info ? info.innerHTML : '';
-        const filters = {'tab-all': null, 'tab-active': 'Đang hoạt động', 'tab-locked': 'Đã khóa'};
-        const statusOf = (row) => (row.querySelector('.status')?.textContent || '').trim();
-
-        tabs.forEach((tab) => {
-            tab.addEventListener('click', () => {
-                const wanted = filters[tab.id] ?? null;
-                let visible = 0;
-
-                rows.forEach((row) => {
-                    const show = !wanted || statusOf(row) === wanted;
-                    row.hidden = !show;
-                    if (show) visible += 1;
-                });
-
-                panel.setAttribute('aria-labelledby', tab.id);
-                if (info) {
-                    info.innerHTML = wanted
-                        ? `Hiển thị <strong>1–${visible}</strong> trên <strong>${visible}</strong> bản ghi đã lọc`
-                        : defaultInfo;
-                }
-            });
-        });
-    })();
-</script>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
 </html>

@@ -1,3 +1,81 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Địa chỉ — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Địa chỉ — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Địa chỉ giao hàng
+        </h1>
+        <p>
+            Đơn đã đặt giữ nguyên bản chụp địa chỉ.
+        </p>
+    </div>
+    <div class="cluster">
+    </div>
+</div>
+<div class="two-col">
+    <section class="stack">
+        <section class="empty">
+            <h2>
+                Chưa có địa chỉ
+            </h2>
+            <p>
+                Thêm địa chỉ nhận hàng vào biểu mẫu bên cạnh.
+            </p>
+        </section>
+    </section>
+    <section class="panel panel--padded">
+        <h2>
+            Thêm địa chỉ
+        </h2>
+        <section class="stack" id="[object HTMLInputElement]" data-backend-form="pending">
+            <input type="hidden" name="id" value="">
+            <label class="field">
+                <span>
+                    Người nhận
+                </span>
+                <input name="name" type="text" value="" required="" maxlength="80">
+            </label>
+            <label class="field">
+                <span>
+                    Điện thoại (10 chữ số)
+                </span>
+                <input name="phone" type="tel" value="" required="" pattern="0[0-9]{9}">
+            </label>
+            <label class="field">
+                <span>
+                    Khu vực
+                </span>
+                <select name="region">
+                    <option value="HCM" selected="">
+                        TP. Hồ Chí Minh
+                    </option>
+                    <option value="HN">
+                        Hà Nội
+                    </option>
+                    <option value="DN">
+                        Đà Nẵng
+                    </option>
+                    <option value="OTHER">
+                        Ngoài vùng giao demo
+                    </option>
+                </select>
+            </label>
+            <label class="field">
+                <span>
+                    Địa chỉ chi tiết, phường/xã
+                </span>
+                <input name="detail" type="text" value="" required="" minlength="8" maxlength="240">
+            </label>
+            <button class="btn btn--primary" type="button" disabled="">
+                Lưu địa chỉ
+            </button>
+            <a class="btn btn--secondary" href="/buyer/addresses/">
+                Hủy sửa
+            </a>
+            <p class="form-error" role="alert">
+            </p>
+        </section>
+    </section>
+</div>
+{% endblock %}

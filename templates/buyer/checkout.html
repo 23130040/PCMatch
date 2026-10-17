@@ -1,3 +1,66 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Checkout — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% load cart_prices %}
+{% block title %}Thanh toán — PCMatch{% endblock %}
+{% block content %}
+<header class="page-head">
+    <div><h1>Địa chỉ &amp; thanh toán</h1><p>Kiểm tra thông tin người nhận và sản phẩm trong giỏ hàng.</p></div>
+    <a class="btn btn--secondary" href="{% url 'buyer_cart' %}">Sửa giỏ hàng</a>
+</header>
+{% if cart_items %}
+<div class="checkout-layout">
+    <div class="stack">
+        <section class="panel panel--padded" aria-labelledby="buyer-information-title">
+            <h2 id="buyer-information-title">Thông tin người mua</h2>
+            <dl class="shop-policies">
+                <dt>Họ tên</dt><dd>{{ checkout_user.full_name|default:checkout_user.username }}</dd>
+                <dt>Email</dt><dd>{{ checkout_user.email }}</dd>
+                <dt>Số điện thoại</dt><dd>{{ checkout_user.phone|default:'Chưa cập nhật số điện thoại.' }}</dd>
+            </dl>
+        </section>
+        <section class="panel panel--padded" aria-labelledby="shipping-address-title">
+            <h2 id="shipping-address-title">Địa chỉ nhận hàng</h2>
+            {% if shipping_address %}
+                <p><strong>{{ shipping_address.receiver_name }}</strong> · {{ shipping_address.receiver_phone }}{% if shipping_address.is_default %} <span class="muted">(Mặc định)</span>{% endif %}</p>
+                <p>{{ shipping_address.detail_address }}{% if shipping_address.ward %}, {{ shipping_address.ward }}{% endif %}{% if shipping_address.district %}, {{ shipping_address.district }}{% endif %}{% if shipping_address.province %}, {{ shipping_address.province }}{% endif %}</p>
+            {% else %}
+                <p class="muted">Chưa có địa chỉ nhận hàng trong tài khoản.</p>
+            {% endif %}
+        </section>
+        {% regroup cart_items by product.shop as shop_groups %}
+        {% for group in shop_groups %}
+        <section class="panel panel--padded" aria-labelledby="checkout-shop-{{ group.grouper.pk }}">
+            <h2 id="checkout-shop-{{ group.grouper.pk }}">{{ group.grouper.shop_name }}</h2>
+            {% for item in group.list %}
+            <article class="checkout-product" data-checkout-item="{{ item.pk }}">
+                <div class="server-cart-product">
+                    <a class="server-cart-image" href="{% url 'buyer_product_detail' item.product_id %}" aria-label="{{ item.product.product_name }}">
+                        {% if item.product.thumbnail %}<img src="{{ item.product.thumbnail.url }}" alt="{{ item.product.product_name }}" width="88" height="88">{% else %}<span>Chưa có ảnh</span>{% endif %}
+                    </a>
+                    <div>
+                        <h3><a href="{% url 'buyer_product_detail' item.product_id %}">{{ item.product.product_name }}</a></h3>
+                        <p>{{ item.product.price|vnd }} ₫ / sản phẩm · Số lượng: {{ item.quantity }}</p>
+                        {% if not item.available %}<p class="message message--error" role="alert">Sản phẩm đã hết hàng hoặc tạm ngừng bán. Vui lòng sửa giỏ hàng.</p>
+                        {% elif item.quantity > item.product.stock_quantity %}<p class="message message--error" role="alert">Số lượng vượt tồn kho (còn {{ item.product.stock_quantity }}). Vui lòng sửa giỏ hàng.</p>{% endif %}
+                    </div>
+                </div>
+                <strong class="checkout-line-total">{{ item.line_total|vnd }} ₫</strong>
+            </article>
+            {% endfor %}
+        </section>
+        {% endfor %}
+    </div>
+    <aside class="panel panel--padded" aria-labelledby="checkout-summary-title">
+        <h2 id="checkout-summary-title">Tóm tắt đơn hàng</h2>
+        <dl class="money-summary">
+            <div><dt>Số sản phẩm</dt><dd>{{ item_count }}</dd></div>
+            <div><dt>Tiền hàng</dt><dd>{{ subtotal|vnd }} đ</dd></div>
+            <div><dt>Phí vận chuyển</dt><dd>0 đ</dd></div>
+            <div class="total"><dt>Tổng</dt><dd>{{ subtotal|vnd }} đ</dd></div>
+        </dl>
+        <button class="btn btn--primary" type="button" title="Đặt hàng">Đặt hàng</button>
+    </aside>
+</div>
+{% else %}
+<section class="empty"><h2>Giỏ hàng đang trống</h2><p>Thêm sản phẩm vào giỏ hàng để tiếp tục thanh toán.</p><a class="btn btn--primary" href="{% url 'buyer_search' %}">Khám phá sản phẩm</a></section>
+{% endif %}
+{% endblock %}

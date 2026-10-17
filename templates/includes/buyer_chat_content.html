@@ -1,0 +1,19 @@
+<div class="chat-layout has-thread" data-chat-interface>
+    <aside class="chat-list" aria-label="Hội thoại">
+        <label class="field"><span>Tìm tên shop</span><input type="search" data-ui-chat-search></label>
+        <div class="chat-threads">
+            <button class="chat-thread" type="button" data-ui-thread="buildpro" aria-current="true"><span class="chat-avatar">BP</span><span><strong>BuildPro Sài Gòn</strong><small>Trao đổi về linh kiện và cấu hình</small><small>Bạn cần tư vấn về sản phẩm nào?</small></span></button>
+            <button class="chat-thread" type="button" data-ui-thread="techzone"><span class="chat-avatar">TZ</span><span><strong>TechZone Hà Nội</strong><small>Thông số và điều kiện bán hàng</small><small>Chào bạn, shop có thể hỗ trợ gì?</small></span></button>
+        </div>
+    </aside>
+    <section class="chat-conversation" data-ui-conversation="buildpro" aria-label="Nội dung trò chuyện với BuildPro">
+        <header class="chat-thread-head"><button class="btn btn--secondary" type="button" data-ui-chat-back>Hội thoại</button><span class="chat-avatar">BP</span><div><h2>BuildPro Sài Gòn</h2><p>Trao đổi về linh kiện và cấu hình</p></div></header>
+        <div class="chat-messages"><article class="chat-message chat-message--shop"><strong>BuildPro Sài Gòn</strong><p>Bạn có thể trao đổi về linh kiện hoặc cấu hình tại đây.</p><time>09:00</time></article><article class="chat-message chat-message--buyer"><strong>Bạn</strong><p>Mình muốn tìm hiểu thêm về cấu hình máy tính.</p><time>09:01</time></article></div>
+        <section class="chat-compose" data-static-content><label class="field"><span>Nội dung tin nhắn</span><textarea placeholder="Nhập nội dung trao đổi…" aria-label="Nội dung trao đổi"></textarea></label><div class="cluster"><button class="btn btn--primary" type="button" disabled title="Nội dung trò chuyện đang hiển thị tĩnh">Gửi</button></div></section>
+    </section>
+    <section class="chat-conversation" data-ui-conversation="techzone" aria-label="Nội dung trò chuyện với TechZone" hidden>
+        <header class="chat-thread-head"><button class="btn btn--secondary" type="button" data-ui-chat-back>Hội thoại</button><span class="chat-avatar">TZ</span><div><h2>TechZone Hà Nội</h2><p>Thông số và điều kiện bán hàng</p></div></header>
+        <div class="chat-messages"><article class="chat-message chat-message--shop"><strong>TechZone Hà Nội</strong><p>Chào bạn! Bạn có thể hỏi về thông số và điều kiện bán tại đây.</p><time>09:00</time></article></div>
+        <section class="chat-compose" data-static-content><label class="field"><span>Nội dung tin nhắn</span><textarea placeholder="Nhập nội dung trao đổi…" aria-label="Nội dung trao đổi"></textarea></label><div class="cluster"><button class="btn btn--primary" type="button" disabled title="Nội dung trò chuyện đang hiển thị tĩnh">Gửi</button></div></section>
+    </section>
+</div>

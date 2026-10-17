@@ -1,19 +1,30 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Tư vấn — PCMatch</title>
-    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/buyer.css' %}">
-    {% include 'includes/frontend_config.html' %}</head>
-<body data-buyer-app>
-<main id="main"><p>Đang tải PCMatch…</p></main>
-<noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript>
-<script type="module" src="{% static 'js/buyer.js' %}"></script>
-</body>
-</html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Tư vấn — PCMatch{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>
+            Tư vấn cấu hình
+        </h1>
+        <p>
+            Phản hồi luôn gắn với phiên bản đã gửi.
+        </p>
+    </div>
+    <div class="cluster">
+        <a class="btn btn--secondary" href="/buyer/consultation/?new=1">
+            Gửi tư vấn mới
+        </a>
+    </div>
+</div>
+<section class="empty">
+    <h2>
+        Chưa có tư vấn
+    </h2>
+    <p>
+        Chọn linh kiện trong Builder rồi gửi câu hỏi.
+    </p>
+    <a class="btn btn--secondary" href="/buyer/builder/">
+        Mở Builder
+    </a>
+</section>
+{% endblock %}

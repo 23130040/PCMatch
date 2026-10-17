@@ -1,17 +1,240 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Dashboard Shop — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Tổng quan gian hàng
+            </span>
+            </div>
+            <h1>
+                Tổng quan gian hàng
+            </h1>
+            <p>
+                Theo dõi sản phẩm, đơn hàng và câu hỏi của khách hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+            <a class="btn btn--primary" href="{% url 'shop_offers' %}?new=1">
+                + Sản phẩm mới
+            </a>
+        </div>
+    </section>
+    <section class="sa-kpi-grid">
+        <article class="sa-kpi-card sa-kpi-card--blue">
+            <h2>
+                TIỀN HÀNG ĐÃ GIAO (30 NGÀY)
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ revenue.total|vnd }}
+                </strong>
+            </div>
+            <p>
+                {{ revenue.count }} đơn có sản phẩm của gian hàng
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--amber">
+            <h2>
+                ĐƠN CHỜ XỬ LÝ
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ order_pending|add:order_processing }}
+                </strong>
+            </div>
+            <p>
+                {{ order_pending }} chờ xác nhận · {{ order_processing }} đang xử lý
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--sky">
+            <h2>
+                SẢN PHẨM ĐANG BÁN
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ product_active }}
+                </strong>
+            </div>
+            <p>
+                {{ product_low }} sắp hết hàng · {{ product_hidden }} đã ẩn
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--rose">
+            <h2>
+                CÂU HỎI CHƯA TRẢ LỜI
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ question_pending }}
+                </strong>
+            </div>
+            <p>
+                Câu hỏi về sản phẩm của gian hàng
+            </p>
+        </article>
+    </section>
+    <div class="shop-report-grid shop-report-grid--wide">
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Tiền hàng đã giao theo ngày
+                </h2>
+                <a class="sa-detail-btn" href="{% url 'shop_revenue' %}">
+                    Xem báo cáo đầy đủ →
+                </a>
+            </div>
+            <div style="padding:16px">
+                {% include 'includes/shop/revenue_chart.html' %}
+            </div>
+        </section>
+        <div class="stack">
+            <section class="sa-table-card">
+                <div class="sa-table-toolbar">
+                    <h2>
+                        Đơn hàng cần xử lý
+                    </h2>
+                </div>
+                {% for order in pending_orders %}
+                    <div class="dash-order-row" style="padding:12px 16px">
+                        <div>
+                            <strong>
+                                {{ order.user.full_name }}
+                            </strong>
+                            <p>
+                                {{ order.shop_total|vnd }} · {{ order.status_label }}
+                            </p>
+                        </div>
+                        <a class="sa-detail-btn" href="{% url 'shop_order' %}?id={{ order.pk }}">
+                            Xem
+                        </a>
+                    </div>
+                {% empty %}
+                    <p style="padding:16px">
+                        Không có đơn chờ xử lý.
+                    </p>
+                {% endfor %}
+            </section>
+            <section class="sa-table-card">
+                <div class="sa-table-toolbar">
+                    <h2>
+                        Câu hỏi chưa trả lời
+                    </h2>
+                    <a class="sa-detail-btn" href="{% url 'shop_questions' %}">
+                        Xem tất cả
+                    </a>
+                </div>
+                {% for question in recent_questions %}
+                    <div class="dash-order-row" style="padding:12px 16px">
+                        <div>
+                            <strong>
+                                {{ question.user.full_name }}
+                            </strong>
+                            <p>
+                                {{ question.question|truncatechars:55 }}
+                            </p>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p style="padding:16px">
+                        Không có câu hỏi mới.
+                    </p>
+                {% endfor %}
+            </section>
+        </div>
+    </div>
+    <div class="shop-report-grid shop-report-grid--three">
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Đơn hàng gần nhất
+                </h2>
+                <a href="{% url 'shop_orders' %}">
+                    Tất cả đơn
+                </a>
+            </div>
+            {% for order in recent_orders %}
+                <div class="dash-order-row" style="padding:12px 16px">
+                    <div>
+                        <strong>
+                            {{ order.order_code }}
+                        </strong>
+                        <p>
+                            {{ order.user.full_name }} · {{ order.shop_total|vnd }}
+                        </p>
+                    </div>
+                    <span class="sa-badge sa-badge--{{ order.status_css }}">
+                {{ order.status_label }}
+            </span>
+                </div>
+            {% empty %}
+                <p style="padding:16px">
+                    Chưa có đơn hàng.
+                </p>
+            {% endfor %}
+        </section>
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Tình trạng tồn kho
+                </h2>
+                <a href="{% url 'shop_inventory' %}">
+                    Quản lý kho
+                </a>
+            </div>
+            <dl class="info-dl" style="padding:16px">
+                <dt>
+                    Tồn ổn định
+                </dt>
+                <dd>
+                    {{ product_ok }}
+                </dd>
+                <dt>
+                    Sắp hết
+                </dt>
+                <dd>
+                    {{ product_low }}
+                </dd>
+                <dt>
+                    Hết hàng
+                </dt>
+                <dd>
+                    {{ product_out }}
+                </dd>
+                <dt>
+                    Tạm ẩn
+                </dt>
+                <dd>
+                    {{ product_hidden }}
+                </dd>
+            </dl>
+        </section>
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Trạng thái đơn hàng
+                </h2>
+                <a href="{% url 'shop_orders' %}">
+                    Tất cả đơn
+                </a>
+            </div>
+            <dl class="info-dl" style="padding:16px">
+                {% for item in order_statuses %}
+                    <dt>
+                        {{ item.label }}
+                    </dt>
+                    <dd>
+                        {{ item.count }}
+                    </dd>
+                {% endfor %}
+            </dl>
+        </section>
+    </div>
+{% endblock %}

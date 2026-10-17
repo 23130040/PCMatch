@@ -1,0 +1,90 @@
+<aside class="sa-sidebar" id="shop-sidebar">
+    <div class="sa-sidebar__brand">
+        <strong>
+            Kênh bán
+        </strong>
+        <small>
+            Quản lý gian hàng của bạn
+        </small>
+    </div>
+    <nav id="shop-nav">
+        <p class="sa-sidebar__group">
+            Tổng quan
+        </p>
+        <a href="{% url 'shop_dashboard' %}" {% if page_name == 'dashboard' %}aria-current="page"{% endif %}>
+            <span>
+                Dashboard
+            </span>
+        </a>
+        <a href="{% url 'shop_revenue' %}" {% if page_name == 'revenue' %}aria-current="page"{% endif %}>
+            <span>
+                Doanh thu
+            </span>
+        </a>
+        <p class="sa-sidebar__group">
+            Sản phẩm
+        </p>
+        <a href="{% url 'shop_offers' %}" {% if page_name == 'offers' %}aria-current="page"{% endif %}>
+            <span>
+                Sản phẩm bán
+            </span>
+        </a>
+        <a href="{% url 'shop_inventory' %}" {% if page_name == 'inventory' %}aria-current="page"{% endif %}>
+            <span>
+                Tồn kho
+            </span>
+        </a>
+        <p class="sa-sidebar__group">
+            Đơn hàng
+        </p>
+        <a href="{% url 'shop_orders' %}" {% if page_name == 'orders' %}aria-current="page"{% endif %}>
+            <span>
+                Đơn hàng
+            </span>
+        </a>
+        <a href="{% url 'shop_fulfillment' %}" {% if page_name == 'fulfillment' %}aria-current="page"{% endif %}>
+            <span>
+                Giao nhận
+            </span>
+        </a>
+        <p class="sa-sidebar__group">
+            Báo giá
+            &amp;
+            Hỗ trợ
+        </p>
+        <a href="{% url 'shop_build_requests' %}" {% if page_name == 'build-requests' %}aria-current="page"{% endif %}>
+            <span>
+                Yêu cầu build
+            </span>
+        </a>
+        <a href="{% url 'shop_proposal_list' %}" {% if page_name == 'proposal-list' %}aria-current="page"{% endif %}>
+            <span>
+                Báo giá đã gửi
+            </span>
+        </a>
+        <a href="{% url 'shop_aftersales' %}" {% if page_name == 'aftersales' %}aria-current="page"{% endif %}>
+            <span>
+                Hậu mãi
+            </span>
+        </a>
+        <a href="{% url 'shop_questions' %}" {% if page_name == 'questions' %}aria-current="page"{% endif %}>
+            <span>
+                Câu hỏi
+            </span>
+        </a>
+    </nav>
+    {% if request.user.is_authenticated %}
+    <div class="sa-sidebar__footer">
+        <div class="sa-sidebar__seller">
+            <div>
+                <strong>
+                    {{ shop.shop_name|default:request.user.full_name }}
+                </strong>
+                <small>
+                    {{ request.user.email }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</aside>

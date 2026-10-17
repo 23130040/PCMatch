@@ -328,8 +328,9 @@
     </main>
 </div>
 
-<script src="{% static 'js/reusable-controls.js' %}?v=20260926"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 <script src="{% static 'js/activity-log.js' %}?v=20260926"></script>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
 </html>

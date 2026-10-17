@@ -1,17 +1,111 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Câu hỏi sản phẩm — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Câu hỏi sản phẩm
+            </span>
+            </div>
+            <h1>
+                Câu hỏi sản phẩm
+            </h1>
+            <p>
+                Theo dõi câu hỏi của khách hàng về sản phẩm của gian hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+        </div>
+    </section>
+    <section class="sa-table-card">
+        <nav class="sa-filter-tabs" aria-label="Trạng thái câu hỏi">
+            <a class="sa-tab {% if not answered %}is-active{% endif %}" href="{% url 'shop_questions' %}">
+                Chưa trả lời
+                <span>
+                {{ question_pending }}
+            </span>
+            </a>
+            <a class="sa-tab {% if answered %}is-active{% endif %}" href="{{ request.path }}?answered=1">
+                Đã trả lời
+            </a>
+        </nav>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>
+                        KHÁCH HÀNG / SẢN PHẨM
+                    </th>
+                    <th>
+                        CÂU HỎI
+                    </th>
+                    <th>
+                        THỜI GIAN
+                    </th>
+                    <th>
+                        TRẢ LỜI
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for question in questions_page %}
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ question.user.full_name }}
+                            </strong>
+                            <small>
+                                {{ question.product.product_name }}
+                            </small>
+                        </td>
+                        <td class="sa-q-text">
+                            {{ question.question }}
+                        </td>
+                        <td>
+                            {{ question.created_at|date:'d/m/Y H:i' }}
+                        </td>
+                        <td>
+                            {% for answer in question.answers.all %}
+                                <div class="sa-q-answered">
+                                    {{ answer.answer }}
+                                </div>
+                            {% empty %}
+                                <form method="post" class="sa-q-reply-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="question_id" value="{{ question.pk }}">
+                                    <input name="answer" maxlength="500" placeholder="Nhập câu trả lời..." disabled
+                                           aria-label="Câu trả lời">
+                                    <button class="inv-update-btn" type="submit" disabled>
+                                        Gửi trả lời
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">
+                            <div class="sa-empty-table">
+                                <h3>
+                                    Không có câu hỏi
+                                </h3>
+                                <p>
+                                    Câu hỏi của khách hàng sẽ xuất hiện tại đây.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/shop/pagination.html' with pagination=questions_page %}
+    </section>
+{% endblock %}

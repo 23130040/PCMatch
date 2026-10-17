@@ -1,0 +1,17 @@
+{% load tz i18n cart_prices %}
+<div class="product-drawer-backdrop" hidden></div>
+{% for p in showProduct %}
+<aside class="product-detail-drawer" id="product-drawer-{{ p.pk }}" hidden aria-hidden="true" aria-labelledby="product-drawer-title-{{ p.pk }}">
+    <header class="product-drawer__header"><div><h2 id="product-drawer-title-{{ p.pk }}">{{ p.product_name }}</h2><p>Mã SP: #{{ p.pk }} · Đăng lúc {{ p.created_at|timezone:'Asia/Ho_Chi_Minh'|date:'d/m/Y H:i' }}</p></div><button type="button" data-product-drawer-close aria-label="Đóng chi tiết">×</button></header>
+    <div class="product-drawer__body">
+        <article class="product-drawer__product-card">
+            <div class="product-drawer__image">{% if p.thumbnail %}<img src="{{ p.thumbnail.url }}" alt="{{ p.product_name }}" width="78" height="78" style="object-fit:contain">{% else %}<span aria-label="Chưa có ảnh">—</span>{% endif %}</div>
+            <div class="product-drawer__product-info"><h3>{{ p.product_name }}</h3><strong>{{ p.price|vnd }} đ</strong><div>
+                {% if p.status == 'ACTIVE' and p.stock_quantity > 0 %}<span class="product-status product-status--selling">Đang bán</span>{% elif p.status == 'OUT_OF_STOCK' or p.status == 'ACTIVE' %}<span class="product-status product-status--pending">Hết hàng</span>{% else %}<span class="product-status product-status--hidden">Đã ẩn</span>{% endif %}
+                <small>Đã bán {{ p.sold_quantity }} sản phẩm</small></div></div>
+        </article>
+        <section class="product-drawer__section"><h3>Thông tin đăng bán</h3><dl><dt>Shop</dt><dd>{{ p.shop.shop_name }}</dd><dt>Danh mục</dt><dd>{{ p.category.category_name }}</dd><dt>Tồn kho</dt><dd>{{ p.stock_quantity }} sản phẩm</dd><dt>Đã bán</dt><dd>{{ p.sold_quantity }} sản phẩm</dd></dl></section>
+        <section class="product-drawer__revenue"><span>Giá trị theo giá bán hiện tại</span><strong>{{ p.current_sales_value|vnd }} đ</strong></section>
+    </div>
+</aside>
+{% endfor %}

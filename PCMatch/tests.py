@@ -1,4 +1,5 @@
 import json
+import re
 from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
 
@@ -67,7 +68,7 @@ class FrontendPagesTests(TestCase):
         self.client.force_login(self.staff)
 
     def test_staff_pages_require_login(self):
-        login_url = reverse('staff_login')
+        login_url = reverse('auth_login')
         dashboard = reverse('staff_dashboard')
         self.client.logout()
         response = self.client.get(dashboard)
@@ -77,14 +78,14 @@ class FrontendPagesTests(TestCase):
         response = self.client.get(dashboard)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response['Location'].startswith(login_url))
-        response = self.client.post(login_url, {'username': 'buyertest@pcmatch.vn', 'password': 'BuyerTest123!'})
+        response = self.client.post(login_url, {'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'không có quyền quản trị')
         self.client.logout()
-        response = self.client.post(login_url, {'username': 'stafftest', 'password': 'StaffTest123!'})
+        response = self.client.post(login_url, {'email': 'stafftest', 'password': 'StaffTest123!', 'next': dashboard})
         self.assertRedirects(response, dashboard, fetch_redirect_response=False)
         self.client.logout()
-        response = self.client.post(login_url, {'username': 'stafftest@pcmatch.vn', 'password': 'sai'})
+        response = self.client.post(login_url, {'email': self.staff.email, 'password': 'sai', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
         self.client.logout()
         response = self.client.get(login_url)
@@ -93,14 +94,14 @@ class FrontendPagesTests(TestCase):
     def test_staff_logout(self):
         logout_url = reverse('staff_logout')
         response = self.client.get(logout_url)
-        self.assertRedirects(response, reverse('staff_dashboard'), fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 405)
         response = self.client.post(logout_url)
-        self.assertRedirects(response, reverse('staff_login'), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse('auth_login'), fetch_redirect_response=False)
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 
     def test_all_pages_render_with_resolvable_links_and_assets(self):
-        pages = [('index', 'sitemap', 'index')]
+        pages = [('home', 'buyer', 'home')]
         pages += [
             (route_name(section, page), section, page)
             for section, group in PAGE_GROUPS.items()
@@ -108,18 +109,18 @@ class FrontendPagesTests(TestCase):
         ]
         for name, section, page in pages:
             with self.subTest(page=name):
-                if name == 'staff_login':
-                    self.client.logout()
-                else:
-                    self.client.force_login(self.staff)
+                self.client.force_login(self.staff)
                 path = reverse(name)
                 response = self.client.get(path)
+                if name in {'buyer_model', 'buyer_shop'}:
+                    self.assertRedirects(response, reverse('buyer_search'))
+                    continue
                 self.assertEqual(response.status_code, 200)
                 parser = PageParser()
                 parser.feed(response.content.decode())
                 self.assertEqual((parser.section, parser.page), (section, page))
                 config = json.loads(parser.config)
-                self.assertEqual(config['index'], reverse('index'))
+                self.assertEqual(config['index'], reverse('home'))
                 for group, urls in config['urls'].items():
                     for key, url in urls.items():
                         self.assertEqual(resolve(url).url_name, route_name(group, key))
@@ -136,7 +137,7 @@ class FrontendPagesTests(TestCase):
                     self.assertTrue(url.path.startswith(settings.STATIC_URL), asset)
                     asset_path = unquote(url.path[len(settings.STATIC_URL):])
                     self.assertIsNotNone(finders.find(asset_path), asset)
-                if section == 'staff' and name != 'staff_login':
+                if section == 'staff':
                     self.assertEqual(parser.components, {
                         'sidebar': 1, 'topbar': 1, 'service-bar': 1,
                     })
@@ -144,20 +145,92 @@ class FrontendPagesTests(TestCase):
                     self.assertNotIn('initSharedComponent', response.content.decode())
 
     def test_registry_covers_every_existing_page(self):
-        page_templates = {'index.html'}
+        page_templates = set()
         page_templates.update(
             template for pages in PAGE_GROUPS.values() for template in pages.values()
         )
         partials = {
             'admin/header.html', 'admin/sidebar.html', 'includes/frontend_config.html',
+            'includes/buyer_base.html',
+            'includes/product_card.html',
+            'includes/buyer_icon.html', 'includes/buyer_header.html', 'includes/buyer_account_links.html',
+            'includes/buyer_chat_content.html', 'includes/buyer_chat_widget.html',
+            'includes/admin_interface_controls.html',
+            'includes/admin_product_drawers.html',
+            'includes/admin_support_drawers.html',
+            'includes/compare_button.html', 'includes/compare_tray.html',
         }
         root = settings.BASE_DIR / 'templates'
+        partials.update(path.relative_to(root).as_posix() for path in (root / 'includes/shop').glob('*.html'))
         existing = {path.relative_to(root).as_posix() for path in root.rglob('*.html')}
         self.assertEqual(existing - partials, page_templates)
 
     def test_django_admin_and_unknown_pages(self):
         self.assertEqual(reverse('admin:index'), '/django-admin/')
         self.assertEqual(self.client.get('/buyer/not-a-page/').status_code, 404)
+
+    def test_frontend_does_not_use_prototype_storage_or_transaction_handlers(self):
+        scripts = settings.BASE_DIR / 'static' / 'js'
+        for name in ['buyer.js', 'store.js', 'account.js', 'commerce.js', 'sitemap.js', 'profile.js', 'shop.js', 'shop-store.js', 'shop-data.js']:
+            self.assertFalse((scripts / name).exists(), name)
+        self.assertFalse((settings.BASE_DIR / 'templates' / 'index.html').exists())
+        for path in scripts.glob('*.js'):
+            content = path.read_text(encoding='utf-8')
+            self.assertNotIn('document.body.innerHTML', content, path.name)
+            for forbidden in ['localStorage', 'sessionStorage']:
+                self.assertNotIn(forbidden, content, path.name)
+            # Comparison enhances only its own backend POST forms.
+            if path.name != 'comparison.js':
+                for forbidden in ["addEventListener('submit'", 'addEventListener("submit"']:
+                    self.assertNotIn(forbidden, content, path.name)
+        for path in (settings.BASE_DIR / 'templates' / 'buyer').glob('*.html'):
+            self.assertNotIn('<template data-page=', path.read_text(encoding='utf-8'), path.name)
+
+    def test_only_backend_template_groups_remain(self):
+        self.assertEqual(set(PAGE_GROUPS), {'buyer', 'shop', 'staff', 'auth'})
+        self.assertEqual(self.client.get('/states/index/').status_code, 404)
+        self.assertFalse((settings.BASE_DIR / 'templates/states').exists())
+
+    def test_shop_content_is_in_the_server_response(self):
+        for page in PAGE_GROUPS['shop']:
+            with self.subTest(page=page):
+                response = self.client.get(reverse(route_name('shop', page)))
+                content = response.content.decode()
+                self.assertEqual(content.count('<head>'), 1)
+                self.assertEqual(content.count('</head>'), 1)
+                self.assertEqual(content.count('<title>'), 1)
+                self.assertContains(response, '<h1>', count=1)
+                self.assertContains(response, 'id="shop-main"', count=1)
+                self.assertContains(response, 'js/shop-interface.js', count=1)
+                for removed in ['shop-templates-', 'data-shop-template', '[[', 'Đang tải giao diện', 'js/shop.js']:
+                    self.assertNotContains(response, removed)
+
+    def test_shop_markup_is_in_html_templates(self):
+        root = settings.BASE_DIR
+        for path in list((root / 'templates/includes/shop').glob('*.html')) + list((root / 'templates/shop').glob('*.html')):
+            content = path.read_text(encoding='utf-8')
+            self.assertNotIn('data-shop-template', content, path.name)
+            self.assertNotIn('shop_templates', content, path.name)
+            self.assertNotIn('onclick=', content, path.name)
+            self.assertNotIn('onsubmit=', content, path.name)
+        for path in (root / 'static/js').glob('shop*.js'):
+            content = path.read_text(encoding='utf-8')
+            self.assertIsNone(re.search(r'</?[A-Za-z][A-Za-z0-9:-]*[\s/>]', content), path.name)
+            for forbidden in ['renderTemplate', 'innerHTML', 'insertAdjacentHTML', 'localStorage', 'sessionStorage']:
+                self.assertNotIn(forbidden, content, path.name)
+        self.assertFalse((root / 'static/js/routing.js').exists())
+        self.assertFalse((root / 'static/js/shop-merchandising-data.js').exists())
+
+    def test_private_layouts_use_django_authentication(self):
+        self.client.logout()
+        for name in ['buyer_account', 'buyer_orders', 'buyer_checkout', 'shop_dashboard', 'shop_offers']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.url.startswith(reverse('auth_login') + '?next='))
+        response = self.client.post(reverse('auth_login'), {
+            'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': reverse('shop_dashboard'),
+        })
+        self.assertRedirects(response, reverse('shop_dashboard'))
 
     def test_search_query_is_preserved_on_slash_redirect(self):
         response = self.client.get('/buyer/search?q=CPU&sort=price')

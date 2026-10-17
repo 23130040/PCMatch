@@ -1,0 +1,14 @@
+{% if request.user.is_authenticated %}
+    <p class="header-account-name">{{ request.user.full_name|default:request.user.username }}</p>
+    <a href="{% url 'buyer_account' %}">Hồ sơ của tôi</a>
+    <a href="{% url 'buyer_addresses' %}">Địa chỉ</a>
+    <a href="{% url 'buyer_orders' %}">Đơn hàng</a>
+    <a href="{% url 'buyer_builds' %}">Cấu hình đã lưu</a>
+    <a href="{% url 'buyer_requests' %}">Yêu cầu build</a>
+    <a href="{% url 'buyer_cases' %}">Hỗ trợ sau mua</a>
+    <form method="post" action="{% url 'auth_logout' %}">{% csrf_token %}<button class="btn btn--secondary" type="submit">Đăng xuất</button></form>
+{% else %}
+    <strong>Tài khoản PCMatch</strong><p>Đăng nhập để theo dõi đơn và lưu cấu hình.</p>
+    <a class="btn btn--primary" href="{% url 'auth_login' %}?next={{ request.get_full_path|urlencode }}">Đăng nhập</a>
+    <a class="btn btn--secondary" href="{% url 'auth_login' %}?mode=register&amp;next={{ request.get_full_path|urlencode }}">Tạo tài khoản</a>
+{% endif %}

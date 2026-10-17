@@ -1,0 +1,14 @@
+<template id="ui-time-popover">
+    <div class="reusable-popover time-popover" role="dialog" aria-label="Chọn khoảng thời gian">
+        <div class="time-popover__quick" role="group" aria-label="Khoảng thời gian nhanh"><button type="button" class="time-chip" data-ui-period>Tất cả</button><button type="button" class="time-chip is-active" data-ui-period>Hôm nay</button><button type="button" class="time-chip" data-ui-period>7 ngày qua</button><button type="button" class="time-chip" data-ui-period>30 ngày qua</button><button type="button" class="time-chip" data-ui-period>Tháng này</button><button type="button" class="time-chip" data-ui-period>Quý này</button><button type="button" class="time-chip" data-ui-period>Năm nay</button></div>
+        <div class="time-popover__divider"></div>
+        <div class="time-popover__modes" role="group" aria-label="Đơn vị thời gian"><button type="button" class="is-active" data-ui-time-mode="date">Ngày</button><button type="button" data-ui-time-mode="month">Tháng</button><button type="button" data-ui-time-mode="number">Năm</button></div>
+        <div class="time-popover__single"><input type="date" aria-label="Chọn ngày" data-ui-date><button type="button" disabled title="Bộ lọc báo cáo chưa kết nối backend">Áp dụng</button></div>
+        <div class="time-popover__divider"></div><p class="time-popover__caption">Khoảng tùy chỉnh</p>
+        <div class="time-popover__range"><input type="date" name="start_date" aria-label="Từ ngày"><span>–</span><input type="date" name="end_date" aria-label="Đến ngày"></div>
+        <button type="button" class="time-popover__apply" disabled title="Bộ lọc báo cáo chưa kết nối backend">Áp dụng khoảng</button>
+    </div>
+</template>
+<template id="ui-bulk-toolbar">
+    <div class="bulk-action-bar" hidden><div class="bulk-action-bar__summary"><span data-ui-selected-count>0</span><span>bản ghi đã chọn</span></div><div class="bulk-action-bar__actions"><button type="button" class="bulk-action-bar__button is-primary" disabled title="Thao tác hàng loạt chưa kết nối backend">Xử lý đã chọn</button></div><button class="bulk-action-bar__clear" type="button" data-ui-clear-selection aria-label="Bỏ chọn">× Bỏ chọn</button></div>
+</template>

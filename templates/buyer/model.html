@@ -1,22 +1,12 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}" data-catalog-source="{{ catalog_source|default:'demo' }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% if selected_product %}{{ selected_product.product_name }}{% else %}Chi tiết sản phẩm{% endif %} — PCMatch</title>
-    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/buyer.css' %}?v=product-detail-1">
-    {% include 'includes/frontend_config.html' %}</head>
-<body data-buyer-app>
-<main id="main"><p role="status">Đang tải chi tiết sản phẩm…</p></main>
-<noscript>Vui lòng bật JavaScript để tìm, lọc và chọn sản phẩm trong bản demo.</noscript>
-<template data-page="model">
-    {% if selected_product %}
-        {% with p=selected_product %}
+{% extends 'includes/buyer_base.html' %}
+{% load cart_prices %}
+{% block body_class %}catalog-page{% endblock %}
+{% block html_attributes %} data-catalog-source="database"{% endblock %}
+{% block title %}{{ selected_product.product_name }} — PCMatch{% endblock %}
+{% block content %}
+{% with p=selected_product %}
+
+
             <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
                 <a href="{% url 'buyer_home' %}">Trang chủ</a><span aria-hidden="true">/</span>
                 <a href="{% url 'buyer_search' %}">Tất cả sản phẩm</a><span aria-hidden="true">/</span>
@@ -37,7 +27,7 @@
                     </div>
                 </figure>
                 <div class="stack">
-                    <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|floatformat:'0g' }} ₫</p>
+                    <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|vnd }} ₫</p>
                     <dl class="shop-policies">
                         <dt>Shop bán</dt><dd>{{ p.shop.shop_name }}</dd>
                         <dt>Tồn kho</dt><dd>{{ p.stock_quantity }} sản phẩm</dd>
@@ -48,8 +38,15 @@
                             {% else %}Còn hàng{% endif %}</dd>
                     </dl>
                     <div class="cluster">
-                        <a class="btn btn--primary" href="{% url 'buyer_search' %}?shop={{ p.shop_id }}">Xem sản phẩm của shop</a>
-                        <button class="btn btn--secondary" type="button" data-action="product-compare-add" data-id="{{ p.product_id }}" aria-pressed="false">Thêm so sánh</button>
+                        <form method="post" action="{% url 'buyer_cart_add' p.product_id %}">
+                            {% csrf_token %}<input type="hidden" name="quantity" value="1">
+                            <button class="btn btn--primary" type="submit"
+                                    {% if p.status != 'ACTIVE' or p.stock_quantity <= 0 %}disabled{% endif %}>
+                                {% if p.status == 'INACTIVE' %}Tạm ngừng bán{% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng{% else %}Thêm vào giỏ hàng{% endif %}
+                            </button>
+                        </form>
+                        <a class="btn btn--secondary" href="{% url 'buyer_search' %}?shop={{ p.shop_id }}">Xem sản phẩm của shop</a>
+                        {% include 'includes/compare_button.html' with product=p %}
                     </div>
                 </div>
             </section>
@@ -65,40 +62,7 @@
                     {% empty %}<div><dt>Thông số</dt><dd>Chưa cập nhật.</dd></div>{% endfor %}
                 </dl>
             </section>
-            <div data-content="compare-tray" class="compare-tray"></div>
-        {% endwith %}
-    {% else %}
-    <nav class="catalog-breadcrumb" aria-label="Đường dẫn" data-content="breadcrumb"></nav>
-    <header data-content="heading"></header>
-    <section class="model-overview" aria-label="Chi tiết model">
-        <figure class="product-figure" data-content="image"></figure>
-        <div class="stack" data-content="specs"></div>
-    </section>
-    <section id="offers" aria-labelledby="offers-title">
-        <div class="section-heading"><h2 id="offers-title">Offer từ các shop</h2>
-            <div data-content="region"></div>
-        </div>
-        <p data-content="offer-count"></p>
-        <div class="cluster">
-            <button type="button" class="btn btn--secondary" data-action="offers-toggle" aria-expanded="false"
-                    aria-controls="offer-comparison">So sánh shop
-            </button>
-        </div>
-        <section id="offer-comparison" hidden aria-label="Bảng so sánh shop" data-content="offer-table"></section>
-        <div class="offer-cards" data-content="offers"></div>
-    </section>
-    <section id="questions" class="panel panel--padded" aria-labelledby="questions-title"><h2 id="questions-title">Hỏi
-        đáp trước mua</h2>
-        <div data-content="questions"></div>
-    </section>
-    <section id="reviews" class="panel panel--padded" aria-labelledby="reviews-title"><h2 id="reviews-title">Đánh giá
-        sau mua</h2>
-        <div data-content="reviews"></div>
-    </section>
-    <div data-content="compare-tray" class="compare-tray"></div>
-    <div data-content="report"></div>
-    {% endif %}
-</template>
-<script type="module" src="{% static 'js/buyer.js' %}?v=database-catalog-4"></script>
-</body>
-</html>
+
+
+{% endwith %}
+{% endblock %}

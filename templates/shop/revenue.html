@@ -1,17 +1,228 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Doanh thu — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop...</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Báo cáo doanh thu
+            </span>
+            </div>
+            <h1>
+                Báo cáo doanh thu
+            </h1>
+            <p>
+                Tiền hàng đã giao của gian hàng, chưa bao gồm phí giao hàng và phí nền tảng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+            <form method="get" class="cluster" action="{% url 'shop_revenue' %}">
+                <label class="field">
+                <span>
+                    Khoảng thời gian
+                </span>
+                    <select name="period">
+                        <option value="7" {% if period == '7' %}selected{% endif %}>
+                            7 ngày
+                        </option>
+                        <option value="14" {% if period == '14' %}selected{% endif %}>
+                            14 ngày
+                        </option>
+                        <option value="30" {% if period == '30' %}selected{% endif %}>
+                            30 ngày
+                        </option>
+                    </select>
+                </label>
+                <button class="btn btn--primary" type="submit">
+                    Áp dụng
+                </button>
+            </form>
+        </div>
+    </section>
+    <section class="sa-kpi-grid">
+        <article class="sa-kpi-card sa-kpi-card--blue">
+            <h2>
+                TIỀN HÀNG ĐÃ GIAO
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ revenue.total|vnd }}
+                </strong>
+            </div>
+            <p>
+                {{ period }} ngày vừa qua
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--sky">
+            <h2>
+                ĐƠN ĐÃ GIAO TRONG KỲ
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ revenue.count }}
+                </strong>
+            </div>
+            <p>
+                Đơn có sản phẩm của gian hàng
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--amber">
+            <h2>
+                TIỀN HÀNG TRUNG BÌNH / ĐƠN
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ revenue.average|vnd }}
+                </strong>
+            </div>
+            <p>
+                Trong khoảng thời gian đã chọn
+            </p>
+        </article>
+        <article class="sa-kpi-card sa-kpi-card--rose">
+            <h2>
+                TỔNG ĐƠN CỦA SHOP
+            </h2>
+            <div class="sa-kpi-value">
+                <strong>
+                    {{ order_total }}
+                </strong>
+            </div>
+            <p>
+                {{ order_delivered }} đơn đã giao
+            </p>
+        </article>
+    </section>
+    <div class="shop-report-grid shop-report-grid--wide">
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Tiền hàng theo ngày
+                </h2>
+                <span>
+                Đơn vị: VNĐ
+            </span>
+            </div>
+            <div style="padding:16px">
+                {% include 'includes/shop/revenue_chart.html' %}
+            </div>
+        </section>
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Cơ cấu theo danh mục
+                </h2>
+            </div>
+            <div class="shop-revenue-legend" style="padding:16px">
+                {% for category in revenue.categories %}
+                    <div>
+                        <i aria-hidden="true" style="background:#2563eb"></i>
+                        <span>
+                    {{ category.name }}
+                </span>
+                        <strong>
+                            {{ category.percent }}%
+                        </strong>
+                        <small>
+                            {{ category.amount|vnd }}
+                        </small>
+                    </div>
+                {% empty %}
+                    <p>
+                        Chưa có doanh thu trong khoảng thời gian này.
+                    </p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+    <div class="shop-report-grid shop-report-grid--wide">
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Sản phẩm bán chạy nhất
+                </h2>
+                <a href="{% url 'shop_offers' %}">
+                    Tất cả sản phẩm
+                </a>
+            </div>
+            <div class="table-scroll">
+                <table style="min-width:0">
+                    <thead>
+                    <tr>
+                        <th>
+                            #
+                        </th>
+                        <th>
+                            SẢN PHẨM
+                        </th>
+                        <th>
+                            ĐÃ BÁN
+                        </th>
+                        <th>
+                            GIÁ
+                        </th>
+                        <th>
+                            TỒN
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for product in top_products %}
+                        <tr>
+                            <td>
+                                {{ forloop.counter }}
+                            </td>
+                            <td>
+                                <strong>
+                                    {{ product.product_name }}
+                                </strong>
+                                <small>
+                                    {{ product.brand.brand_name }}
+                                </small>
+                            </td>
+                            <td>
+                                {{ product.sold_quantity }}
+                            </td>
+                            <td>
+                                {{ product.price|vnd }}
+                            </td>
+                            <td>
+                                {{ product.stock_quantity }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                Chưa có dữ liệu sản phẩm.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="sa-table-card">
+            <div class="sa-table-toolbar">
+                <h2>
+                    Tổng kết đơn hàng
+                </h2>
+            </div>
+            <dl class="info-dl" style="padding:16px">
+                {% for item in order_statuses %}
+                    <dt>
+                        {{ item.label }}
+                    </dt>
+                    <dd>
+                        {{ item.count }}
+                    </dd>
+                {% endfor %}
+            </dl>
+        </section>
+    </div>
+{% endblock %}

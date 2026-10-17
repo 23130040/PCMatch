@@ -6,7 +6,7 @@ BUYER_PAGES = (
 )
 
 SHOP_PAGES = (
-    'login', 'register', 'forgot', 'dashboard', 'offers', 'inventory', 'build-requests',
+    'dashboard', 'offers', 'inventory', 'build-requests',
     'build-request-detail', 'proposal-builder', 'proposal-list',
     'proposal', 'orders', 'order', 'fulfillment', 'aftersales', 'revenue', 'questions',
 )
@@ -15,7 +15,7 @@ STAFF_PAGES = (
     'dashboard', 'order', 'transaction', 'return', 'shop', 'products',
     'categories', 'guest', 'review', 'complain', 'authorization',
     'activityLog', 'activity-log', 'profile', 'password', 'policies',
-    'support', 'login',
+    'support',
 )
 
 # Public route names may differ from the legacy HTML filenames.
@@ -27,7 +27,6 @@ PAGE_GROUPS = {
         'fee-policies': 'admin/fee&policies.html',
     },
     'auth': {'login': 'auth/login.html'},
-    'states': {'index': 'states/index.html'},
 }
 
 

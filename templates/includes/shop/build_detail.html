@@ -1,0 +1,155 @@
+<p class="message message--info">
+    Chức năng yêu cầu cấu hình và báo giá đang được phát triển. Chưa có yêu cầu được chọn.
+</p>
+<div class="shop-grid">
+    <div class="stack">
+        <section class="panel panel--padded">
+            <h2>
+                Thông tin yêu cầu
+            </h2>
+            <dl class="info-dl">
+                <dt>
+                    Khách hàng
+                </dt>
+                <dd>
+                    —
+                </dd>
+                <dt>
+                    Ngân sách
+                </dt>
+                <dd>
+                    —
+                </dd>
+                <dt>
+                    Mục đích
+                </dt>
+                <dd>
+                    —
+                </dd>
+                <dt>
+                    Yêu cầu thêm
+                </dt>
+                <dd>
+                    —
+                </dd>
+                <dt>
+                    Trạng thái
+                </dt>
+                <dd>
+                    Chưa có dữ liệu
+                </dd>
+            </dl>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                Tạo / cập nhật báo giá
+            </h2>
+            <form method="post" class="stack">
+                {% csrf_token %}
+                <fieldset disabled class="stack">
+                    <div class="shop-slot-grid">
+                        <div class="shop-slot">
+                            <div class="shop-slot__code">
+                                1
+                            </div>
+                            <div>
+                                <label class="field">
+                                    <span>
+                                        Sản phẩm
+                                    </span>
+                                    <select name="product">
+                                        <option value="">
+                                            Chọn sản phẩm
+                                        </option>
+                                        {% for product in top_products %}
+                                        <option value="{{ product.pk }}">
+                                            {{ product.product_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <div class="two-col">
+                                    <label class="field">
+                                        <span>
+                                            Giá báo (VND)
+                                        </span>
+                                        <input name="price" type="number" min="1000">
+                                    </label>
+                                    <label class="field">
+                                        <span>
+                                            Số lượng
+                                        </span>
+                                        <input name="quantity" type="number" min="1" value="1">
+                                    </label>
+                                </div>
+                            </div>
+                            <button class="btn" type="button" aria-label="Xóa dòng">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cluster">
+                        <button class="btn btn--secondary" type="button">
+                            + Thêm linh kiện
+                        </button>
+                        <button class="btn btn--primary" type="submit">
+                            Gửi báo giá cho khách
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                Báo giá hiện tại
+            </h2>
+            <p>
+                Chưa có báo giá.
+            </p>
+            <div class="shop-total">
+                <span>
+                    Tổng báo giá
+                </span>
+                <strong>
+                    —
+                </strong>
+            </div>
+        </section>
+    </div>
+    <aside class="stack">
+        <section class="panel panel--padded">
+            <h2>
+                Phân tích ngân sách
+            </h2>
+            <p>
+                Ngân sách: —
+            </p>
+            <p>
+                Tổng báo giá: —
+            </p>
+            <button class="btn btn--primary" disabled>
+                Đánh dấu đã chốt
+            </button>
+        </section>
+        <section class="panel panel--padded">
+            <h2>
+                Trao đổi với khách hàng
+            </h2>
+            <div class="shop-chat__messages">
+                <p>
+                    Chưa có nội dung trao đổi.
+                </p>
+            </div>
+            <label class="field">
+                <span>
+                    Tin nhắn
+                </span>
+                <textarea name="message" disabled>
+                </textarea>
+            </label>
+            <button class="btn btn--secondary" disabled>
+                Gửi
+            </button>
+        </section>
+    </aside>
+</div>

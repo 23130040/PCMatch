@@ -1,3 +1,6 @@
-{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chat — PCMatch</title><link rel="stylesheet" href="{% static 'css/tokens.css' %}"><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><link rel="stylesheet" href="{% static 'css/pages.css' %}"><link rel="stylesheet" href="{% static 'css/buyer.css' %}">{% include 'includes/frontend_config.html' %}</head><body data-buyer-app><main id="main"><p>Đang tải PCMatch...</p></main><noscript>Vui lòng bật JavaScript để dùng prototype mua hàng.</noscript><script type="module" src="{% static 'js/buyer.js' %}"></script></body></html>
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Chat — PCMatch{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Chat với shop</h1><p>Trao đổi về linh kiện và cấu hình máy tính.</p></div></header>
+<div id="chat-page-host">{% include 'includes/buyer_chat_content.html' %}</div>
+{% endblock %}

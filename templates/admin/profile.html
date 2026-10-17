@@ -85,7 +85,7 @@
                                 <i class="fa-regular fa-image"></i> Đổi ảnh
                             </a>
                         </div>
-                        <form id="profile-form">
+                        <form id="profile-form" method="post" data-backend-form="pending">
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="full-name">Họ và tên</label>
@@ -128,7 +128,7 @@
                                 <button type="reset" class="btn-secondary" id="btn-cancel-profile">
                                     Hoàn tác
                                 </button>
-                                <button type="submit" class="btn-primary" id="btn-save-profile">
+                                <button type="submit" class="btn-primary" id="btn-save-profile" disabled>
                                     Lưu thay đổi
                                 </button>
                             </div>
@@ -282,7 +282,5 @@
 </div>
 
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
-<script src="{% static 'js/profile.js' %}?v=20260926"></script>
-
 </body>
 </html>

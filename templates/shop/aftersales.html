@@ -1,17 +1,141 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Hậu mãi — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop...</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Hậu mãi
+            </span>
+            </div>
+            <h1>
+                Hậu mãi
+            </h1>
+            <p>
+                Theo dõi yêu cầu đổi trả của khách hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+        </div>
+    </section>
+    {% if case %}
+        <div class="shop-grid">
+            <section class="panel panel--padded">
+                <h2>
+                    Hồ sơ #{{ case.pk }}
+                </h2>
+                <dl class="info-dl">
+                    <dt>
+                        Đơn hàng
+                    </dt>
+                    <dd>
+                        {{ case.order.order_code }}
+                    </dd>
+                    <dt>
+                        Khách hàng
+                    </dt>
+                    <dd>
+                        {{ case.user.full_name }}
+                    </dd>
+                    <dt>
+                        Lý do
+                    </dt>
+                    <dd>
+                        {{ case.reason }}
+                    </dd>
+                    <dt>
+                        Trạng thái
+                    </dt>
+                    <dd>
+                        {{ case.get_status_display }}
+                    </dd>
+                </dl>
+                <a class="btn btn--secondary" href="{% url 'shop_aftersales' %}">
+                    Quay lại danh sách
+                </a>
+            </section>
+            <aside class="panel panel--padded">
+                <h2>
+                    Xử lý hồ sơ
+                </h2>
+                <p>
+                    Chức năng xử lý đổi trả đang được phát triển.
+                </p>
+                <div class="stack">
+                    <button class="btn btn--primary" disabled>
+                        Duyệt yêu cầu
+                    </button>
+                    <button class="btn btn--danger" disabled>
+                        Từ chối
+                    </button>
+                    <label class="field">
+                <span>
+                    Phản hồi khách hàng
+                </span>
+                        <textarea name="reply" disabled>
+                </textarea>
+                    </label>
+                    <button class="btn btn--secondary" disabled>
+                        Gửi phản hồi
+                    </button>
+                </div>
+            </aside>
+        </div>
+    {% else %}
+        <section class="sa-table-card">
+            <nav class="sa-filter-tabs" aria-label="Trạng thái đổi trả">
+                <a class="sa-tab" href="{% url 'shop_aftersales' %}">
+                    Tất cả
+                </a>
+                {% for code,label in return_statuses %}
+                    <a class="sa-tab {% if status == code %}is-active{% endif %}"
+                       href="{{ request.path }}?status={{ code }}">
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </nav>
+            <div class="stack" style="padding:16px">
+                {% for case in cases_page %}
+                    <article class="shop-card">
+                        <div>
+                <span class="sa-badge">
+                    {{ case.get_status_display }}
+                </span>
+                            <h3>
+                                {{ case.user.full_name }}
+                            </h3>
+                            <p>
+                                Đơn {{ case.order.order_code }}
+                            </p>
+                            <p>
+                                {{ case.reason }}
+                            </p>
+                            <small>
+                                {{ case.created_at|date:'d/m/Y H:i' }}
+                            </small>
+                        </div>
+                        <a class="btn btn--primary" href="{{ request.path }}?id={{ case.pk }}">
+                            Xem hồ sơ
+                        </a>
+                    </article>
+                {% empty %}
+                    <div class="sa-empty-table">
+                        <h3>
+                            Không có hồ sơ hậu mãi
+                        </h3>
+                        <p>
+                            Yêu cầu đổi trả thuộc gian hàng sẽ hiển thị tại đây.
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+            {% include 'includes/shop/pagination.html' with pagination=cases_page %}
+        </section>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+<div class="compare-tray" id="product-compare-tray" data-content="compare-tray"{% if not comparison_products %} hidden{% endif %}>
+    <p class="message comparison-feedback" role="status" data-comparison-feedback hidden></p>
+    {% if comparison_products %}
+    <div class="compare-tray-inner">
+        <strong>Đang so sánh {{ comparison_products|length }}/4</strong>
+        <div class="cluster">
+            {% for item in comparison_products %}
+            <form method="post" action="{% url 'buyer_comparison_update' %}" data-comparison-form class="comparison-form">
+                {% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="product_id" value="{{ item.pk }}"><input type="hidden" name="return_to" value="{{ compare_return_to }}">
+                <button type="submit" class="btn btn--secondary">{{ item.product_name }} · Bỏ</button>
+            </form>
+            {% endfor %}
+        </div>
+        <div class="cluster">
+            <a class="btn btn--primary" href="{% url 'buyer_compare' %}">Xem bảng so sánh</a>
+            <form method="post" action="{% url 'buyer_comparison_update' %}" data-comparison-form class="comparison-form">
+                {% csrf_token %}<input type="hidden" name="action" value="clear"><input type="hidden" name="return_to" value="{{ compare_return_to }}"><button type="submit" class="btn btn--secondary">Xóa danh sách</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>

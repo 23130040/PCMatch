@@ -1,17 +1,192 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Quản lý đơn hàng — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Chi tiết đơn hàng
+            </span>
+            </div>
+            <h1>
+                Chi tiết đơn hàng
+            </h1>
+            <p>
+                Thông tin đơn hàng và sản phẩm thuộc gian hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+            <a class="btn btn--secondary" href="{% url 'shop_orders' %}">
+                ← Tất cả đơn hàng
+            </a>
+        </div>
+    </section>
+    {% if order %}
+        <div class="shop-grid">
+            <div class="stack">
+                <section class="panel panel--padded">
+                    <h2>
+                        {{ order.order_code }}
+                    </h2>
+                    <dl class="info-dl">
+                        <dt>
+                            Khách hàng
+                        </dt>
+                        <dd>
+                            {{ order.user.full_name }}
+                        </dd>
+                        <dt>
+                            Số điện thoại
+                        </dt>
+                        <dd>
+                            {{ order.address.receiver_phone }}
+                        </dd>
+                        <dt>
+                            Địa chỉ giao
+                        </dt>
+                        <dd>
+                            {{ order.address.detail_address }}, {{ order.address.ward }}, {{ order.address.district }}, {{ order.address.province }}
+                        </dd>
+                        <dt>
+                            Thanh toán
+                        </dt>
+                        <dd>
+                            {{ order.get_payment_status_display }}
+                        </dd>
+                    </dl>
+                </section>
+                <section class="panel panel--padded">
+                    <h2>
+                        Sản phẩm của gian hàng
+                    </h2>
+                    <div class="shop-order-items">
+                        {% for item in order.shop_items %}
+                            <div class="shop-order-item">
+                                <div>
+                                    <strong>
+                                        {{ item.product.product_name }}
+                                    </strong>
+                                    <p>
+                                        {{ item.quantity }} × {{ item.unit_price|vnd }} = {{ item.subtotal|vnd }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="shop-total shop-total--grand">
+                <span>
+                    Tổng tiền hàng của shop
+                </span>
+                        <strong>
+                            {{ order.shop_total|vnd }}
+                        </strong>
+                    </div>
+                </section>
+                <section class="panel panel--padded">
+                    <h2>
+                        Lịch sử trạng thái
+                    </h2>
+                    <ol class="shop-timeline">
+                        {% for item in order.status_history.all %}
+                            <li>
+                                <strong>
+                                    {{ item.changed_at|date:'d/m/Y H:i' }}
+                                </strong>
+                                <span>
+                        {{ item.new_status }} · {{ item.note }}
+                    </span>
+                            </li>
+                        {% empty %}
+                            <li>
+                                Chưa có lịch sử cập nhật.
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </section>
+            </div>
+            <aside class="stack">
+                <section class="panel panel--padded">
+                    <h2>
+                        Xử lý đơn hàng
+                    </h2>
+                    <p>
+                <span class="sa-badge sa-badge--{{ order.status_css }}">
+                    {{ order.status_label }}
+                </span>
+                    </p>
+                    <p>
+                        Chức năng cập nhật trạng thái đang được phát triển.
+                    </p>
+                    <div class="stack">
+                        <button class="btn btn--primary" disabled>
+                            Xác nhận đơn
+                        </button>
+                        <button class="btn btn--secondary" disabled>
+                            Bắt đầu giao hàng
+                        </button>
+                        <button class="btn btn--danger" disabled>
+                            Hủy đơn
+                        </button>
+                    </div>
+                </section>
+                <section class="panel panel--padded">
+                    <h2>
+                        Thông tin giao nhận
+                    </h2>
+                    <form method="post" class="stack">
+                        {% csrf_token %}
+                        <fieldset disabled class="stack">
+                            <label class="field">
+                        <span>
+                            Mã vận đơn
+                        </span>
+                                <input name="tracking">
+                            </label>
+                            <button class="btn btn--primary" type="submit">
+                                Lưu mã vận đơn
+                            </button>
+                        </fieldset>
+                    </form>
+                </section>
+                <section class="panel panel--padded">
+                    <h2>
+                        Ghi chú nội bộ
+                    </h2>
+                    <form method="post" class="stack">
+                        {% csrf_token %}
+                        <fieldset disabled class="stack">
+                            <label class="field">
+                        <span>
+                            Ghi chú
+                        </span>
+                                <textarea name="note" maxlength="500">
+                        </textarea>
+                            </label>
+                            <button class="btn btn--primary" type="submit">
+                                Lưu ghi chú
+                            </button>
+                        </fieldset>
+                    </form>
+                </section>
+            </aside>
+        </div>
+    {% else %}
+        <section class="sa-empty-table">
+            <h2>
+                Chưa chọn đơn hàng
+            </h2>
+            <p>
+                Mở một đơn từ danh sách để xem thông tin chi tiết.
+            </p>
+            <a class="btn btn--primary" href="{% url 'shop_orders' %}">
+                Danh sách đơn hàng
+            </a>
+        </section>
+    {% endif %}
+{% endblock %}

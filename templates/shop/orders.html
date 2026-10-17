@@ -1,17 +1,134 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Danh sách đơn hàng — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                /
+            </span>
+                <span>
+                Quản lý đơn hàng
+            </span>
+            </div>
+            <h1>
+                Quản lý đơn hàng
+            </h1>
+            <p>
+                Theo dõi đơn hàng có sản phẩm của gian hàng.
+            </p>
+        </div>
+        <div class="sa-page-actions">
+        </div>
+    </section>
+    <section class="sa-table-card">
+        <form method="get" class="sa-table-toolbar" action="{% url 'shop_orders' %}">
+            <label class="sa-table-search">
+            <span class="sr-only">
+                Tìm đơn hàng
+            </span>
+                <input name="q" value="{{ q }}" placeholder="Tìm mã đơn hoặc tên khách...">
+            </label>
+            <input type="hidden" name="status" value="{{ status }}">
+            <button class="btn btn--secondary" type="submit">
+                Tìm kiếm
+            </button>
+            <span class="sa-result-count">
+            {{ orders_page.paginator.count }} đơn hàng
+        </span>
+        </form>
+        <nav class="sa-filter-tabs" aria-label="Trạng thái đơn">
+            <a class="sa-tab {% if not status %}is-active{% endif %}" href="{{ request.path }}?q={{ q|urlencode }}">
+                Tất cả
+                <span>
+                {{ order_total }}
+            </span>
+            </a>
+            {% for item in order_statuses %}
+                <a class="sa-tab {% if status == item.code %}is-active{% endif %}"
+                   href="{{ request.path }}?status={{ item.code }}&amp;q={{ q|urlencode }}">
+                    {{ item.label }}
+                    <span>
+                {{ item.count }}
+            </span>
+                </a>
+            {% endfor %}
+        </nav>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>
+                        MÃ ĐƠN
+                    </th>
+                    <th>
+                        KHÁCH HÀNG
+                    </th>
+                    <th>
+                        TIỀN HÀNG CỦA SHOP
+                    </th>
+                    <th>
+                        TRẠNG THÁI
+                    </th>
+                    <th>
+                        NGÀY TẠO
+                    </th>
+                    <th>
+                        THAO TÁC
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for order in orders_page %}
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ order.order_code }}
+                            </strong>
+                        </td>
+                        <td>
+                            {{ order.user.full_name }}
+                            <small>
+                                {{ order.user.phone }}
+                            </small>
+                        </td>
+                        <td>
+                            {{ order.shop_total|vnd }}
+                        </td>
+                        <td>
+                        <span class="sa-badge sa-badge--{{ order.status_css }}">
+                            {{ order.status_label }}
+                        </span>
+                        </td>
+                        <td>
+                            {{ order.created_at|date:'d/m/Y' }}
+                        </td>
+                        <td>
+                            <a class="sa-detail-btn" href="{% url 'shop_order' %}?id={{ order.pk }}">
+                                Chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="sa-empty-table">
+                                <h3>
+                                    Không có đơn hàng
+                                </h3>
+                                <p>
+                                    Chưa có đơn phù hợp bộ lọc.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/shop/pagination.html' with pagination=orders_page %}
+    </section>
+{% endblock %}

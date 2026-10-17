@@ -1,0 +1,17 @@
+{% load shop_display %}
+<div class="shop-revenue-bars" style="--days:{{ revenue.days|length }}">
+    {% for day in revenue.days %}
+    <div class="shop-revenue-bar">
+        <div class="shop-revenue-bar__value">
+            {{ day.amount|vnd }}
+        </div>
+        <div class="shop-revenue-bar__track">
+            <i style="--bar:{{ day.percent }}%">
+            </i>
+        </div>
+        <small>
+            {{ day.date|date:'d/m' }}
+        </small>
+    </div>
+    {% endfor %}
+</div>

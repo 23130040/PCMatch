@@ -1,17 +1,54 @@
-﻿{% load static %}
-<!doctype html>
-<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Yêu cầu Build — PCMatch</title>
-<link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-<link rel="stylesheet" href="{% static 'css/base.css' %}">
-<link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages.css' %}">
-<link rel="stylesheet" href="{% static 'css/production.css' %}">
-<link rel="stylesheet" href="{% static 'css/shop.css' %}">
-{% include 'includes/frontend_config.html' %}</head>
-<body><main id="main"><p>Đang tải Cổng Shop…</p></main><noscript>Vui lòng bật JavaScript để dùng prototype.</noscript><script type="module" src="{% static 'js/shop.js' %}"></script></body>
-</html>
+{% extends 'includes/shop/base.html' %}
+{% load shop_display %}
+{% block content %}
+<section class="sa-page-heading">
+    <div>
+        <div class="sa-breadcrumbs">
+            <a href="{% url 'shop_dashboard' %}">
+                Kênh bán
+            </a>
+            <span>
+                /
+            </span>
+            <span>
+                Yêu cầu cấu hình build
+            </span>
+        </div>
+        <h1>
+            Yêu cầu cấu hình build
+        </h1>
+        <p>
+            Theo dõi yêu cầu tư vấn và cấu hình máy tính của khách hàng.
+        </p>
+    </div>
+    <div class="sa-page-actions">
+    </div>
+</section>
+<section class="sa-table-card">
+    <nav class="sa-filter-tabs" aria-label="Trạng thái yêu cầu">
+        <a class="sa-tab is-active" href="{% url 'shop_build_requests' %}">
+            Tất cả
+        </a>
+        <span class="sa-tab">
+            Mới
+        </span>
+        <span class="sa-tab">
+            Đã gửi báo giá
+        </span>
+        <span class="sa-tab">
+            Đang thương lượng
+        </span>
+        <span class="sa-tab">
+            Đã chốt
+        </span>
+    </nav>
+    <div class="sa-empty-table">
+        <h2>
+            Chưa có yêu cầu build
+        </h2>
+        <p>
+            Chức năng nhận yêu cầu cấu hình đang được phát triển.
+        </p>
+    </div>
+</section>
+{% endblock %}

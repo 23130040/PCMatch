@@ -266,8 +266,8 @@
     </main>
 </div>
 
-<script src="{% static 'js/reusable-controls.js' %}"></script>
-<script src="{% static 'js/shop-effects.js' %}"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
 </html>

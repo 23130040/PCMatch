@@ -63,10 +63,10 @@ class BuyerRegisterForm(forms.Form):
         return user
 
 
-class BuyerLoginForm(forms.Form):
-    email = forms.EmailField(
-        label='Email', required=True,
-        widget=forms.EmailInput(attrs={'autocomplete': 'username'}),
+class LoginForm(forms.Form):
+    email = forms.CharField(
+        label='Email hoặc tên đăng nhập', required=True, max_length=254,
+        widget=forms.TextInput(attrs={'autocomplete': 'username'}),
     )
     password = forms.CharField(
         label='Mật khẩu', required=True,
