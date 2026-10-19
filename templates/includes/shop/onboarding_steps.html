@@ -1,0 +1,34 @@
+<ol class="reg-steps">
+    <li class="reg-steps__item {% if current == 1 %}is-current{% elif current > 1 %}is-done{% endif %}">
+        <span class="reg-steps__num">
+            {% if current > 1 %}✓{% else %}1{% endif %}
+        </span>
+        <span>
+            Tài khoản
+        </span>
+    </li>
+    <li class="reg-steps__item {% if current == 2 %}is-current{% elif current > 2 %}is-done{% endif %}">
+        <span class="reg-steps__num">
+            {% if current > 2 %}✓{% else %}2{% endif %}
+        </span>
+        <span>
+            Xác thực
+        </span>
+    </li>
+    <li class="reg-steps__item {% if current == 3 %}is-current{% elif current > 3 %}is-done{% endif %}">
+        <span class="reg-steps__num">
+            {% if current > 3 %}✓{% else %}3{% endif %}
+        </span>
+        <span>
+            Hồ sơ shop
+        </span>
+    </li>
+    <li class="reg-steps__item {% if current == 4 %}is-current{% elif current > 4 %}is-done{% endif %}">
+        <span class="reg-steps__num">
+            {% if current > 4 %}✓{% else %}4{% endif %}
+        </span>
+        <span>
+            Pháp lý
+        </span>
+    </li>
+</ol>

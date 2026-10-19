@@ -3,27 +3,39 @@
 from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
+from time import time
 
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import user_passes_test
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from django.views.decorators.http import require_GET
 
 from orders.models import Order, OrderItem, Return
 from products.models import Category, Product, ProductQuestion
-from users.models import User
+from users.models import EmailVerificationToken, User
 from users.views import finish_auth_login, is_active_buyer, safe_auth_next
 
-from .forms import ShopLoginForm
+from .forms import PhoneOTPForm, SellerRegisterForm, ShopLegalForm, ShopLoginForm, ShopProfileForm
 from .models import Shop
 
 
 shop_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('shop_login'))
+
+OTP_SESSION_KEY = 'shop_phone_otp'
+OTP_TTL_SECONDS = 300
+
+
+def _owned_shop(user):
+    return Shop.objects.filter(owner=user).order_by('pk').first()
 
 
 def shop_login(request):
@@ -49,6 +61,198 @@ def shop_login(request):
         'page_title': 'Đăng nhập',
         'form': form,
         'next': destination,
+    })
+
+
+def _send_verification_email(request, account, token):
+    link = request.build_absolute_uri(reverse('shop_verify_email_confirm', args=[token.token]))
+    send_mail(
+        'Kích hoạt tài khoản người bán PCMatch',
+        f'Vui lòng kiểm tra email và bấm vào liên kết sau để kích hoạt tài khoản người bán:\n{link}',
+        None,
+        [account.email],
+        fail_silently=True,
+    )
+
+
+def shop_register(request):
+    """Step 1: create a seller account (unique username/email, strong password)."""
+    if request.user.is_authenticated and _owned_shop(request.user):
+        return redirect('shop_dashboard')
+    form = SellerRegisterForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        account = form.save()
+        token = EmailVerificationToken.objects.create(
+            user=account,
+            token=get_random_string(48),
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        _send_verification_email(request, account, token)
+        login(request, account)
+        return redirect('shop_verify_email')
+    return render(request, 'shop/register.html', {
+        'page_name': 'register',
+        'page_section': 'shop',
+        'page_title': 'Đăng ký tài khoản người bán',
+        'form': form,
+    })
+
+
+@require_GET
+def shop_verify_email(request):
+    """Step 2a: ask the seller to confirm their email address."""
+    if not request.user.is_authenticated:
+        return redirect('shop_login')
+    if request.user.email_verified:
+        return redirect('shop_verify_phone')
+    token = EmailVerificationToken.objects.filter(
+        user=request.user, verified_at__isnull=True,
+    ).order_by('-created_at').first()
+    return render(request, 'shop/verify_email.html', {
+        'page_name': 'verify-email',
+        'page_section': 'shop',
+        'page_title': 'Xác thực email',
+        'activation_url': reverse('shop_verify_email_confirm', args=[token.token]) if token else None,
+    })
+
+
+@require_GET
+def shop_verify_email_confirm(request, token):
+    """Activation link target. Marks the account email as verified."""
+    record = get_object_or_404(EmailVerificationToken, token=token)
+    if record.verified_at is not None or record.expires_at < timezone.now():
+        messages.error(request, 'Liên kết xác thực không hợp lệ hoặc đã hết hạn.')
+        return redirect('shop_verify_email')
+    record.verified_at = timezone.now()
+    record.save(update_fields=['verified_at'])
+    account = record.user
+    account.email_verified = True
+    account.save(update_fields=['email_verified'])
+    if not request.user.is_authenticated:
+        login(request, account)
+    return redirect('shop_verify_phone')
+
+
+def shop_verify_phone(request):
+    """Step 2b: confirm the phone number with a one-time code."""
+    if not request.user.is_authenticated:
+        return redirect('shop_login')
+    if not request.user.email_verified:
+        return redirect('shop_verify_email')
+    if request.user.phone_verified:
+        return redirect('shop_onboarding_profile')
+
+    otp = request.session.get(OTP_SESSION_KEY)
+    form = PhoneOTPForm(request.POST or None, initial={'phone': request.user.phone})
+    if request.method == 'POST' and form.is_valid():
+        code = form.cleaned_data['code'].strip()
+        if otp and otp.get('code') == code and otp.get('expires', 0) > time():
+            request.user.phone = form.cleaned_data['phone']
+            request.user.phone_verified = True
+            request.user.save(update_fields=['phone', 'phone_verified'])
+            request.session.pop(OTP_SESSION_KEY, None)
+            return redirect('shop_onboarding_profile')
+        form.add_error('code', 'Mã OTP không đúng hoặc đã hết hạn.')
+
+    if not otp or otp.get('expires', 0) <= time():
+        otp = {'code': get_random_string(6, allowed_chars='0123456789'), 'expires': time() + OTP_TTL_SECONDS}
+        request.session[OTP_SESSION_KEY] = otp
+    return render(request, 'shop/verify_phone.html', {
+        'page_name': 'verify-phone',
+        'page_section': 'shop',
+        'page_title': 'Xác thực số điện thoại',
+        'form': form,
+        'dev_otp': otp['code'] if settings.DEBUG else None,
+    })
+
+
+def _onboarding_account_ready(request):
+    """Return a redirect for the first incomplete step, or None when ready."""
+    if not request.user.email_verified:
+        return redirect('shop_verify_email')
+    if not request.user.phone_verified:
+        return redirect('shop_verify_phone')
+    return None
+
+
+def shop_onboarding_profile(request):
+    """Step 3: create the shop profile (unique name, logo, contact info)."""
+    if not request.user.is_authenticated:
+        return redirect('shop_login')
+    blocked = _onboarding_account_ready(request)
+    if blocked:
+        return blocked
+    shop = _owned_shop(request.user)
+    form = ShopProfileForm(request.POST or None, request.FILES or None, instance=shop)
+    if request.method == 'POST' and form.is_valid():
+        shop = form.save(commit=False)
+        shop.owner = request.user
+        shop.status = 'PENDING'
+        shop.save()
+        return redirect('shop_onboarding_legal')
+    return render(request, 'shop/onboarding_profile.html', {
+        'page_name': 'onboarding-profile',
+        'page_section': 'shop',
+        'page_title': 'Hồ sơ shop',
+        'form': form,
+        'shop': shop,
+    })
+
+
+def shop_onboarding_legal(request):
+    """Step 4: upload identity and business documents, then wait for approval."""
+    if not request.user.is_authenticated:
+        return redirect('shop_login')
+    blocked = _onboarding_account_ready(request)
+    if blocked:
+        return blocked
+    shop = _owned_shop(request.user)
+    if shop is None:
+        return redirect('shop_onboarding_profile')
+    if shop.legal_submitted_at is not None:
+        return redirect('shop_onboarding_pending')
+    form = ShopLegalForm(request.POST or None, request.FILES or None, instance=shop)
+    if request.method == 'POST' and form.is_valid():
+        shop = form.save(commit=False)
+        shop.status = 'PENDING'
+        shop.legal_submitted_at = timezone.now()
+        shop.save()
+        return redirect('shop_onboarding_pending')
+    return render(request, 'shop/onboarding_legal.html', {
+        'page_name': 'onboarding-legal',
+        'page_section': 'shop',
+        'page_title': 'Xác thực pháp lý',
+        'form': form,
+        'shop': shop,
+    })
+
+
+@require_GET
+def shop_onboarding_pending(request):
+    """Step 4 result: the shop is queued for admin review."""
+    if not request.user.is_authenticated:
+        return redirect('shop_login')
+    shop = _owned_shop(request.user)
+    return render(request, 'shop/onboarding_pending.html', {
+        'page_name': 'onboarding-pending',
+        'page_section': 'shop',
+        'page_title': 'Chờ xét duyệt',
+        'shop': shop,
+    })
+
+
+@require_GET
+def shop_notifications(request):
+    """In-dashboard notifications, including the approval congratulations."""
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+    return render(request, 'shop/notifications.html', {
+        'page_name': 'notifications',
+        'page_section': 'shop',
+        'page_title': 'Thông báo',
+        'shop': shop,
+        'notifications': request.user.notifications.order_by('-created_at')[:50],
     })
 
 
@@ -118,11 +322,17 @@ def _revenue(orders, days):
 
 @require_GET
 def shop_page(request, page):
+    # The seller dashboard is only available for an approved shop.
+    shop = _owned_shop(request.user)
+    if shop is None:
+        return redirect('shop_onboarding_profile')
+    if shop.status != 'ACTIVE':
+        return redirect('shop_onboarding_pending')
+
     context = {'page_name': page, 'page_section': 'shop', 'page_title': TITLES[page]}
 
     # Every query starts from shops owned by this account. Query-string IDs cannot select another shop's data.
-    shop = Shop.objects.filter(owner=request.user).order_by('pk').first()
-    products = Product.objects.filter(shop=shop).select_related('brand', 'category').order_by('-created_at', '-pk') if shop else Product.objects.none()
+    products = Product.objects.filter(shop=shop).select_related('brand', 'category').order_by('-created_at', '-pk')
     orders = _orders(shop)
     q = request.GET.get('q', '').strip()
     status = request.GET.get('status', '')

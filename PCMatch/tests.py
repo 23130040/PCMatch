@@ -9,6 +9,8 @@ from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import resolve, reverse
 
+from shops.models import Shop
+
 from .pages import PAGE_GROUPS, route_name
 
 
@@ -62,6 +64,10 @@ class FrontendPagesTests(TestCase):
             username='buyertest@pcmatch.vn', email='buyertest@pcmatch.vn',
             password='BuyerTest123!', full_name='Buyer Test',
             role='BUYER', status='ACTIVE',
+        )
+        cls.shop = Shop.objects.create(
+            owner=cls.staff, shop_name='Gian hàng kiểm thử',
+            phone='0900000000', address='Địa chỉ kiểm thử', status='ACTIVE',
         )
 
     def setUp(self):
@@ -159,6 +165,9 @@ class FrontendPagesTests(TestCase):
             'includes/admin_product_drawers.html',
             'includes/admin_support_drawers.html',
             'includes/compare_button.html', 'includes/compare_tray.html',
+            'shop/register.html', 'shop/verify_email.html', 'shop/verify_phone.html',
+            'shop/onboarding_profile.html', 'shop/onboarding_legal.html',
+            'shop/onboarding_pending.html', 'shop/notifications.html',
         }
         root = settings.BASE_DIR / 'templates'
         partials.update(path.relative_to(root).as_posix() for path in (root / 'includes/shop').glob('*.html'))
@@ -234,7 +243,7 @@ class FrontendPagesTests(TestCase):
         response = self.client.post(reverse('shop_login'), {
             'username': self.buyer.email, 'password': 'BuyerTest123!',
         })
-        self.assertRedirects(response, reverse('shop_dashboard'))
+        self.assertRedirects(response, reverse('shop_dashboard'), fetch_redirect_response=False)
 
     def test_search_query_is_preserved_on_slash_redirect(self):
         response = self.client.get('/buyer/search?q=CPU&sort=price')

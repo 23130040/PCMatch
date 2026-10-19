@@ -1,0 +1,26 @@
+{% extends 'includes/shop/auth_base.html' %}
+{% block heading %}
+    Xác thực email
+{% endblock %}
+{% block subheading %}
+    Bước 2 · Xác thực thông tin tài khoản
+{% endblock %}
+{% block content %}
+    {% include 'includes/shop/onboarding_steps.html' with current=2 %}
+    <div class="message message--info" role="status">
+        Vui lòng kiểm tra email để kích hoạt tài khoản. Liên kết xác thực đã được gửi tới {{ request.user.email }}.
+    </div>
+    {% if activation_url %}
+    <div class="message message--info" role="status">
+        Chế độ phát triển:
+        <a href="{{ activation_url }}">
+            Bấm vào đây để kích hoạt tài khoản
+        </a>
+    </div>
+    {% endif %}
+    <form method="get" action="{% url 'shop_verify_email' %}">
+        <button class="btn btn--secondary shop-auth__submit" type="submit">
+            Tôi đã xác thực xong
+        </button>
+    </form>
+{% endblock %}

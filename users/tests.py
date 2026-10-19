@@ -35,16 +35,15 @@ class SharedAuthenticationTests(TestCase):
         self.assertNotContains(response, 'name="password2"')
 
     def test_legacy_urls_only_redirect_to_shared_auth(self):
-        for old, shared, destination in [
-            ('shop_register', 'auth_login', 'shop_dashboard'),
-            ('shop_forgot', 'auth_login', 'shop_dashboard'),
-            ('staff_login', 'auth_login', 'staff_dashboard'),
+        for old, destination in [
+            ('shop_forgot', 'shop_dashboard'),
+            ('staff_login', 'staff_dashboard'),
         ]:
             with self.subTest(route=old):
                 response = self.client.get(reverse(old), follow=True)
-                self.assertEqual(response.resolver_match.url_name, shared)
+                self.assertEqual(response.resolver_match.url_name, 'auth_login')
                 self.assertEqual(response.context['next'], reverse(destination))
-                self.assertEqual(response.context['mode'], 'register' if old == 'shop_register' else 'login')
+                self.assertEqual(response.context['mode'], 'login')
                 self.assertEqual(self.client.post(reverse(old), {}).status_code, 405)
 
     def test_registration_cannot_grant_staff_access(self):

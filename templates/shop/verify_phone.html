@@ -1,0 +1,41 @@
+{% extends 'includes/shop/auth_base.html' %}
+{% block heading %}
+    Xác thực số điện thoại
+{% endblock %}
+{% block subheading %}
+    Bước 2 · Nhập mã OTP đã gửi tới số điện thoại của bạn
+{% endblock %}
+{% block content %}
+    {% include 'includes/shop/onboarding_steps.html' with current=2 %}
+    {% if dev_otp %}
+    <div class="message message--info" role="status">
+        Chế độ phát triển — mã OTP của bạn là <strong>{{ dev_otp }}</strong>
+    </div>
+    {% endif %}
+    <form method="post" action="{% url 'shop_verify_phone' %}" class="shop-auth__form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="shop-auth__error" role="alert">
+            {% for error in form.non_field_errors %}
+            {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <label class="field" for="{{ field.id_for_label }}">
+            <span>
+                {{ field.label }}
+            </span>
+            {{ field }}
+        </label>
+        {% if field.errors %}
+        <div class="field-error" role="alert">
+            {{ field.errors }}
+        </div>
+        {% endif %}
+        {% endfor %}
+        <button class="btn btn--primary shop-auth__submit" type="submit">
+            Xác thực
+        </button>
+    </form>
+{% endblock %}

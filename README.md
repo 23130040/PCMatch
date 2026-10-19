@@ -38,11 +38,35 @@ Buyer, Shop and staff share Django accounts and sessions. Shop has its own
 sign-in page (`templates/shop/login.html`, form in `shops/forms.py`) that calls
 `shops.views.shop_login` and authenticates the same `users.User` accounts used
 elsewhere — it is a separate screen, not a separate account store. Staff pages
-still require administrator privileges. Old `/shop/register/`, `/shop/forgot/`
-and `/staff/login/` URLs only redirect to auth. Buyer and staff continue to use
+still require administrator privileges. Old `/shop/forgot/` and `/staff/login/`
+URLs only redirect to auth. Buyer and staff continue to use
 `templates/auth/login.html`; `/auth/register/` redirects to the shared
 registration mode for old links. Registration
 creates an ordinary buyer account; it does not grant staff access or create a Shop.
+
+## Seller Onboarding
+
+Clicking “Đăng ký làm người bán” on `/shop/login/` starts a four-step wizard that
+creates a seller account and a Shop, then waits for admin approval:
+
+- `/shop/register/` — step 1: seller account (unique username/email, strong password).
+- `/shop/verify/email/` — step 2a: “Vui lòng kiểm tra email để kích hoạt tài khoản”.
+  The activation link (`/shop/verify/email/<token>/`) marks the email verified. The
+  link is printed by the console email backend and, while `DEBUG` is on, also shown
+  on the page.
+- `/shop/verify/phone/` — step 2b: phone number and OTP (code kept in the session;
+  shown on the page in `DEBUG`).
+- `/shop/onboarding/profile/` — step 3: unique shop name, contact info, logo upload.
+- `/shop/onboarding/legal/` — step 4: CMND/CCCD and business-licence uploads, then
+  the shop is set to `PENDING` and `/shop/onboarding/pending/` shows
+  “Shop của bạn đang chờ xét duyệt bởi admin”.
+- `/shop/dashboard/` — available only once `Shop.status == 'ACTIVE'`; otherwise the
+  seller is redirected back to the onboarding step. `/shop/notifications/` lists the
+  notifications, including “Chúc mừng, shop của bạn đã sẵn sàng!”.
+
+Admin approves a shop in Django admin (`/django-admin/`) with the “Phê duyệt shop
+đã chọn” action. `Shop.save()` detects the transition to `ACTIVE`, records a
+`Notification` and emails the owner “Shop của bạn đã được phê duyệt thành công”.
 Adding a product requires sign-in;
 an interrupted add resumes after successful sign-in or registration. Cart rows are
 stored in `Cart`/`CartItem`, with one cart per user and one row per product.
