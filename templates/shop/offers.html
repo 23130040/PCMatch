@@ -219,12 +219,18 @@
                                     <a class="sa-detail-btn" href="{% url 'shop_offers' %}?edit={{ product.pk }}">
                                         Sửa
                                     </a>
-                                    <button class="sa-detail-btn" disabled>
-                                        Ẩn / hiện
-                                    </button>
-                                    <button class="sa-detail-btn sa-detail-btn--danger" disabled>
-                                        Xóa
-                                    </button>
+                                    <form method="post" action="{% url 'shop_product_toggle' product.pk %}">
+                                        {% csrf_token %}
+                                        <button class="sa-detail-btn" type="submit">
+                                            {% if product.status == 'INACTIVE' %}Hiện{% else %}Ẩn{% endif %}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'shop_product_delete' product.pk %}" onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?')">
+                                        {% csrf_token %}
+                                        <button class="sa-detail-btn sa-detail-btn--danger" type="submit">
+                                            Xóa
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

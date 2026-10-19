@@ -83,9 +83,9 @@
             <h2>
                 Toàn bộ sản phẩm
             </h2>
-            <p>
-                Cập nhật tồn kho đang được phát triển.
-            </p>
+            <span class="sa-result-count">
+                {{ products_page.paginator.count }} sản phẩm
+            </span>
         </div>
         <div class="table-scroll">
             <table>
@@ -132,12 +132,12 @@
                             {{ product.sold_quantity }}
                         </td>
                         <td>
-                            <form method="post" class="inv-update-form">
+                            <form method="post" action="{% url 'shop_inventory_update' %}" class="inv-update-form">
                                 {% csrf_token %}
                                 <input type="hidden" name="product_id" value="{{ product.pk }}">
                                 <input type="number" name="quantity" value="{{ product.stock_quantity }}" min="0"
-                                       disabled aria-label="Tồn kho {{ product.product_name }}">
-                                <button type="submit" class="inv-update-btn" disabled>
+                                       aria-label="Tồn kho {{ product.product_name }}">
+                                <button type="submit" class="inv-update-btn">
                                     Cập nhật
                                 </button>
                             </form>

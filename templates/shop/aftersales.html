@@ -64,27 +64,28 @@
                 <h2>
                     Xử lý hồ sơ
                 </h2>
-                <p>
-                    Chức năng xử lý đổi trả đang được phát triển.
-                </p>
-                <div class="stack">
-                    <button class="btn btn--primary" disabled>
-                        Duyệt yêu cầu
-                    </button>
-                    <button class="btn btn--danger" disabled>
-                        Từ chối
-                    </button>
-                    <label class="field">
-                <span>
-                    Phản hồi khách hàng
-                </span>
-                        <textarea name="reply" disabled>
-                </textarea>
-                    </label>
-                    <button class="btn btn--secondary" disabled>
-                        Gửi phản hồi
-                    </button>
-                </div>
+                {% if case.status == 'REQUESTED' %}
+                    <div class="stack">
+                        <form method="post" action="{% url 'shop_return_update' case.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve">
+                            <button class="btn btn--primary" type="submit">
+                                Duyệt yêu cầu
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'shop_return_update' case.pk %}" onsubmit="return confirm('Bạn có chắc muốn từ chối?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+                            <button class="btn btn--danger" type="submit">
+                                Từ chối
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p>
+                        Hồ sơ đã được xử lý: {{ case.get_status_display }}
+                    </p>
+                {% endif %}
             </aside>
         </div>
     {% else %}

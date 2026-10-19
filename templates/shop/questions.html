@@ -77,12 +77,11 @@
                                     {{ answer.answer }}
                                 </div>
                             {% empty %}
-                                <form method="post" class="sa-q-reply-form">
+                                <form method="post" action="{% url 'shop_question_answer' question.pk %}" class="sa-q-reply-form">
                                     {% csrf_token %}
-                                    <input type="hidden" name="question_id" value="{{ question.pk }}">
-                                    <input name="answer" maxlength="500" placeholder="Nhập câu trả lời..." disabled
+                                    <input name="answer" maxlength="500" placeholder="Nhập câu trả lời..." required
                                            aria-label="Câu trả lời">
-                                    <button class="inv-update-btn" type="submit" disabled>
+                                    <button class="inv-update-btn" type="submit">
                                         Gửi trả lời
                                     </button>
                                 </form>

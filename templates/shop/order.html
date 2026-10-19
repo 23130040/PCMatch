@@ -88,6 +88,83 @@
                         </strong>
                     </div>
                 </section>
+            </div>
+            <aside class="stack">
+                <section class="panel panel--padded">
+                    <h2>
+                        Xử lý đơn hàng
+                    </h2>
+                    <p>
+                        <span class="sa-badge sa-badge--{{ order.status_css }}">
+                            {{ order.status_label }}
+                        </span>
+                    </p>
+                    <div class="stack">
+                        {% if order.order_status == 'PENDING' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="COMFIRMED">
+                                <button class="btn btn--primary" type="submit">
+                                    Xác nhận đơn
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="CANCELLED">
+                                <label class="field">
+                                    <span>
+                                        Lý do hủy
+                                    </span>
+                                    <input name="note" placeholder="Nhập lý do...">
+                                </label>
+                                <button class="btn btn--danger" type="submit">
+                                    Hủy đơn
+                                </button>
+                            </form>
+                        {% elif order.order_status == 'COMFIRMED' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="PROCESSING">
+                                <button class="btn btn--primary" type="submit">
+                                    Bắt đầu xử lý
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="CANCELLED">
+                                <label class="field">
+                                    <span>
+                                        Lý do hủy
+                                    </span>
+                                    <input name="note" placeholder="Nhập lý do...">
+                                </label>
+                                <button class="btn btn--danger" type="submit">
+                                    Hủy đơn
+                                </button>
+                            </form>
+                        {% elif order.order_status == 'PROCESSING' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="SHIPPING">
+                                <button class="btn btn--primary" type="submit">
+                                    Bắt đầu giao hàng
+                                </button>
+                            </form>
+                        {% elif order.order_status == 'SHIPPING' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="DELIVERED">
+                                <button class="btn btn--primary" type="submit">
+                                    Xác nhận đã giao
+                                </button>
+                            </form>
+                        {% else %}
+                            <p>
+                                Đơn hàng đã hoàn tất xử lý.
+                            </p>
+                        {% endif %}
+                    </div>
+                </section>
                 <section class="panel panel--padded">
                     <h2>
                         Lịch sử trạng thái
@@ -99,8 +176,8 @@
                                     {{ item.changed_at|date:'d/m/Y H:i' }}
                                 </strong>
                                 <span>
-                        {{ item.new_status }} · {{ item.note }}
-                    </span>
+                                    {{ item.new_status }} · {{ item.note }}
+                                </span>
                             </li>
                         {% empty %}
                             <li>
@@ -108,71 +185,6 @@
                             </li>
                         {% endfor %}
                     </ol>
-                </section>
-            </div>
-            <aside class="stack">
-                <section class="panel panel--padded">
-                    <h2>
-                        Xử lý đơn hàng
-                    </h2>
-                    <p>
-                <span class="sa-badge sa-badge--{{ order.status_css }}">
-                    {{ order.status_label }}
-                </span>
-                    </p>
-                    <p>
-                        Chức năng cập nhật trạng thái đang được phát triển.
-                    </p>
-                    <div class="stack">
-                        <button class="btn btn--primary" disabled>
-                            Xác nhận đơn
-                        </button>
-                        <button class="btn btn--secondary" disabled>
-                            Bắt đầu giao hàng
-                        </button>
-                        <button class="btn btn--danger" disabled>
-                            Hủy đơn
-                        </button>
-                    </div>
-                </section>
-                <section class="panel panel--padded">
-                    <h2>
-                        Thông tin giao nhận
-                    </h2>
-                    <form method="post" class="stack">
-                        {% csrf_token %}
-                        <fieldset disabled class="stack">
-                            <label class="field">
-                        <span>
-                            Mã vận đơn
-                        </span>
-                                <input name="tracking">
-                            </label>
-                            <button class="btn btn--primary" type="submit">
-                                Lưu mã vận đơn
-                            </button>
-                        </fieldset>
-                    </form>
-                </section>
-                <section class="panel panel--padded">
-                    <h2>
-                        Ghi chú nội bộ
-                    </h2>
-                    <form method="post" class="stack">
-                        {% csrf_token %}
-                        <fieldset disabled class="stack">
-                            <label class="field">
-                        <span>
-                            Ghi chú
-                        </span>
-                                <textarea name="note" maxlength="500">
-                        </textarea>
-                            </label>
-                            <button class="btn btn--primary" type="submit">
-                                Lưu ghi chú
-                            </button>
-                        </fieldset>
-                    </form>
                 </section>
             </aside>
         </div>

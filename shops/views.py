@@ -1,8 +1,6 @@
-"""Server-rendered Shop screens. Browser storage is never used as business data."""
-
 from collections import defaultdict
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from time import time
 from urllib.parse import urlencode
 
@@ -18,10 +16,11 @@ from django.http import Http404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST
 
-from orders.models import Order, OrderItem, Return
-from products.models import Category, Product, ProductQuestion
+from orders.models import Order, OrderItem, OrderStatusHistory, Return
+from products.models import Brand, Category, Product, ProductAnswer, ProductQuestion
 from users.models import EmailVerificationToken, User
 from users.views import finish_auth_login, is_active_seller, safe_auth_next
 
@@ -40,7 +39,6 @@ def _owned_shop(user):
 
 
 def shop_login(request):
-    """Seller sign-in. Uses the shared Django account/session, not a separate one."""
     destination = safe_auth_next(request, 'shop_dashboard')
     form = ShopLoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -68,6 +66,7 @@ def shop_login(request):
 
 
 def _send_verification_email(request, account, token):
+
     link = request.build_absolute_uri(reverse('shop_verify_email_confirm', args=[token.token]))
     send_mail(
         'Kích hoạt tài khoản người bán PCMatch',
@@ -79,7 +78,6 @@ def _send_verification_email(request, account, token):
 
 
 def shop_register(request):
-    """Step 1: create a seller account (unique username/email, strong password)."""
     if is_active_seller(request.user) and _owned_shop(request.user):
         return redirect('shop_dashboard')
     form = SellerRegisterForm(request.POST or None)
@@ -103,7 +101,6 @@ def shop_register(request):
 
 @require_GET
 def shop_verify_email(request):
-    """Step 2a: ask the seller to confirm their email address."""
     if not is_active_seller(request.user):
         return redirect('shop_login')
     if request.user.email_verified:
@@ -121,7 +118,6 @@ def shop_verify_email(request):
 
 @require_GET
 def shop_verify_email_confirm(request, token):
-    """Activation link target. Marks the account email as verified."""
     record = get_object_or_404(EmailVerificationToken, token=token)
     if record.verified_at is not None or record.expires_at < timezone.now():
         messages.error(request, 'Liên kết xác thực không hợp lệ hoặc đã hết hạn.')
@@ -137,7 +133,6 @@ def shop_verify_email_confirm(request, token):
 
 
 def shop_verify_phone(request):
-    """Step 2b: confirm the phone number with a one-time code."""
     if not is_active_seller(request.user):
         return redirect('shop_login')
     if not request.user.email_verified:
@@ -170,7 +165,6 @@ def shop_verify_phone(request):
 
 
 def _onboarding_account_ready(request):
-    """Return a redirect for the first incomplete step, or None when ready."""
     if not request.user.email_verified:
         return redirect('shop_verify_email')
     if not request.user.phone_verified:
@@ -179,7 +173,6 @@ def _onboarding_account_ready(request):
 
 
 def shop_onboarding_profile(request):
-    """Step 3: create the shop profile (unique name, logo, contact info)."""
     if not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
@@ -203,7 +196,6 @@ def shop_onboarding_profile(request):
 
 
 def shop_onboarding_legal(request):
-    """Step 4: upload identity and business documents, then wait for approval."""
     if not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
@@ -232,7 +224,6 @@ def shop_onboarding_legal(request):
 
 @require_GET
 def shop_onboarding_pending(request):
-    """Step 4 result: the shop is queued for admin review."""
     if not is_active_seller(request.user):
         return redirect('shop_login')
     shop = _owned_shop(request.user)
@@ -251,7 +242,6 @@ def shop_onboarding_pending(request):
 
 @require_GET
 def shop_notifications(request):
-    """In-dashboard notifications, including the approval congratulations."""
     shop = _owned_shop(request.user)
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
@@ -330,7 +320,6 @@ def _revenue(orders, days):
 
 @require_GET
 def shop_page(request, page):
-    # The seller dashboard is only available for an approved shop.
     shop = _owned_shop(request.user)
     if shop is None:
         return redirect('shop_onboarding_profile')
@@ -339,7 +328,6 @@ def shop_page(request, page):
 
     context = {'page_name': page, 'page_section': 'shop', 'page_title': TITLES[page]}
 
-    # Every query starts from shops owned by this account. Query-string IDs cannot select another shop's data.
     products = Product.objects.filter(shop=shop).select_related('brand', 'category').order_by('-created_at', '-pk')
     orders = _orders(shop)
     q = request.GET.get('q', '').strip()
@@ -410,7 +398,239 @@ def shop_page(request, page):
     return render(request, f'shop/{page}.html', context)
 
 
-# --- Staff shop management ----------------------------------------------------------
+@require_POST
+def shop_product_save(request):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    product_id = request.POST.get('product_id')
+    category_id = request.POST.get('category')
+    product_name = request.POST.get('product_name', '').strip()
+    brand_name = request.POST.get('brand', '').strip()
+    price_raw = request.POST.get('price', '0')
+    stock_raw = request.POST.get('stock_quantity', '0')
+    status = request.POST.get('status', 'ACTIVE')
+    description = request.POST.get('description', '').strip()
+
+    if not product_name:
+        messages.error(request, 'Tên sản phẩm không được để trống.')
+        return redirect('shop_offers')
+
+    try:
+        price = Decimal(price_raw)
+    except (InvalidOperation, ValueError):
+        price = Decimal('0')
+
+    try:
+        stock_quantity = int(stock_raw)
+    except (ValueError, TypeError):
+        stock_quantity = 0
+
+    category = get_object_or_404(Category, pk=category_id)
+
+    brand = None
+    if brand_name:
+        brand, _ = Brand.objects.get_or_create(brand_name=brand_name)
+
+    base_slug = slugify(product_name, allow_unicode=True) or 'product'
+    slug = base_slug
+    counter = 1
+
+    if product_id:
+        product = get_object_or_404(Product, pk=product_id, shop=shop)
+        product.category = category
+        product.brand = brand
+        product.product_name = product_name
+        product.description = description
+        product.price = price
+        product.stock_quantity = stock_quantity
+        product.status = status
+        if product.slug != slug:
+            while Product.objects.filter(slug=slug).exclude(pk=product.pk).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            product.slug = slug
+        if request.FILES.get('thumbnail'):
+            product.thumbnail = request.FILES['thumbnail']
+        product.save()
+        messages.success(request, f'Đã cập nhật sản phẩm "{product_name}".')
+    else:
+        while Product.objects.filter(slug=slug).exists():
+            slug = f'{base_slug}-{counter}'
+            counter += 1
+        product = Product(
+            shop=shop,
+            category=category,
+            brand=brand,
+            product_name=product_name,
+            slug=slug,
+            description=description,
+            price=price,
+            stock_quantity=stock_quantity,
+            status=status,
+        )
+        if request.FILES.get('thumbnail'):
+            product.thumbnail = request.FILES['thumbnail']
+        product.save()
+        messages.success(request, f'Đã thêm sản phẩm "{product_name}".')
+
+    return redirect('shop_offers')
+
+
+@require_POST
+def shop_product_toggle(request, product_id):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    product = get_object_or_404(Product, pk=product_id, shop=shop)
+    if product.status == 'INACTIVE':
+        product.status = 'ACTIVE'
+        messages.success(request, f'Đã hiện sản phẩm "{product.product_name}".')
+    else:
+        product.status = 'INACTIVE'
+        messages.success(request, f'Đã ẩn sản phẩm "{product.product_name}".')
+    product.save()
+    return redirect('shop_offers')
+
+
+@require_POST
+def shop_product_delete(request, product_id):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    product = get_object_or_404(Product, pk=product_id, shop=shop)
+    name = product.product_name
+    product.delete()
+    messages.success(request, f'Đã xóa sản phẩm "{name}".')
+    return redirect('shop_offers')
+
+
+@require_POST
+def shop_inventory_update(request):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    product_id = request.POST.get('product_id')
+    product = get_object_or_404(Product, pk=product_id, shop=shop)
+
+    try:
+        quantity = int(request.POST.get('quantity', 0))
+    except (ValueError, TypeError):
+        quantity = 0
+
+    if quantity < 0:
+        quantity = 0
+
+    product.stock_quantity = quantity
+    product.save(update_fields=['stock_quantity'])
+    messages.success(request, f'Đã cập nhật tồn kho "{product.product_name}" thành {quantity}.')
+    return redirect('shop_inventory')
+
+
+@require_POST
+def shop_order_update_status(request, order_id):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    order = get_object_or_404(
+        Order.objects.filter(order_items__shop=shop).distinct(),
+        pk=order_id,
+    )
+
+    new_status = request.POST.get('new_status', '').strip()
+    note = request.POST.get('note', '').strip()
+    redirect_to = request.POST.get('redirect', '')
+
+    valid_transitions = {
+        'PENDING': ['COMFIRMED', 'CANCELLED'],
+        'COMFIRMED': ['PROCESSING', 'CANCELLED'],
+        'PROCESSING': ['SHIPPING'],
+        'SHIPPING': ['DELIVERED', 'CANCELLED'],
+    }
+
+    allowed = valid_transitions.get(order.order_status, [])
+    if new_status not in allowed:
+        messages.error(request, 'Không thể chuyển sang trạng thái này.')
+        return redirect('shop_orders')
+
+    old_status = order.order_status
+    order.order_status = new_status
+    order.save(update_fields=['order_status', 'updated_at'])
+
+    OrderStatusHistory.objects.create(
+        order=order,
+        changed_by=request.user,
+        old_status=old_status,
+        new_status=new_status,
+        note=note,
+    )
+
+    label = ORDER_LABELS.get(new_status, new_status)
+    messages.success(request, f'Đơn {order.order_code} đã chuyển sang "{label}".')
+
+    if redirect_to == 'fulfillment':
+        return redirect('shop_fulfillment')
+    return redirect('shop_order')
+
+
+@require_POST
+def shop_question_answer(request, question_id):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    question = get_object_or_404(
+        ProductQuestion.objects.filter(product__shop=shop),
+        pk=question_id,
+    )
+
+    answer_text = request.POST.get('answer', '').strip()
+    if not answer_text:
+        messages.error(request, 'Câu trả lời không được để trống.')
+        return redirect('shop_questions')
+
+    ProductAnswer.objects.create(
+        question=question,
+        user=request.user,
+        answer=answer_text,
+    )
+    question.status = True
+    question.save(update_fields=['status'])
+    messages.success(request, 'Đã gửi câu trả lời.')
+    return redirect('shop_questions')
+
+
+@require_POST
+def shop_return_update(request, return_id):
+    shop = _owned_shop(request.user)
+    if shop is None or shop.status != 'ACTIVE':
+        return redirect('shop_dashboard')
+
+    case = get_object_or_404(
+        Return.objects.filter(order__order_items__shop=shop).distinct(),
+        pk=return_id,
+    )
+
+    action = request.POST.get('action', '').strip()
+    if action == 'approve':
+        case.status = 'APPROVED'
+        case.save(update_fields=['status', 'updated_at'])
+        messages.success(request, f'Đã duyệt yêu cầu đổi trả #{case.pk}.')
+    elif action == 'reject':
+        case.status = 'REJECTED'
+        case.save(update_fields=['status', 'updated_at'])
+        messages.success(request, f'Đã từ chối yêu cầu đổi trả #{case.pk}.')
+    else:
+        messages.error(request, 'Hành động không hợp lệ.')
+
+    return redirect('shop_aftersales')
+
+
 
 STAFF_SHOP_STATUSES = (
     ('PENDING', 'Chờ duyệt tham gia'),
@@ -422,7 +642,6 @@ STAFF_SHOP_LABELS = dict(STAFF_SHOP_STATUSES)
 
 @require_GET
 def staff_shop_list(request):
-    """Admin reviews every shop and the applications waiting for approval."""
     every = Shop.objects.select_related('owner')
     search = request.GET.get('search', '').strip()
     status = request.GET.get('status', '').strip()
@@ -453,7 +672,6 @@ def staff_shop_list(request):
 
 
 def _staff_shop_return(request):
-    """Back to the staff list with the filters the admin was using."""
     query = {key: request.POST[key] for key in ('search', 'status', 'page') if request.POST.get(key)}
     url = reverse('staff_shop')
     return f'{url}?{urlencode(query)}' if query else url
@@ -461,20 +679,18 @@ def _staff_shop_return(request):
 
 @require_POST
 def staff_shop_approve(request, shop_id):
-    """Approve a shop so its seller can open the shop dashboard."""
     shop = get_object_or_404(Shop, pk=shop_id)
     if shop.status == 'ACTIVE':
         messages.info(request, f'Shop "{shop.shop_name}" đã được duyệt trước đó.')
     else:
         shop.status = 'ACTIVE'
-        shop.save()  # Shop.save() notifies the owner and emails the approval.
+        shop.save()
         messages.success(request, f'Đã duyệt shop "{shop.shop_name}". Chủ shop đã được thông báo.')
     return redirect(_staff_shop_return(request))
 
 
 @require_POST
 def staff_shop_suspend(request, shop_id):
-    """Suspend a shop; the seller loses the dashboard until it is approved again."""
     shop = get_object_or_404(Shop, pk=shop_id)
     if shop.status == 'SUSPENDED':
         messages.info(request, f'Shop "{shop.shop_name}" đã ở trạng thái tạm ngưng.')
