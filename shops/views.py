@@ -4,17 +4,52 @@ from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import user_passes_test
 from django.core.paginator import Paginator
 from django.db.models import Prefetch, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
+from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from orders.models import Order, OrderItem, Return
 from products.models import Category, Product, ProductQuestion
+from users.models import User
+from users.views import finish_auth_login, is_active_buyer, safe_auth_next
 
+from .forms import ShopLoginForm
 from .models import Shop
+
+
+shop_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('shop_login'))
+
+
+def shop_login(request):
+    """Seller sign-in. Uses the shared Django account/session, not a separate one."""
+    destination = safe_auth_next(request, 'shop_dashboard')
+    form = ShopLoginForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        identifier = form.cleaned_data['username'].strip()
+        found = User.objects.filter(email__iexact=identifier).first()
+        account = authenticate(
+            request,
+            username=found.username if found else identifier,
+            password=form.cleaned_data['password'],
+        )
+        if account is None or not is_active_buyer(account):
+            form.add_error(None, 'Tên tài khoản hoặc mật khẩu không đúng, hoặc tài khoản đã bị khóa.')
+        else:
+            login(request, account)
+            return finish_auth_login(request, destination)
+    return render(request, 'shop/login.html', {
+        'page_name': 'login',
+        'page_section': 'shop',
+        'page_title': 'Đăng nhập',
+        'form': form,
+        'next': destination,
+    })
 
 
 ORDER_LABELS = {

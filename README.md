@@ -25,19 +25,23 @@ The previous environment is preserved in `.venv-backup-20261004`.
 
 - Buyer home (default entry): `/`
 - Buyer: `/buyer/home/`
-- Shared sign-in: `/auth/login/`
+- Shared sign-in (buyer/staff): `/auth/login/`
 - Shared registration: `/auth/login/?mode=register`
 - Database cart: `/buyer/cart/`
 - Checkout information: `/buyer/checkout/`
+- Shop sign-in: `/shop/login/`
 - Shop: `/shop/dashboard/`
 - Staff UI: `/staff/dashboard/`
 - Django admin: `/django-admin/`
 
-Buyer, Shop and staff use the shared auth pages and Django sessions. Staff pages
-still require administrator privileges. Old Shop/staff sign-in URLs only redirect
-to auth; there are no separate sign-in or registration templates in those folders.
-Both modes use `templates/auth/login.html`; `/auth/register/` redirects to the
-shared registration mode for old links. Registration
+Buyer, Shop and staff share Django accounts and sessions. Shop has its own
+sign-in page (`templates/shop/login.html`, form in `shops/forms.py`) that calls
+`shops.views.shop_login` and authenticates the same `users.User` accounts used
+elsewhere — it is a separate screen, not a separate account store. Staff pages
+still require administrator privileges. Old `/shop/register/`, `/shop/forgot/`
+and `/staff/login/` URLs only redirect to auth. Buyer and staff continue to use
+`templates/auth/login.html`; `/auth/register/` redirects to the shared
+registration mode for old links. Registration
 creates an ordinary buyer account; it does not grant staff access or create a Shop.
 Adding a product requires sign-in;
 an interrupted add resumes after successful sign-in or registration. Cart rows are

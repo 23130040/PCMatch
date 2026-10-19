@@ -97,14 +97,23 @@ class ShopBackendLayoutsTests(TestCase):
             self.assertNotContains(response, self.product.product_name)
             self.assertNotContains(response, self.foreign_product.product_name)
 
-    def test_shop_sign_in_uses_existing_django_authentication(self):
+    def test_shop_sign_in_page_uses_existing_django_authentication(self):
         self.client.logout()
-        response = self.client.get(reverse('shop_login'), follow=True)
-        self.assertEqual(response.resolver_match.url_name, 'auth_login')
-        self.assertContains(response, f'action="{reverse("auth_login")}"')
+        response = self.client.get(reverse('shop_login'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'shop/login.html')
+        self.assertContains(response, f'action="{reverse("shop_login")}"')
         self.assertContains(response, f'name="next" value="{reverse("shop_dashboard")}"')
-        response = self.client.post(reverse('auth_login'), {'email': self.owner.email, 'password': 'ShopOwner!789', 'next': reverse('shop_dashboard')})
+        self.assertContains(response, 'Đăng ký làm người bán')
+        self.assertContains(response, 'Quên mật khẩu?')
+        response = self.client.post(reverse('shop_login'), {'username': self.owner.email, 'password': 'ShopOwner!789'})
         self.assertRedirects(response, reverse('shop_dashboard'))
+        self.assertEqual(self.client.get(reverse('shop_dashboard')).status_code, 200)
+        self.client.logout()
+        response = self.client.post(reverse('shop_login'), {'username': self.owner.username, 'password': 'sai'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'không đúng')
+        self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_unimplemented_actions_cannot_simulate_a_success(self):
         response = self.client.post(reverse('shop_offers'), {'product_name': 'Fake', 'price': '1'})

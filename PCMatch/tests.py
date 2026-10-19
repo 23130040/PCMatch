@@ -223,12 +223,16 @@ class FrontendPagesTests(TestCase):
 
     def test_private_layouts_use_django_authentication(self):
         self.client.logout()
-        for name in ['buyer_account', 'buyer_orders', 'buyer_checkout', 'shop_dashboard', 'shop_offers']:
+        for name in ['buyer_account', 'buyer_orders', 'buyer_checkout']:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.url.startswith(reverse('auth_login') + '?next='))
-        response = self.client.post(reverse('auth_login'), {
-            'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': reverse('shop_dashboard'),
+        for name in ['shop_dashboard', 'shop_offers']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.url.startswith(reverse('shop_login') + '?next='))
+        response = self.client.post(reverse('shop_login'), {
+            'username': self.buyer.email, 'password': 'BuyerTest123!',
         })
         self.assertRedirects(response, reverse('shop_dashboard'))
 

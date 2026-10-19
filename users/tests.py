@@ -36,7 +36,6 @@ class SharedAuthenticationTests(TestCase):
 
     def test_legacy_urls_only_redirect_to_shared_auth(self):
         for old, shared, destination in [
-            ('shop_login', 'auth_login', 'shop_dashboard'),
             ('shop_register', 'auth_login', 'shop_dashboard'),
             ('shop_forgot', 'auth_login', 'shop_dashboard'),
             ('staff_login', 'auth_login', 'staff_dashboard'),

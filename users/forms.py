@@ -25,8 +25,7 @@ class BuyerRegisterForm(forms.Form):
     password2 = forms.CharField(
         label='Nhập lại mật khẩu', required=True, min_length=8,
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-    )
-
+    )  
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
@@ -65,7 +64,7 @@ class BuyerRegisterForm(forms.Form):
 
 class LoginForm(forms.Form):
     email = forms.CharField(
-        label='Email hoặc tên đăng nhập', required=True, max_length=254,
+        label='Email', required=True, max_length=254,
         widget=forms.TextInput(attrs={'autocomplete': 'username'}),
     )
     password = forms.CharField(

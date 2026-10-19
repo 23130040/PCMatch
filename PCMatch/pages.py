@@ -6,7 +6,7 @@ BUYER_PAGES = (
 )
 
 SHOP_PAGES = (
-    'dashboard', 'offers', 'inventory', 'build-requests',
+    'login', 'dashboard', 'offers', 'inventory', 'build-requests',
     'build-request-detail', 'proposal-builder', 'proposal-list',
     'proposal', 'orders', 'order', 'fulfillment', 'aftersales', 'revenue', 'questions',
 )
