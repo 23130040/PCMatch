@@ -26,7 +26,9 @@ urlpatterns = [
     path('shop/onboarding/pending/', shop_views.shop_onboarding_pending, name='shop_onboarding_pending'),
     path('shop/notifications/', shop_views.shop_notifications, name='shop_notifications'),
     path('shop/forgot/', partial(user_views.legacy_auth, destination='shop_dashboard'), name='shop_forgot'),
-    path('staff/login/', partial(user_views.legacy_auth, destination='staff_dashboard'), name='staff_login'),
+    path('staff/login/', user_views.staff_login, name='staff_login'),
+    path('staff/forgot/', user_views.staff_forgot_password, name='staff_forgot'),
+    path('staff/reset/<str:token>/', user_views.staff_reset_password, name='staff_reset_password'),
     path('buyer/cart/add/<int:product_id>/', cart_views.cart_add, name='buyer_cart_add'),
     path('buyer/cart/items/<int:item_id>/update/', cart_views.cart_update, name='buyer_cart_update'),
     path('buyer/cart/items/<int:item_id>/remove/', cart_views.cart_remove, name='buyer_cart_remove'),
@@ -44,9 +46,22 @@ urlpatterns = [
          name='staff_guest_toggle',
     ),
 
+    path('staff/shop/<int:shop_id>/approve/',
+         staff_required(shop_views.staff_shop_approve),
+         name='staff_shop_approve',
+    ),
+    path('staff/shop/<int:shop_id>/suspend/',
+         staff_required(shop_views.staff_shop_suspend),
+         name='staff_shop_suspend',
+    ),
+
     path('staff/logout/',
-         user_views.auth_logout,
+         user_views.staff_logout,
          name='staff_logout',
+    ),
+    path('shop/logout/',
+         user_views.shop_logout,
+         name='shop_logout',
     ),
 ]
 
@@ -73,6 +88,8 @@ for section, pages in PAGE_GROUPS.items():
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
             view = staff_required(user_views.guest_list)
+        elif section == 'staff' and page == 'shop':
+            view = staff_required(shop_views.staff_shop_list)
         elif section == 'shop' and page == 'login':
             view = shop_views.shop_login
         elif section == 'shop':

@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 from time import time
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -17,18 +18,18 @@ from django.http import Http404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from orders.models import Order, OrderItem, Return
 from products.models import Category, Product, ProductQuestion
 from users.models import EmailVerificationToken, User
-from users.views import finish_auth_login, is_active_buyer, safe_auth_next
+from users.views import finish_auth_login, is_active_seller, safe_auth_next
 
 from .forms import PhoneOTPForm, SellerRegisterForm, ShopLegalForm, ShopLoginForm, ShopProfileForm
 from .models import Shop
 
 
-shop_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('shop_login'))
+shop_required = user_passes_test(is_active_seller, login_url=reverse_lazy('shop_login'))
 
 OTP_SESSION_KEY = 'shop_phone_otp'
 OTP_TTL_SECONDS = 300
@@ -50,8 +51,10 @@ def shop_login(request):
             username=found.username if found else identifier,
             password=form.cleaned_data['password'],
         )
-        if account is None or not is_active_buyer(account):
+        if account is None:
             form.add_error(None, 'Tên tài khoản hoặc mật khẩu không đúng, hoặc tài khoản đã bị khóa.')
+        elif not is_active_seller(account):
+            form.add_error(None, 'Tài khoản không thuộc khu vực người bán.')
         else:
             login(request, account)
             return finish_auth_login(request, destination)
@@ -77,7 +80,7 @@ def _send_verification_email(request, account, token):
 
 def shop_register(request):
     """Step 1: create a seller account (unique username/email, strong password)."""
-    if request.user.is_authenticated and _owned_shop(request.user):
+    if is_active_seller(request.user) and _owned_shop(request.user):
         return redirect('shop_dashboard')
     form = SellerRegisterForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -101,7 +104,7 @@ def shop_register(request):
 @require_GET
 def shop_verify_email(request):
     """Step 2a: ask the seller to confirm their email address."""
-    if not request.user.is_authenticated:
+    if not is_active_seller(request.user):
         return redirect('shop_login')
     if request.user.email_verified:
         return redirect('shop_verify_phone')
@@ -135,7 +138,7 @@ def shop_verify_email_confirm(request, token):
 
 def shop_verify_phone(request):
     """Step 2b: confirm the phone number with a one-time code."""
-    if not request.user.is_authenticated:
+    if not is_active_seller(request.user):
         return redirect('shop_login')
     if not request.user.email_verified:
         return redirect('shop_verify_email')
@@ -177,7 +180,7 @@ def _onboarding_account_ready(request):
 
 def shop_onboarding_profile(request):
     """Step 3: create the shop profile (unique name, logo, contact info)."""
-    if not request.user.is_authenticated:
+    if not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
     if blocked:
@@ -201,7 +204,7 @@ def shop_onboarding_profile(request):
 
 def shop_onboarding_legal(request):
     """Step 4: upload identity and business documents, then wait for approval."""
-    if not request.user.is_authenticated:
+    if not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
     if blocked:
@@ -230,9 +233,14 @@ def shop_onboarding_legal(request):
 @require_GET
 def shop_onboarding_pending(request):
     """Step 4 result: the shop is queued for admin review."""
-    if not request.user.is_authenticated:
+    if not is_active_seller(request.user):
         return redirect('shop_login')
     shop = _owned_shop(request.user)
+    if shop is None:
+        return redirect('shop_onboarding_profile')
+    # Approved while waiting: send the seller straight to the dashboard.
+    if shop.status == 'ACTIVE':
+        return redirect('shop_dashboard')
     return render(request, 'shop/onboarding_pending.html', {
         'page_name': 'onboarding-pending',
         'page_section': 'shop',
@@ -400,3 +408,85 @@ def shop_page(request, page):
         context['period'] = period if period in {'7', '14', '30'} else '30'
         context['revenue'] = _revenue(orders, int(context['period']))
     return render(request, f'shop/{page}.html', context)
+
+
+# --- Staff shop management ----------------------------------------------------------
+
+STAFF_SHOP_STATUSES = (
+    ('PENDING', 'Chờ duyệt tham gia'),
+    ('ACTIVE', 'Đang hoạt động'),
+    ('SUSPENDED', 'Tạm ngưng'),
+)
+STAFF_SHOP_LABELS = dict(STAFF_SHOP_STATUSES)
+
+
+@require_GET
+def staff_shop_list(request):
+    """Admin reviews every shop and the applications waiting for approval."""
+    every = Shop.objects.select_related('owner')
+    search = request.GET.get('search', '').strip()
+    status = request.GET.get('status', '').strip()
+    if status not in STAFF_SHOP_LABELS:
+        status = ''
+    shops = every.filter(status=status) if status else every
+    if search:
+        shops = shops.filter(
+            Q(shop_name__icontains=search)
+            | Q(owner__full_name__icontains=search)
+            | Q(owner__email__icontains=search)
+            | Q(phone__icontains=search)
+        )
+    filter_query = request.GET.copy()
+    filter_query.pop('page', None)
+    counts = {code: every.filter(status=code).count() for code in STAFF_SHOP_LABELS}
+    return render(request, 'admin/shop.html', {
+        'page_name': 'shop',
+        'page_section': 'staff',
+        'shop_page': Paginator(shops.order_by('-created_at', '-pk'), 10).get_page(request.GET.get('page')),
+        'search': search,
+        'status': status,
+        'filter_query': filter_query.urlencode(),
+        'shop_total': every.count(),
+        'shop_counts': counts,
+        'shop_statuses': [(code, label, counts[code]) for code, label in STAFF_SHOP_STATUSES],
+    })
+
+
+def _staff_shop_return(request):
+    """Back to the staff list with the filters the admin was using."""
+    query = {key: request.POST[key] for key in ('search', 'status', 'page') if request.POST.get(key)}
+    url = reverse('staff_shop')
+    return f'{url}?{urlencode(query)}' if query else url
+
+
+@require_POST
+def staff_shop_approve(request, shop_id):
+    """Approve a shop so its seller can open the shop dashboard."""
+    shop = get_object_or_404(Shop, pk=shop_id)
+    if shop.status == 'ACTIVE':
+        messages.info(request, f'Shop "{shop.shop_name}" đã được duyệt trước đó.')
+    else:
+        shop.status = 'ACTIVE'
+        shop.save()  # Shop.save() notifies the owner and emails the approval.
+        messages.success(request, f'Đã duyệt shop "{shop.shop_name}". Chủ shop đã được thông báo.')
+    return redirect(_staff_shop_return(request))
+
+
+@require_POST
+def staff_shop_suspend(request, shop_id):
+    """Suspend a shop; the seller loses the dashboard until it is approved again."""
+    shop = get_object_or_404(Shop, pk=shop_id)
+    if shop.status == 'SUSPENDED':
+        messages.info(request, f'Shop "{shop.shop_name}" đã ở trạng thái tạm ngưng.')
+    else:
+        shop.status = 'SUSPENDED'
+        shop.save()
+        from notifications.models import Notification
+        Notification.objects.create(
+            user=shop.owner,
+            title='Shop đã bị tạm ngưng',
+            message=f'Shop "{shop.shop_name}" đã bị tạm ngưng. Vui lòng liên hệ quản trị viên.',
+            type='SHOP_SUSPENDED',
+        )
+        messages.success(request, f'Đã tạm ngưng shop "{shop.shop_name}".')
+    return redirect(_staff_shop_return(request))

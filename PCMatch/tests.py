@@ -65,8 +65,13 @@ class FrontendPagesTests(TestCase):
             password='BuyerTest123!', full_name='Buyer Test',
             role='BUYER', status='ACTIVE',
         )
+        cls.seller = get_user_model().objects.create_user(
+            username='sellertest', email='sellertest@pcmatch.vn',
+            password='SellerTest123!', full_name='Seller Test',
+            role='SELLER', status='ACTIVE', email_verified=True, phone_verified=True,
+        )
         cls.shop = Shop.objects.create(
-            owner=cls.staff, shop_name='Gian hàng kiểm thử',
+            owner=cls.seller, shop_name='Gian hàng kiểm thử',
             phone='0900000000', address='Địa chỉ kiểm thử', status='ACTIVE',
         )
 
@@ -74,22 +79,28 @@ class FrontendPagesTests(TestCase):
         self.client.force_login(self.staff)
 
     def test_staff_pages_require_login(self):
-        login_url = reverse('auth_login')
+        redirect_url = reverse('staff_login')
         dashboard = reverse('staff_dashboard')
         self.client.logout()
         response = self.client.get(dashboard)
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response['Location'].startswith(login_url))
+        self.assertTrue(response['Location'].startswith(redirect_url))
         self.client.force_login(self.buyer)
         response = self.client.get(dashboard)
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response['Location'].startswith(login_url))
+        self.assertTrue(response['Location'].startswith(redirect_url))
+        login_url = reverse('auth_login')
         response = self.client.post(login_url, {'email': self.buyer.email, 'password': 'BuyerTest123!', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'không có quyền quản trị')
         self.client.logout()
         response = self.client.post(login_url, {'email': 'stafftest', 'password': 'StaffTest123!', 'next': dashboard})
-        self.assertRedirects(response, dashboard, fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'tài khoản quản trị')
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.client.logout()
+        response = self.client.post(reverse('staff_login'), {'username': 'stafftest', 'password': 'StaffTest123!'})
+        self.assertRedirects(response, dashboard)
         self.client.logout()
         response = self.client.post(login_url, {'email': self.staff.email, 'password': 'sai', 'next': dashboard})
         self.assertEqual(response.status_code, 200)
@@ -99,10 +110,8 @@ class FrontendPagesTests(TestCase):
 
     def test_staff_logout(self):
         logout_url = reverse('staff_logout')
-        response = self.client.get(logout_url)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.post(logout_url)
-        self.assertRedirects(response, reverse('auth_login'), fetch_redirect_response=False)
+        self.assertEqual(self.client.post(logout_url).status_code, 302)
+        self.assertRedirects(self.client.get(logout_url), reverse('staff_login'))
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 
@@ -113,9 +122,10 @@ class FrontendPagesTests(TestCase):
             for section, group in PAGE_GROUPS.items()
             for page in group
         ]
+        accounts = {'buyer': self.buyer, 'shop': self.seller, 'staff': self.staff}
         for name, section, page in pages:
             with self.subTest(page=name):
-                self.client.force_login(self.staff)
+                self.client.force_login(accounts.get(section, self.buyer))
                 path = reverse(name)
                 response = self.client.get(path)
                 if name in {'buyer_model', 'buyer_shop'}:
@@ -168,6 +178,7 @@ class FrontendPagesTests(TestCase):
             'shop/register.html', 'shop/verify_email.html', 'shop/verify_phone.html',
             'shop/onboarding_profile.html', 'shop/onboarding_legal.html',
             'shop/onboarding_pending.html', 'shop/notifications.html',
+            'staff/login.html', 'staff/forgot_password.html', 'staff/reset_password.html',
         }
         root = settings.BASE_DIR / 'templates'
         partials.update(path.relative_to(root).as_posix() for path in (root / 'includes/shop').glob('*.html'))
@@ -201,6 +212,7 @@ class FrontendPagesTests(TestCase):
         self.assertFalse((settings.BASE_DIR / 'templates/states').exists())
 
     def test_shop_content_is_in_the_server_response(self):
+        self.client.force_login(self.seller)
         for page in PAGE_GROUPS['shop']:
             with self.subTest(page=page):
                 response = self.client.get(reverse(route_name('shop', page)))
@@ -242,6 +254,12 @@ class FrontendPagesTests(TestCase):
             self.assertTrue(response.url.startswith(reverse('shop_login') + '?next='))
         response = self.client.post(reverse('shop_login'), {
             'username': self.buyer.email, 'password': 'BuyerTest123!',
+        })
+        self.assertContains(response, 'khu vực người bán')
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.client.logout()
+        response = self.client.post(reverse('shop_login'), {
+            'username': self.seller.username, 'password': 'SellerTest123!',
         })
         self.assertRedirects(response, reverse('shop_dashboard'), fetch_redirect_response=False)
 
