@@ -25,20 +25,95 @@ The previous environment is preserved in `.venv-backup-20261004`.
 
 - Buyer home (default entry): `/`
 - Buyer: `/buyer/home/`
-- Shared sign-in: `/auth/login/`
+- Sign out: `/auth/logout/` (buyer), `/shop/logout/` (seller), `/staff/logout/` (admin)
+- Shared sign-in (buyer): `/auth/login/`
 - Shared registration: `/auth/login/?mode=register`
 - Database cart: `/buyer/cart/`
 - Checkout information: `/buyer/checkout/`
+- Shop sign-in: `/shop/login/`
 - Shop: `/shop/dashboard/`
+- Admin sign-in: `/staff/login/`
 - Staff UI: `/staff/dashboard/`
 - Django admin: `/django-admin/`
 
-Buyer, Shop and staff use the shared auth pages and Django sessions. Staff pages
-still require administrator privileges. Old Shop/staff sign-in URLs only redirect
-to auth; there are no separate sign-in or registration templates in those folders.
-Both modes use `templates/auth/login.html`; `/auth/register/` redirects to the
-shared registration mode for old links. Registration
-creates an ordinary buyer account; it does not grant staff access or create a Shop.
+Buyer, Shop and staff share one Django account store, but they are three
+separate portals and each role only opens its own area:
+
+- buyer area (`is_active_buyer`, roles `BUYER`/`CUSTOMER`) → `/buyer/...`
+- shop area (`is_active_seller`, role `SELLER`) → `/shop/...`
+- staff area (`is_staff_user`, `ADMIN` or `is_staff`) → `/staff/...`
+
+Because of this, one session never leaks into another portal: after signing in
+at `/staff/login/`, opening `/buyer/account/` redirects to
+`/auth/login/?next=...` and opening `/shop/dashboard/` redirects to
+`/shop/login/?next=...`, so each portal always asks for its own sign-in.
+
+Sign-out is per portal: `auth_logout`, `shop_logout` and `staff_logout` end the
+session and return to `/auth/login/`, `/shop/login/` and `/staff/login/`. They
+accept `GET` as well as `POST` and the sign-out control is a plain link, because
+Django rotates the CSRF token on every login: a POST form rendered before a
+login elsewhere in the same browser would fail with “CSRF token from POST
+incorrect”. Signing out only ends a session and has no other side effect.
+`auth_logout` remains CSRF-protected for POST requests.
+
+Shop has its own sign-in page (`templates/shop/login.html`, form in
+`shops/forms.py`) that calls `shops.views.shop_login` and authenticates the same
+`users.User` accounts used elsewhere — it is a separate screen, not a separate
+account store. The admin
+channel has its own sign-in page (`templates/staff/login.html`, form
+`StaffLoginForm` in `users/forms.py`) served by `users.views.staff_login` at
+`/staff/login/`. It offers a "Ghi nhớ đăng nhập" (remember-me) session and,
+when `User.two_factor_enabled` is set, a second OTP step whose code is emailed
+to the account (printed to the console in development and shown on the page
+while `DEBUG` is on). Unknown accounts, wrong passwords and non-staff accounts
+get distinct messages. Only staff/`ADMIN` accounts are
+admitted and a successful sign-in redirects to `/staff/dashboard/`. `staff_required`
+sends unauthorised visitors to `/staff/login/`, not the buyer form. `shop/forgot/`
+still redirects to the shared auth page; admin password recovery lives at
+`/staff/forgot/` and `/staff/reset/<token>/`. Buyer screens continue to use
+`templates/auth/login.html`; `/auth/register/` redirects to the shared
+registration mode for old links. Registration creates an ordinary buyer account;
+it does not grant staff access or create a Shop.
+
+## Seller Onboarding
+
+Clicking “Đăng ký làm người bán” on `/shop/login/` starts a four-step wizard that
+creates a seller account and a Shop, then waits for admin approval:
+
+- `/shop/register/` — step 1: seller account (unique username/email, strong password).
+- `/shop/verify/email/` — step 2a: “Vui lòng kiểm tra email để kích hoạt tài khoản”.
+  The activation link (`/shop/verify/email/<token>/`) marks the email verified. The
+  link is printed by the console email backend and, while `DEBUG` is on, also shown
+  on the page.
+- `/shop/verify/phone/` — step 2b: phone number and OTP (code kept in the session;
+  shown on the page in `DEBUG`).
+- `/shop/onboarding/profile/` — step 3: unique shop name, contact info, logo upload.
+- `/shop/onboarding/legal/` — step 4: CMND/CCCD and business-licence uploads, then
+  the shop is set to `PENDING` and `/shop/onboarding/pending/` shows
+  “Shop của bạn đang chờ xét duyệt bởi admin”.
+- `/shop/dashboard/` — available only once `Shop.status == 'ACTIVE'`; otherwise the
+  seller is redirected back to the onboarding step. `/shop/notifications/` lists the
+  notifications, including “Chúc mừng, shop của bạn đã sẵn sàng!”.
+
+### Admin shop approval
+
+`/staff/shop/` (`shops.views.staff_shop_list`) lists the real shops with a search
+box (name, owner, email, phone), status tabs and pagination. Each row posts one
+CSRF-protected action:
+
+- `/staff/shop/<id>/approve/` — `PENDING`/`SUSPENDED` → `ACTIVE`. `Shop.save()`
+  creates the `SHOP_APPROVED` notification and emails the owner, so the seller can
+  open `/shop/dashboard/`. Approving twice does not send a second notification.
+- `/staff/shop/<id>/suspend/` — sets `SUSPENDED` and records a `SHOP_SUSPENDED`
+  notification; the seller is sent back to `/shop/onboarding/pending/`.
+
+`/shop/onboarding/pending/` redirects to `/shop/dashboard/` once the shop is
+approved, so a seller who was waiting lands on the shop home page after signing
+in. Django admin approval still works and behaves identically.
+
+Admin approves a shop in Django admin (`/django-admin/`) with the “Phê duyệt shop
+đã chọn” action. `Shop.save()` detects the transition to `ACTIVE`, records a
+`Notification` and emails the owner “Shop của bạn đã được phê duyệt thành công”.
 Adding a product requires sign-in;
 an interrupted add resumes after successful sign-in or registration. Cart rows are
 stored in `Cart`/`CartItem`, with one cart per user and one row per product.

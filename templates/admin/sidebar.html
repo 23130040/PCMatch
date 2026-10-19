@@ -14,7 +14,7 @@
     <a href="{% url 'staff_return' %}"><span>Hoàn trả</span><span class="sidebar__count">232</span></a>
 
     <p class="sidebar__group">Hệ sinh thái</p>
-    <a href="{% url 'staff_shop' %}"><span>Shop</span><span class="sidebar__count">6</span></a>
+    <a href="{% url 'staff_shop' %}"><span>Shop</span>{% if staff_shops.pending %}<span class="sidebar__count">{{ staff_shops.pending }}</span>{% endif %}</a>
     <a href="{% url 'staff_products' %}"><span>Sản phẩm</span></a>
     <a href="{% url 'staff_categories' %}"><span>Danh mục</span></a>
     <a href="{% url 'staff_fee_policies' %}"><span>Phí &amp; Chính sách</span></a>

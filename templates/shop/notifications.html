@@ -1,0 +1,55 @@
+{% extends 'includes/shop/base.html' %}
+{% block content %}
+    <section class="sa-page-heading">
+        <div>
+            <div class="sa-breadcrumbs">
+                <a href="{% url 'shop_dashboard' %}">
+                    Kênh bán
+                </a>
+                <span>
+                    /
+                </span>
+                <span>
+                    Thông báo
+                </span>
+            </div>
+            <h1>
+                Thông báo
+            </h1>
+            <p>
+                Cập nhật về hoạt động của gian hàng {{ shop.shop_name }}.
+            </p>
+        </div>
+    </section>
+    {% if shop.status == 'ACTIVE' %}
+    <div class="message message--info" role="status">
+        Chúc mừng, shop của bạn đã sẵn sàng! Shop đã được duyệt, bạn có thể bắt đầu kinh doanh.
+    </div>
+    {% endif %}
+    <section class="sa-table-card">
+        <div class="sa-table-toolbar">
+            <h2>
+                Tất cả thông báo
+            </h2>
+        </div>
+        {% for note in notifications %}
+        <div class="dash-order-row" style="padding:12px 16px">
+            <div>
+                <strong>
+                    {{ note.title }}
+                </strong>
+                <p>
+                    {{ note.message }}
+                </p>
+            </div>
+            <span class="sa-badge sa-badge--info">
+                {{ note.created_at|date:"d/m/Y H:i" }}
+            </span>
+        </div>
+        {% empty %}
+        <p style="padding:16px">
+            Chưa có thông báo nào.
+        </p>
+        {% endfor %}
+    </section>
+{% endblock %}

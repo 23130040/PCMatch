@@ -21,6 +21,11 @@
                 Doanh thu
             </span>
         </a>
+        <a href="{% url 'shop_notifications' %}" {% if page_name == 'notifications' %}aria-current="page"{% endif %}>
+            <span>
+                Thông báo
+            </span>
+        </a>
         <p class="sa-sidebar__group">
             Sản phẩm
         </p>

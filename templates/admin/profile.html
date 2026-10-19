@@ -85,7 +85,8 @@
                                 <i class="fa-regular fa-image"></i> Đổi ảnh
                             </a>
                         </div>
-                        <form id="profile-form" method="post" data-backend-form="pending">
+                        <form id="profile-form" method="post" action="{% url 'staff_profile' %}" data-backend-form="pending">
+                            {% csrf_token %}
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="full-name">Họ và tên</label>

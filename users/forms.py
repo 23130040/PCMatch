@@ -25,8 +25,7 @@ class BuyerRegisterForm(forms.Form):
     password2 = forms.CharField(
         label='Nhập lại mật khẩu', required=True, min_length=8,
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-    )
-
+    )  
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
@@ -65,10 +64,58 @@ class BuyerRegisterForm(forms.Form):
 
 class LoginForm(forms.Form):
     email = forms.CharField(
-        label='Email hoặc tên đăng nhập', required=True, max_length=254,
+        label='Email', required=True, max_length=254,
         widget=forms.TextInput(attrs={'autocomplete': 'username'}),
     )
     password = forms.CharField(
         label='Mật khẩu', required=True,
         widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
     )
+
+
+class StaffLoginForm(forms.Form):
+    """Admin sign-in form."""
+
+    username = forms.CharField(
+        label='Tên tài khoản', max_length=254, required=True,
+        widget=forms.TextInput(attrs={'autocomplete': 'username', 'autofocus': True}),
+    )
+    password = forms.CharField(
+        label='Mật khẩu', required=True,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
+    )
+    remember_me = forms.BooleanField(label='Ghi nhớ đăng nhập', required=False)
+    otp = forms.CharField(
+        label='Mã OTP', max_length=6, required=False,
+        widget=forms.TextInput(attrs={'autocomplete': 'one-time-code', 'inputmode': 'numeric', 'placeholder': '______'}),
+    )
+
+
+class StaffForgotPasswordForm(forms.Form):
+    email = forms.EmailField(
+        label='Email quản trị', required=True,
+        widget=forms.EmailInput(attrs={'autocomplete': 'email', 'autofocus': True}),
+    )
+
+
+class StaffSetPasswordForm(forms.Form):
+    password1 = forms.CharField(
+        label='Mật khẩu mới (ít nhất 8 ký tự)', required=True, min_length=8,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'autofocus': True}),
+    )
+    password2 = forms.CharField(
+        label='Nhập lại mật khẩu', required=True, min_length=8,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        p1, p2 = cleaned.get('password1'), cleaned.get('password2')
+        if p1 and p2 and p1 != p2:
+            self.add_error('password2', 'Mật khẩu nhập lại không khớp.')
+        if p1:
+            try:
+                password_validation.validate_password(p1)
+            except forms.ValidationError as error:
+                self.add_error('password1', error)
+        return cleaned

@@ -67,5 +67,5 @@
         </nav>
     </div>
 </header>
-<noscript><nav class="container market-nav no-script-nav"><a href="{% url 'home' %}">Trang chủ</a><a href="{% url 'buyer_search' %}">Sản phẩm</a><a href="{% url 'buyer_cart' %}">Giỏ hàng</a>{% if request.user.is_authenticated %}<form method="post" action="{% url 'auth_logout' %}">{% csrf_token %}<button class="btn btn--secondary" type="submit">Đăng xuất</button></form>{% else %}<a href="{% url 'auth_login' %}">Đăng nhập</a>{% endif %}</nav></noscript>
+<noscript><nav class="container market-nav no-script-nav"><a href="{% url 'home' %}">Trang chủ</a><a href="{% url 'buyer_search' %}">Sản phẩm</a><a href="{% url 'buyer_cart' %}">Giỏ hàng</a>{% if request.user.is_authenticated %}<a class="btn btn--secondary" href="{% url 'auth_logout' %}">Đăng xuất</a>{% else %}<a href="{% url 'auth_login' %}">Đăng nhập</a>{% endif %}</nav></noscript>
 <dialog id="buyer-menu" class="buyer-menu" aria-labelledby="buyer-menu-title"><div class="buyer-menu-heading"><h2 id="buyer-menu-title">Khám phá PCMatch</h2><button class="btn btn--secondary" type="button" data-ui-menu-close aria-label="Đóng menu">{% include 'includes/buyer_icon.html' with icon='close' %}</button></div><div data-menu-body></div></dialog>
