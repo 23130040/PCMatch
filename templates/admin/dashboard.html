@@ -39,27 +39,38 @@
         </div>
 
         <section class="dashboard-metrics admin-metrics" aria-label="Chỉ số tổng quan">
+            <!-- 1. Doanh thu -->
             <article class="panel metric-panel admin-metric admin-metric--blue">
-                <span class="metric-label">Doanh thu sàn hôm nay</span>
-                <strong class="metric-value">1,84 <small>tỷ ₫</small> <em><i class="fa-solid fa-arrow-up"></i>
-                    +12,4%</em></strong>
-                <p>Tổng giá trị giao dịch linh kiện ghi nhận trong ngày</p>
+                <span class="metric-label">Tổng doanh thu</span>
+                <strong class="metric-value">
+                    {{ total_revenue }} ₫
+                </strong>
+                <p>Tổng giá trị giao dịch đơn hàng thành công</p>
             </article>
+
+            <!-- 2. Phí & Hoa hồng -->
             <article class="panel metric-panel admin-metric admin-metric--amber">
                 <span class="metric-label">Phí &amp; hoa hồng thu được</span>
-                <strong class="metric-value">76,2 <small>triệu ₫</small> <em><i class="fa-solid fa-arrow-up"></i> +5,1%</em></strong>
+                <strong class="metric-value">76,2 <small>triệu ₫</small></strong>
                 <p>Phí sàn và hoa hồng đã ghi nhận</p>
             </article>
+
+            <!-- 3. Tổng đơn hàng -->
             <article class="panel metric-panel admin-metric admin-metric--plain">
                 <span class="metric-label">Đơn hàng phát sinh</span>
-                <strong class="metric-value">3.428 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i>
-                    +8,7%</em></strong>
-                <p>Đơn đã xác nhận trên toàn sàn</p>
+                <strong class="metric-value">
+                    {{ total_orders_count }} <small>đơn</small>
+                </strong>
+                <p>Tổng số đơn hàng ghi nhận trên hệ thống</p>
             </article>
+
+            <!-- 4. Tổng sản phẩm -->
             <article class="panel metric-panel admin-metric admin-metric--blue">
-                <span class="metric-label">Shop đang hoạt động</span>
-                <strong class="metric-value">1.286 <small>shop</small> <em><i class="fa-solid fa-arrow-up"></i> +24 shop</em></strong>
-                <p>Shop linh kiện có phát sinh đơn trong 24 giờ</p>
+                <span class="metric-label">Tổng sản phẩm</span>
+                <strong class="metric-value">
+                    {{ total_products_count }} <small>sản phẩm</small>
+                </strong>
+                <p>Sản phẩm đang có trong danh mục</p>
             </article>
         </section>
 
@@ -161,56 +172,21 @@
                     </div>
                 </div>
                 <div class="ranking-list">
-                    <div class="ranking-row">
-                        <b class="rank rank-1">1</b>
-                        <div class="rank-shop">
-                            <strong>Linh Kiện TechZone <span>★ 4.9</span></strong>
-                            <small>Module &amp; cảm biến</small>
+                    {% for p in top10SPsale %}
+                        <div class="ranking-row">
+                            <b class="rank rank-{{ forloop.counter }}">{{ forloop.counter }}</b>
+                            <div class="rank-shop">
+                                <strong>{{ p.product_name }}</strong>
+                                <small>Mã SP: #{{ p.product_id }}</small>
+                            </div>
+                            <div class="rank-number">
+                                <strong>{{ p.price }} đ</strong>
+                                <small>Đã bán: {{ p.sold_quantity }}</small>
+                            </div>
                         </div>
-                        <div class="rank-number"><strong>486,2 triệu ₫</strong><small>1.284 đơn</small></div>
-                        <div class="rank-fee"><span>Phí đã trả</span><strong>21,8 triệu ₫</strong></div>
-                        <button class="row-arrow">›</button>
-                    </div>
-                    <div class="ranking-row">
-                        <b class="rank rank-2">2</b>
-                        <div class="rank-shop">
-                            <strong>Sao Việt Electronics <span>★ 4.8</span></strong>
-                            <small>Vi điều khiển &amp; board mạch</small>
-                        </div>
-                        <div class="rank-number"><strong>352,7 triệu ₫</strong><small>968 đơn</small></div>
-                        <div class="rank-fee"><span>Phí đã trả</span><strong>15,9 triệu ₫</strong></div>
-                        <button class="row-arrow">›</button>
-                    </div>
-                    <div class="ranking-row">
-                        <b class="rank rank-3">3</b>
-                        <div class="rank-shop">
-                            <strong>PCB Express <span>★ 4.7</span></strong>
-                            <small>Linh kiện cơ khí &amp; PCB</small>
-                        </div>
-                        <div class="rank-number"><strong>298,4 triệu ₫</strong><small>842 đơn</small></div>
-                        <div class="rank-fee"><span>Phí đã trả</span><strong>13,4 triệu ₫</strong></div>
-                        <button class="row-arrow">›</button>
-                    </div>
-                    <div class="ranking-row">
-                        <b class="rank">4</b>
-                        <div class="rank-shop">
-                            <strong>Nguồn &amp; Adapter Pro <span>★ 4.7</span></strong>
-                            <small>Nguồn, pin &amp; adapter</small>
-                        </div>
-                        <div class="rank-number"><strong>241,6 triệu ₫</strong><small>715 đơn</small></div>
-                        <div class="rank-fee"><span>Phí đã trả</span><strong>10,9 triệu ₫</strong></div>
-                        <button class="row-arrow">›</button>
-                    </div>
-                    <div class="ranking-row">
-                        <b class="rank">5</b>
-                        <div class="rank-shop">
-                            <strong>Chip Á Châu <span>★ 4.6</span></strong>
-                            <small>Linh kiện thụ động</small>
-                        </div>
-                        <div class="rank-number"><strong>208,9 triệu ₫</strong><small>634 đơn</small></div>
-                        <div class="rank-fee"><span>Phí đã trả</span><strong>9,4 triệu ₫</strong></div>
-                        <button class="row-arrow">›</button>
-                    </div>
+                    {% empty %}
+                        <p style="padding: 15px; color: #6b7280;">Chưa có dữ liệu sản phẩm.</p>
+                    {% endfor %}
                 </div>
             </article>
 
@@ -359,38 +335,34 @@
 
 
 {{ list_DoanhThu_12Months|json_script:"revenue-data" }}
+{{ listOrder|json_script:"order-status-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('bieuDoDoanhThu');
-    const revenueData = JSON.parse(document.getElementById('revenue-data').textContent);
-
-    if (ctx && Array.isArray(revenueData)) new Chart(ctx, {
+    // 1. Biểu đồ cột 
+    const dataCot = JSON.parse(document.getElementById('revenue-data').textContent);
+    new Chart(document.getElementById('bieuDoDoanhThu'), {
         type: 'bar',
         data: {
-            labels: [
-                'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 
-                'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 
-                'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
-            ],
+            labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+            datasets: [{ label: 'Doanh thu', data: dataCot, backgroundColor: '#3b82f6' }]  // mau xanh dương
+        }
+    });
+
+    // 2. Biểu đồ tròn 
+    const dataTron = JSON.parse(document.getElementById('order-status-data').textContent);
+    new Chart(document.getElementById('bieuDoTron'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Chờ xác nhận', 'Đã xác nhận', 'Đã giao', 'Đã hủy'],
             datasets: [{
-                label: 'Doanh thu năm 2026 (VNĐ)',
-                data: revenueData,
-                backgroundColor: '#3b82f6',
-                borderRadius: 6
+                data: dataTron,
+                backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']  // vàng -> xanh dương -> xanh lá -> đỏ 
             }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
         }
     });
 </script>
+
 {% include 'includes/admin_interface_controls.html' %}
 <script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>

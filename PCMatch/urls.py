@@ -1,18 +1,21 @@
+from functools import partial
 
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 from django.views.generic import TemplateView
-from functools import partial
+
+from analytics import views as analytics_views
+from carts import views as cart_views
+from orders import views as order_views
+from products import views as product_views
+from shops import views as shop_views
+from users import views as user_views
+from users.views import staff_required
 
 from .pages import PAGE_GROUPS, route_name
 
-from products import views as product_views
-from carts import views as cart_views
-from users import views as user_views
-from shops import views as shop_views
-from users.views import staff_required
 urlpatterns = [
     path('django-admin/', admin.site.urls),
     path('auth/logout/', user_views.auth_logout, name='auth_logout'),
@@ -26,22 +29,15 @@ urlpatterns = [
     path('buyer/cart/items/<int:item_id>/remove/', cart_views.cart_remove, name='buyer_cart_remove'),
     path('buyer/compare/selection/', product_views.buyer_comparison_update, name='buyer_comparison_update'),
 
+    
+    path('staff/orders/', staff_required(order_views.order_list), name='load_ListOrder'),
+    path('staff/products/<int:product_id>/toggle/', product_views.showORhide_Product, name='showORhide_Product'),
+    path('staff/order/<int:order_id>/update/', order_views.changeStatus, name='update_order_status'),
+    path('staff/guest/<int:user_id>/toggle/', staff_required(user_views.toggle_user_lock), name='staff_guest_toggle'),
+
     path('', product_views.buyer_home, name='home'),
-
-    path('buyer/products/<int:product_id>/',
-         product_views.product_detail,
-         name='buyer_product_detail',
-    ),
-
-    path('staff/guest/<int:user_id>/toggle/',
-         staff_required(user_views.toggle_user_lock),
-         name='staff_guest_toggle',
-    ),
-
-    path('staff/logout/',
-         user_views.auth_logout,
-         name='staff_logout',
-    ),
+    path('buyer/products/<int:product_id>/', product_views.product_detail, name='buyer_product_detail'),
+    path('staff/logout/', user_views.auth_logout, name='staff_logout'),
 ]
 
 for section, pages in PAGE_GROUPS.items():
@@ -63,10 +59,18 @@ for section, pages in PAGE_GROUPS.items():
             view = product_views.buyer_product_compare
         elif section == 'buyer' and page == 'checkout':
             view = cart_views.cart_checkout
+            
+        
+        elif section == 'staff' and page == 'dashboard':
+            view = staff_required(analytics_views.dashboard_view)
+        elif section == 'staff' and (page == 'order' or page == 'orders'):
+            view = staff_required(order_views.order_list)
         elif section == 'staff' and page == 'products':
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
             view = staff_required(user_views.guest_list)
+      
+
         elif section == 'shop':
             view = user_views.buyer_required(partial(shop_views.shop_page, page=page))
         elif section == 'staff':

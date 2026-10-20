@@ -30,7 +30,7 @@ def order_list(request):
 def changeStatus(request, order_id):
     order = Order.objects.filter(order_id=order_id).first()
     if not order:
-        messages.error(request, 'Order not found.')
+        messages.error(request, 'Order not found.') 
         
         return redirect('admin_order_list')
 
@@ -41,4 +41,4 @@ def changeStatus(request, order_id):
         messages.success(request, f'Order status updated to {newStatus}.')
         
 
-    return redirect('admin_order_list')
+    return redirect('load_ListOrder')
