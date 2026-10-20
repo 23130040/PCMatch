@@ -1,0 +1,32 @@
+{% extends 'includes/shop/auth_base.html' %}
+{% block heading %}
+    Shop đang chờ xét duyệt
+{% endblock %}
+{% block subheading %}
+    Bước 4 · Hồ sơ của bạn đã được gửi
+{% endblock %}
+{% block content %}
+    {% include 'includes/shop/onboarding_steps.html' with current=4 %}
+    <div class="message message--info" role="status">
+        Shop của bạn đang chờ xét duyệt bởi admin. Chúng tôi sẽ gửi email cho bạn ngay khi shop được phê duyệt.
+    </div>
+    {% if shop %}
+    <dl class="info-dl">
+        <dt>
+            Tên shop
+        </dt>
+        <dd>
+            {{ shop.shop_name }}
+        </dd>
+        <dt>
+            Trạng thái
+        </dt>
+        <dd>
+            Pending approval
+        </dd>
+    </dl>
+    {% endif %}
+    <a class="btn btn--secondary shop-auth__submit" href="{% url 'shop_login' %}">
+        Về trang đăng nhập
+    </a>
+{% endblock %}

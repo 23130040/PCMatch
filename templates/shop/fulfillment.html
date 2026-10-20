@@ -49,9 +49,14 @@
                             <a class="btn btn--secondary" href="{% url 'shop_order' %}?id={{ order.pk }}">
                                 Chi tiết
                             </a>
-                            <button class="btn btn--primary" disabled>
-                                Bắt đầu giao
-                            </button>
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="SHIPPING">
+                                <input type="hidden" name="redirect" value="fulfillment">
+                                <button class="btn btn--primary" type="submit">
+                                    Bắt đầu giao
+                                </button>
+                            </form>
                         </div>
                     </article>
                 {% empty %}
@@ -87,12 +92,22 @@
                             <a class="btn btn--secondary" href="{% url 'shop_order' %}?id={{ order.pk }}">
                                 Chi tiết
                             </a>
-                            <button class="btn btn--primary" disabled>
-                                Đã giao
-                            </button>
-                            <button class="btn btn--danger" disabled>
-                                Giao thất bại
-                            </button>
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="DELIVERED">
+                                <input type="hidden" name="redirect" value="fulfillment">
+                                <button class="btn btn--primary" type="submit">
+                                    Đã giao
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Xác nhận giao thất bại?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="new_status" value="CANCELLED">
+                                <input type="hidden" name="redirect" value="fulfillment">
+                                <button class="btn btn--danger" type="submit">
+                                    Giao thất bại
+                                </button>
+                            </form>
                         </div>
                     </article>
                 {% empty %}

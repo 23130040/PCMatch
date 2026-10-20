@@ -170,11 +170,11 @@ class DatabaseCartTests(TestCase):
         response = self.client.post(reverse('auth_login'), {'email': self.user.email, 'password': self.password, 'next': 'https://example.com/'})
         self.assertRedirects(response, reverse('buyer_cart'))
 
-    def test_logout_requires_post_and_keeps_cart(self):
+    def test_logout_ends_the_session_and_keeps_cart(self):
         self.client.force_login(self.user)
         self.make_item()
-        self.assertEqual(self.client.get(reverse('auth_logout')).status_code, 405)
-        self.client.post(reverse('auth_logout'))
+        response = self.client.get(reverse('auth_logout'))
+        self.assertRedirects(response, reverse('auth_login'))
         self.assertNotIn('_auth_user_id', self.client.session)
         self.assertEqual(self.client.get(reverse('buyer_cart')).status_code, 302)
         self.assertTrue(CartItem.objects.exists())

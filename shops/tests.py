@@ -1,11 +1,15 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from decimal import Decimal
+import tempfile
 
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+from django.urls import reverse
+
+from notifications.models import Notification
 from orders.models import Order, OrderItem, Return
 from products.models import Brand, Category, Product, ProductQuestion
-from users.models import Address
+from users.models import Address, EmailVerificationToken
 from .models import Shop
 
 
@@ -13,9 +17,10 @@ class ShopBackendLayoutsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
-        cls.owner = User.objects.create_user(username='shop-owner', email='owner@example.test', password='ShopOwner!789', full_name='Chủ gian hàng', status='ACTIVE')
-        cls.other = User.objects.create_user(username='other-owner', email='other@example.test', password='OtherOwner!789', full_name='Chủ khác', status='ACTIVE')
-        cls.buyer = User.objects.create_user(username='shop-buyer', email='shopbuyer@example.test', password='ShopBuyer!789', full_name='Khách hàng', status='ACTIVE')
+        cls.owner = User.objects.create_user(username='shop-owner', email='owner@example.test', password='ShopOwner!789', full_name='Chủ gian hàng', role='SELLER', status='ACTIVE')
+        cls.other = User.objects.create_user(username='other-owner', email='other@example.test', password='OtherOwner!789', full_name='Chủ khác', role='SELLER', status='ACTIVE')
+        cls.buyer = User.objects.create_user(username='shop-buyer', email='shopbuyer@example.test', password='ShopBuyer!789', full_name='Khách hàng', role='BUYER', status='ACTIVE')
+        cls.seller_without_shop = User.objects.create_user(username='seller-no-shop', email='noshop@example.test', password='NoShop!7891', full_name='Người bán mới', role='SELLER', status='ACTIVE')
         cls.shop = Shop.objects.create(owner=cls.owner, shop_name='Gian hàng thật', phone='0901234567', address='Địa chỉ kho', status='ACTIVE')
         cls.other_shop = Shop.objects.create(owner=cls.other, shop_name='Gian hàng khác', phone='0901234568', address='Kho khác', status='ACTIVE')
         cls.category = Category.objects.create(category_name='CPU')
@@ -88,26 +93,223 @@ class ShopBackendLayoutsTests(TestCase):
         self.assertContains(response, 'Trang trước')
         self.assertNotContains(response, self.foreign_product.product_name)
 
-    def test_account_without_shop_sees_empty_layouts(self):
-        self.client.force_login(self.buyer)
+    def test_account_without_shop_is_sent_to_onboarding(self):
+        self.client.force_login(self.seller_without_shop)
         for name in ['shop_dashboard', 'shop_offers', 'shop_orders', 'shop_questions', 'shop_revenue', 'shop_inventory']:
             response = self.client.get(reverse(name))
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, 'chưa được liên kết')
-            self.assertNotContains(response, self.product.product_name)
-            self.assertNotContains(response, self.foreign_product.product_name)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, reverse('shop_onboarding_profile'))
 
-    def test_shop_sign_in_uses_existing_django_authentication(self):
+    def test_shop_sign_in_page_uses_existing_django_authentication(self):
         self.client.logout()
-        response = self.client.get(reverse('shop_login'), follow=True)
-        self.assertEqual(response.resolver_match.url_name, 'auth_login')
-        self.assertContains(response, f'action="{reverse("auth_login")}"')
+        response = self.client.get(reverse('shop_login'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'shop/login.html')
+        self.assertContains(response, f'action="{reverse("shop_login")}"')
         self.assertContains(response, f'name="next" value="{reverse("shop_dashboard")}"')
-        response = self.client.post(reverse('auth_login'), {'email': self.owner.email, 'password': 'ShopOwner!789', 'next': reverse('shop_dashboard')})
+        self.assertContains(response, 'Đăng ký làm người bán')
+        self.assertContains(response, 'Quên mật khẩu?')
+        response = self.client.post(reverse('shop_login'), {'username': self.owner.email, 'password': 'ShopOwner!789'})
         self.assertRedirects(response, reverse('shop_dashboard'))
+        self.assertEqual(self.client.get(reverse('shop_dashboard')).status_code, 200)
+        self.client.logout()
+        response = self.client.post(reverse('shop_login'), {'username': self.owner.username, 'password': 'sai'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'không đúng')
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_seller_logout_returns_to_the_shop_login(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop_logout'))
+        self.assertRedirects(response, reverse('shop_login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_unimplemented_actions_cannot_simulate_a_success(self):
         response = self.client.post(reverse('shop_offers'), {'product_name': 'Fake', 'price': '1'})
         self.assertEqual(response.status_code, 405)
         self.product.refresh_from_db()
         self.assertEqual(self.product.price, Decimal('100000'))
+
+
+class StaffShopApprovalTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.admin = User.objects.create_user(
+            username='shop-admin', email='shopadmin@example.test',
+            password='ShopAdmin!321', full_name='Quản trị', role='ADMIN',
+            status='ACTIVE', is_staff=True,
+        )
+        cls.buyer = User.objects.create_user(
+            username='shop-outsider', email='outsider@example.test',
+            password='Outsider!321', full_name='Người ngoài', role='BUYER', status='ACTIVE',
+        )
+        cls.seller = User.objects.create_user(
+            username='new-seller', email='newseller@example.test',
+            password='NewSeller!321', full_name='Chủ shop mới', role='SELLER',
+            status='ACTIVE', email_verified=True, phone_verified=True,
+        )
+        cls.shop = Shop.objects.create(
+            owner=cls.seller, shop_name='Shop chờ duyệt',
+            phone='0900000011', address='Địa chỉ chờ duyệt', status='PENDING',
+        )
+
+    def test_staff_list_shows_real_shops_and_filters(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('staff_shop'))
+        self.assertTemplateUsed(response, 'admin/shop.html')
+        self.assertContains(response, 'Shop chờ duyệt')
+        self.assertContains(response, 'newseller@example.test')
+        self.assertEqual(response.context['shop_counts']['PENDING'], 1)
+        self.assertEqual(response.context['shop_counts']['ACTIVE'], 0)
+
+        response = self.client.get(reverse('staff_shop'), {'status': 'ACTIVE'})
+        self.assertNotContains(response, 'Shop chờ duyệt')
+
+        response = self.client.get(reverse('staff_shop'), {'search': 'chờ duyệt'})
+        self.assertContains(response, 'Shop chờ duyệt')
+
+    def test_buyer_cannot_open_staff_shop_management(self):
+        self.client.force_login(self.buyer)
+        response = self.client.get(reverse('staff_shop'))
+        self.assertRedirects(response, reverse('staff_login') + '?next=' + reverse('staff_shop'))
+
+    def test_approval_lets_the_seller_reach_the_shop_dashboard(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
+        self.assertRedirects(response, reverse('staff_shop'))
+
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'ACTIVE')
+        self.assertTrue(Notification.objects.filter(
+            user=self.seller, type='SHOP_APPROVED').exists())
+
+        # The pending screen is replaced by the real shop dashboard.
+        self.client.force_login(self.seller)
+        self.assertRedirects(self.client.get(reverse('shop_onboarding_pending')),
+                             reverse('shop_dashboard'))
+        self.assertEqual(self.client.get(reverse('shop_dashboard')).status_code, 200)
+
+    def test_approving_twice_does_not_send_two_notifications(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
+        self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
+        self.assertEqual(
+            Notification.objects.filter(user=self.seller, type='SHOP_APPROVED').count(), 1)
+
+    def test_suspend_closes_the_dashboard_until_approved_again(self):
+        self.shop.status = 'ACTIVE'
+        self.shop.save()
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('staff_shop_suspend', args=[self.shop.pk]))
+        self.assertRedirects(response, reverse('staff_shop'))
+
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'SUSPENDED')
+        self.assertTrue(Notification.objects.filter(
+            user=self.seller, type='SHOP_SUSPENDED').exists())
+
+        self.client.force_login(self.seller)
+        self.assertRedirects(self.client.get(reverse('shop_dashboard')),
+                             reverse('shop_onboarding_pending'))
+
+    def test_shop_actions_require_staff_and_post(self):
+        self.client.logout()
+        url = reverse('staff_shop_approve', args=[self.shop.pk])
+        self.assertRedirects(self.client.post(url), reverse('staff_login') + '?next=' + url)
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(url).status_code, 405)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class SellerOnboardingFlowTests(TestCase):
+    password = 'StrongSeller!123'
+
+    def register(self, **overrides):
+        payload = {
+            'username': 'newseller',
+            'email': 'newseller@example.test',
+            'password1': self.password,
+            'password2': self.password,
+        }
+        payload.update(overrides)
+        return self.client.post(reverse('shop_register'), payload)
+
+    def test_full_seller_onboarding_then_approval(self):
+        # Step 1: seller account.
+        response = self.register()
+        self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
+        seller = get_user_model().objects.get(username='newseller')
+        self.assertEqual(seller.role, 'SELLER')
+        self.assertFalse(seller.email_verified)
+
+        # Step 2a: email verification page and activation link.
+        token = EmailVerificationToken.objects.get(user=seller)
+        response = self.client.get(reverse('shop_verify_email'))
+        self.assertContains(response, 'Vui lòng kiểm tra email')
+        response = self.client.get(reverse('shop_verify_email_confirm', args=[token.token]))
+        self.assertRedirects(response, reverse('shop_verify_phone'), fetch_redirect_response=False)
+        seller.refresh_from_db()
+        self.assertTrue(seller.email_verified)
+
+        # Step 2b: phone OTP.
+        response = self.client.get(reverse('shop_verify_phone'))
+        self.assertEqual(response.status_code, 200)
+        code = self.client.session['shop_phone_otp']['code']
+        response = self.client.post(reverse('shop_verify_phone'), {'phone': '0901234567', 'code': code})
+        self.assertRedirects(response, reverse('shop_onboarding_profile'), fetch_redirect_response=False)
+        seller.refresh_from_db()
+        self.assertTrue(seller.phone_verified)
+
+        # Step 3: shop profile.
+        response = self.client.post(reverse('shop_onboarding_profile'), {
+            'shop_name': 'Shop mới', 'address': 'Hà Nội', 'phone': '0901234567', 'description': 'Mô tả ngắn',
+        })
+        self.assertRedirects(response, reverse('shop_onboarding_legal'), fetch_redirect_response=False)
+        shop = Shop.objects.get(owner=seller)
+        self.assertEqual(shop.status, 'PENDING')
+
+        # Step 4: legal documents -> pending approval.
+        response = self.client.post(reverse('shop_onboarding_legal'), {
+            'id_card': SimpleUploadedFile('cccd.jpg', b'cccd-bytes'),
+            'business_license': SimpleUploadedFile('gpkd.jpg', b'gpkd-bytes'),
+        })
+        self.assertRedirects(response, reverse('shop_onboarding_pending'), fetch_redirect_response=False)
+        shop.refresh_from_db()
+        self.assertIsNotNone(shop.legal_submitted_at)
+
+        # Dashboard is blocked while the shop is not approved.
+        self.assertRedirects(self.client.get(reverse('shop_dashboard')),
+                             reverse('shop_onboarding_pending'), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse('shop_onboarding_pending')), 'đang chờ xét duyệt')
+
+        # Admin approval creates the notification and unlocks the dashboard.
+        shop.status = 'ACTIVE'
+        shop.save()
+        self.assertTrue(Notification.objects.filter(user=seller, type='SHOP_APPROVED').exists())
+        self.assertEqual(self.client.get(reverse('shop_dashboard')).status_code, 200)
+        self.assertContains(self.client.get(reverse('shop_notifications')), 'shop của bạn đã sẵn sàng')
+
+    def test_registration_validates_unique_username_and_email(self):
+        get_user_model().objects.create_user(
+            username='dup', email='dup@example.test', password=self.password, full_name='Dup',
+        )
+        response = self.register(username='dup')
+        self.assertContains(response, 'Tên đăng nhập đã được sử dụng.')
+        response = self.register(email='dup@example.test')
+        self.assertContains(response, 'Email đã được đăng ký.')
+
+    def test_shop_name_must_be_unique(self):
+        other = get_user_model().objects.create_user(
+            username='owner1', email='owner1@example.test', password=self.password, full_name='Owner 1',
+        )
+        Shop.objects.create(owner=other, shop_name='Tên đã dùng', phone='0900000000', address='X')
+        seller = get_user_model().objects.create_user(
+            username='owner2', email='owner2@example.test', password=self.password, full_name='Owner 2',
+            role='SELLER', email_verified=True, phone_verified=True,
+        )
+        self.client.force_login(seller)
+        response = self.client.post(reverse('shop_onboarding_profile'), {
+            'shop_name': 'Tên đã dùng', 'address': 'Y', 'phone': '0900000001', 'description': '',
+        })
+        self.assertContains(response, 'Tên shop đã được sử dụng.')

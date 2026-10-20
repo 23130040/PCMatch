@@ -6,12 +6,10 @@
         Thêm sản phẩm mới
         {% endif %}
     </h2>
-    <p class="message message--info">
-        Chức năng lưu thay đổi sản phẩm đang được phát triển.
-    </p>
-    <form method="post" class="stack">
+    <form method="post" action="{% url 'shop_product_save' %}" enctype="multipart/form-data" class="stack">
         {% csrf_token %}
-        <fieldset disabled class="stack">
+        {% if editing_product %}<input type="hidden" name="product_id" value="{{ editing_product.pk }}">{% endif %}
+        <fieldset class="stack">
             <div class="two-col">
                 <label class="field">
                     <span>
@@ -70,6 +68,10 @@
                     </select>
                 </label>
             </div>
+            <label class="field">
+                <span>Ảnh đại diện</span>
+                <input type="file" name="thumbnail" accept="image/*">
+            </label>
             <label class="field">
                 <span>
                     Mô tả sản phẩm

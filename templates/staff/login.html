@@ -1,0 +1,86 @@
+{% extends 'includes/shop/auth_base.html' %}
+{% block brand_logo %}{% endblock %}
+{% block heading %}Đăng nhập quản trị{% endblock %}
+{% block subheading %}Đăng nhập để quản lý và vận hành sàn PCMatch.{% endblock %}
+{% block content %}
+{% if stage == 'otp' %}
+<form method="post" action="{% url 'staff_login' %}" class="shop-auth__form">
+    {% csrf_token %}
+    <input type="hidden" name="stage" value="otp">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="message message--info" role="status">
+        <strong>Xác thực hai lớp (2FA)</strong>
+        <p>Nhập mã OTP đã gửi tới email quản trị của bạn.</p>
+        {% if dev_otp %}
+        <p>Chế độ phát triển — mã OTP: <strong>{{ dev_otp }}</strong></p>
+        {% endif %}
+    </div>
+
+    {% if otp_error %}
+    <div class="shop-auth__error" role="alert">
+        {{ otp_error }}
+    </div>
+    {% endif %}
+
+    <label class="field" for="{{ form.otp.id_for_label }}">
+        <span>{{ form.otp.label }}</span>
+        {{ form.otp }}
+    </label>
+
+    <button class="btn btn--primary shop-auth__submit" type="submit">
+        Xác thực
+    </button>
+</form>
+<p class="shop-auth__switch">
+    <a href="{% url 'staff_login' %}">Quay lại đăng nhập</a>
+</p>
+{% else %}
+<form method="post" action="{% url 'staff_login' %}" class="shop-auth__form">
+    {% csrf_token %}
+    <input type="hidden" name="stage" value="credentials">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    {% if form.non_field_errors %}
+    <div class="shop-auth__error" role="alert">
+        {% for error in form.non_field_errors %}
+        {{ error }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <label class="field" for="{{ form.username.id_for_label }}">
+        <span>{{ form.username.label }}</span>
+        {{ form.username }}
+    </label>
+    {% if form.username.errors %}
+    <div class="field-error" role="alert">{{ form.username.errors }}</div>
+    {% endif %}
+
+    <label class="field" for="{{ form.password.id_for_label }}">
+        <span>{{ form.password.label }}</span>
+        <span class="password-wrap">
+            {{ form.password }}
+            <button class="password-eye" type="button" data-password-toggle="{{ form.password.id_for_label }}" aria-label="Hiện mật khẩu">
+                👁
+            </button>
+        </span>
+    </label>
+    {% if form.password.errors %}
+    <div class="field-error" role="alert">{{ form.password.errors }}</div>
+    {% endif %}
+
+    <div class="shop-auth__row">
+        <label class="shop-auth__remember" for="{{ form.remember_me.id_for_label }}">
+            {{ form.remember_me }}
+            <span>Ghi nhớ đăng nhập</span>
+        </label>
+        <a href="{% url 'staff_forgot' %}">Quên mật khẩu?</a>
+    </div>
+
+    <button class="btn btn--primary shop-auth__submit" type="submit">
+        Đăng nhập
+    </button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,89 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>
+            {{ page_title }} — PCMatch
+        </title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+        <link rel="stylesheet" href="{% static 'css/base.css' %}">
+        <link rel="stylesheet" href="{% static 'css/components.css' %}">
+        <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+        <link rel="stylesheet" href="{% static 'css/production.css' %}">
+        <link rel="stylesheet" href="{% static 'css/shop.css' %}">
+        {% include 'includes/frontend_config.html' %}
+    </head>
+    <body class="shop-app sa-app shop-auth-page">
+        <main class="shop-auth" id="shop-main" tabindex="-1">
+            <section class="shop-auth__card">
+                <div class="shop-auth__brand">
+                    <h1>
+                        Đăng nhập
+                    </h1>
+                    <p>
+                        Đăng nhập để quản lý gian hàng của bạn trên PCMatch.
+                    </p>
+                </div>
+                <form method="post" action="{% url 'shop_login' %}" class="shop-auth__form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% if form.non_field_errors %}
+                    <div class="shop-auth__error" role="alert">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <label class="field" for="{{ form.username.id_for_label }}">
+                        <span>
+                            {{ form.username.label }}
+                        </span>
+                        {{ form.username }}
+                    </label>
+                    {% if form.username.errors %}
+                    <div class="field-error" role="alert">
+                        {{ form.username.errors }}
+                    </div>
+                    {% endif %}
+                    <label class="field" for="{{ form.password.id_for_label }}">
+                        <span>
+                            {{ form.password.label }}
+                        </span>
+                        <span class="password-wrap">
+                            {{ form.password }}
+                            <button class="password-eye" type="button" data-password-toggle="{{ form.password.id_for_label }}" aria-label="Hiện mật khẩu">
+                                👁
+                            </button>
+                        </span>
+                    </label>
+                    {% if form.password.errors %}
+                    <div class="field-error" role="alert">
+                        {{ form.password.errors }}
+                    </div>
+                    {% endif %}
+                    <button class="btn btn--primary shop-auth__submit" type="submit">
+                        Đăng nhập
+                    </button>
+                </form>
+                <p class="shop-auth__switch">
+                    Chưa có tài khoản?
+                    <a href="{% url 'shop_register' %}">
+                        Đăng ký làm người bán
+                    </a>
+                </p>
+                <div class="shop-auth__footer">
+                    <a href="{% url 'shop_forgot' %}">
+                        Quên mật khẩu?
+                    </a>
+                </div>
+            </section>
+        </main>
+        <script src="{% static 'js/shop-interface.js' %}" defer>
+        </script>
+    </body>
+</html>

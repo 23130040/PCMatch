@@ -11,6 +11,7 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('CUSTOMER', 'Customer'),
         ('BUYER', 'Buyer'),
+        ('SELLER', 'Seller'),
         ('ADMIN', 'Admin'),
     ]
 
@@ -21,6 +22,11 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CUSTOMER')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
     email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
+    two_factor_enabled = models.BooleanField(
+        default=False,
+        help_text='Bật để yêu cầu mã OTP khi đăng nhập khu vực quản trị.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

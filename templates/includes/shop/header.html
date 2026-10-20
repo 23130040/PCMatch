@@ -44,12 +44,7 @@
                         Kênh bán
                     </span>
                 </div>
-                <form method="post" action="{% url 'auth_logout' %}">
-                    {% csrf_token %}
-                    <button class="sa-udm-logout btn" type="submit">
-                        Đăng xuất
-                    </button>
-                </form>
+                <a class="sa-udm-logout btn" href="{% url 'shop_logout' %}">Đăng xuất</a>
             </div>
         </details>
     </div>
