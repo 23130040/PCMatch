@@ -124,7 +124,7 @@
             <input class="order-checkbox row-check" type="checkbox" aria-label="Chọn {{ order.order_code }}">
         </td>
         
-       >
+       
         <td class="order-code">
             <strong>{{ order.order_code }}</strong>
             <small>{{ order.created_at|date:"d/m/Y · H:i" }}</small>
@@ -183,10 +183,10 @@
     </button>
 
     {% if order.order_status == 'PENDING' %}
-        <!--  Xác nhận -->
+      
         <a href="{% url 'update_order_status' order.order_id %}?status=COMFIRMED" class="btn btn-sm btn-success" style="font-size: 12px; margin-left: 5px;">Xác nhận</a>
     {% elif order.order_status == 'COMFIRMED' %}
-        <!--  nút Giao hàng -->
+      
         <a href="{% url 'update_order_status' order.order_id %}?status=SHIPPING" class="btn btn-sm btn-primary" style="font-size: 12px; margin-left: 5px;">Giao hàng</a>
     {% endif %}
 </td>
