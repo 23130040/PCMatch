@@ -100,7 +100,7 @@
                     <canvas id="bieuDoDoanhThu"></canvas>
                 </div>
 
-                <p class="admin-chart-note">Trục trái: doanh thu (VNĐ) theo 12 tháng năm 2026</p>
+                <p class="admin-chart-note">Trục trái: doanh thu 12 tháng năm 2026</p>
             </article>
 
             <div class="admin-side-stack">
@@ -109,22 +109,27 @@
                         <div class="admin-section-title">
                             <span class="admin-icon admin-icon--blue"><i class="fa-solid fa-bag-shopping"></i></span>
                             <div>
-                                <h3>Trạng thái đơn hàng hôm nay</h3>
-                                <p>Tổng {{ total_orders }} đơn phát sinh</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="order-status-visual">
-                        <div style="position: relative; height: 210px; width: 210px; margin: 0 auto;">
-                            <canvas id="bieuDoTron"></canvas>
-                        </div>
-                        <div class="status-list">
-                            <div><span><i class="status-dot dot-amber"></i>Chờ xác nhận</span><strong>{{ order_Pending }} <small>đơn</small></strong></div>
-                            <div><span><i class="status-dot dot-blue"></i>Đã xác nhận</span><strong>{{ order_Comfirm }} <small>đơn</small></strong></div>
-                            <div><span><i class="status-dot dot-slate" style="background:#10b981;"></i>Đã giao</span><strong>{{ order_Delivered }} <small>đơn</small></strong></div>
-                            <div><span><i class="status-dot dot-orange" style="background:#ef4444;"></i>Đã hủy</span><strong>{{ order_Cancelled }} <small>đơn</small></strong></div>
-                        </div>
-                    </div>
+    <h3>Trạng thái đơn hàng hôm nay</h3>
+    <p>Tổng {{ total_orders }} đơn phát sinh</p>
+</div>
+
+
+<div class="order-status-visual" style="display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 15px;">
+    
+    
+    <div style="position: relative; height: 160px; width: 160px; flex-shrink: 0;">
+        <canvas id="bieuDoTron"></canvas>
+    </div>
+
+    
+    <div class="status-list" style="flex-grow: 1;">
+        <div><span><i class="status-dot dot-amber"></i>Chờ xác nhận</span><strong>{{ order_Pending }} <small>đơn</small></strong></div>
+        <div><span><i class="status-dot dot-blue"></i>Đã xác nhận</span><strong>{{ order_Comfirm }} <small>đơn</small></strong></div>
+        <div><span><i class="status-dot dot-slate" style="background:#10b981;"></i>Đã giao</span><strong>{{ order_Delivered }} <small>đơn</small></strong></div>
+        <div><span><i class="status-dot dot-orange" style="background:#ef4444;"></i>Đã hủy</span><strong>{{ order_Cancelled }} <small>đơn</small></strong></div>
+    </div>
+
+</div>
                 </article>
 
                 <article class="panel admin-health-panel">
@@ -334,33 +339,56 @@
 <script src="{% static 'js/app.js' %}?v=20260926f"></script>
 
 
-{{ list_DoanhThu_12Months|json_script:"revenue-data" }}
-{{ listOrder|json_script:"order-status-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    // 1. Biểu đồ cột 
-    const dataCot = JSON.parse(document.getElementById('revenue-data').textContent);
+    
+    const dataCot = {{ list_DoanhThu_12Months|safe }};
+    
     new Chart(document.getElementById('bieuDoDoanhThu'), {
         type: 'bar',
         data: {
             labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
-            datasets: [{ label: 'Doanh thu', data: dataCot, backgroundColor: '#3b82f6' }]  // mau xanh dương
-        }
-    });
-
-    // 2. Biểu đồ tròn 
-    const dataTron = JSON.parse(document.getElementById('order-status-data').textContent);
-    new Chart(document.getElementById('bieuDoTron'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Chờ xác nhận', 'Đã xác nhận', 'Đã giao', 'Đã hủy'],
-            datasets: [{
-                data: dataTron,
-                backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']  // vàng -> xanh dương -> xanh lá -> đỏ 
+            datasets: [{ 
+                label: 'Doanh thu (VNĐ)', 
+                data: dataCot, 
+                backgroundColor: '#3b82f6' 
             }]
         }
     });
+
+   
+    
+// 2. Biểu đồ tròn 
+const dataTron = {{ listOrder|safe }};
+
+new Chart(document.getElementById('bieuDoTron'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Chờ xác nhận', 'Đã xác nhận', 'Đang xử lý', 'Đang giao', 'Đã giao', 'Đã hủy', 'Trả hàng'],
+        datasets: [{
+            data: dataTron,
+            backgroundColor: [
+                '#f59e0b', // Vàng
+                '#3b82f6', // Xanh dương
+                '#06b6d4', // Xanh biển
+                '#8b5cf6', // Tím
+                '#10b981', // Xanh lá
+                '#ef4444', // Đỏ
+                '#6b7280'  // Xám
+            ]
+        }]
+    },
+    options: {
+        plugins: {
+            legend: {
+                display: false 
+            }
+        },
+        maintainAspectRatio: false
+    }
+});
 </script>
 
 {% include 'includes/admin_interface_controls.html' %}
