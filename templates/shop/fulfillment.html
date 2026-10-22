@@ -95,19 +95,15 @@
                             <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="new_status" value="DELIVERED">
+                                {% if order.payment_method == 'COD' %}
+                                <label class="check"><input type="checkbox" name="cod_collected" value="yes" required> Đã thu đủ {{ order.shop_total|vnd }} ₫ tiền COD của shop</label>
+                                {% endif %}
                                 <input type="hidden" name="redirect" value="fulfillment">
                                 <button class="btn btn--primary" type="submit">
-                                    Đã giao
+                                    Đã giao và hoàn thành
                                 </button>
                             </form>
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Xác nhận giao thất bại?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="CANCELLED">
-                                <input type="hidden" name="redirect" value="fulfillment">
-                                <button class="btn btn--danger" type="submit">
-                                    Giao thất bại
-                                </button>
-                            </form>
+
                         </div>
                     </article>
                 {% empty %}

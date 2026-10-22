@@ -60,6 +60,10 @@
 .sa-q-text span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sa-q-time { white-space: nowrap; color: #64748b; font-size: 12px !important; min-width: 80px; }
 .sa-q-answered { font-size: 13px; color: #334155; max-width: 260px; }
+.sa-q-message { min-width: 240px; max-width: 360px; padding: 12px; margin-bottom: 12px; border-left: 3px solid var(--color-teal); background: var(--color-teal-soft); border-radius: 4px; white-space: normal; overflow-wrap: anywhere; }
+.sa-q-message small { display: block; color: var(--color-slate); font-size: 11px; margin-block: 4px; }
+.sa-q-message p { margin: 0; white-space: pre-wrap; }
+.sa-q-followup { border-left-color: var(--color-cobalt); background: var(--color-cobalt-soft); }
 .sa-q-reply-form { display: flex; align-items: center; gap: 6px; min-width: 240px; }
 .sa-q-reply-form input[type="text"] { flex: 1; height: 32px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; outline: none; min-width: 0; }
 .sa-q-reply-form input[type="text"]:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.12); }

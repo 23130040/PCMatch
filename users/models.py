@@ -43,6 +43,15 @@ class Address(models.Model):
     ward = models.CharField(max_length=100)
     detail_address = models.CharField(max_length=255)
     is_default = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'], condition=models.Q(is_default=True, is_archived=False),
+                name='unique_active_default_address',
+            ),
+        ]
 
     def __str__(self):
         return self.receiver_name

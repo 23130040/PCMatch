@@ -9,18 +9,22 @@ from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Q
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import Http404
+from django import forms
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from users.models import PasswordResetToken, User
+from users.models import Address, PasswordResetToken, User
+from .address_services import save_address, set_default_address
 from users.forms import (
     BuyerRegisterForm,
+    BuyerAddressForm,
     LoginForm,
     StaffForgotPasswordForm,
     StaffLoginForm,
@@ -52,6 +56,52 @@ def is_active_seller(user):
 
 
 buyer_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('auth_login'))
+
+
+def _buyer_address(user, identifier):
+    try:
+        address_id = forms.IntegerField(min_value=1, max_value=9223372036854775807).clean(identifier)
+    except ValidationError:
+        raise Http404('Địa chỉ không hợp lệ.')
+    return get_object_or_404(Address, pk=address_id, user=user, is_archived=False)
+
+
+@require_http_methods(['GET', 'POST'])
+@buyer_required
+def buyer_addresses(request):
+    identifier = request.POST.get('address_id') if request.method == 'POST' else request.GET.get('edit')
+    address = _buyer_address(request.user, identifier) if identifier else None
+    form = BuyerAddressForm(request.POST if request.method == 'POST' else None, instance=address)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            save_address(request.user, form.cleaned_data, address.pk if address else None)
+        except Address.DoesNotExist:
+            raise Http404('Địa chỉ không còn tồn tại.')
+        except DatabaseError:
+            form.add_error(None, 'Chưa lưu được địa chỉ. Vui lòng thử lại.')
+        else:
+            messages.success(request, 'Đã cập nhật địa chỉ.' if address else 'Đã lưu địa chỉ nhận hàng.')
+            return redirect('buyer_addresses')
+    return render(request, 'buyer/addresses.html', {
+        'page_name': 'addresses', 'page_section': 'buyer', 'form': form,
+        'editing_address': address,
+        'addresses': request.user.addresses.filter(is_archived=False).order_by('-is_default', 'pk'),
+    })
+
+
+@require_POST
+@buyer_required
+def buyer_address_default(request, address_id):
+    _buyer_address(request.user, address_id)
+    try:
+        set_default_address(request.user, address_id)
+    except Address.DoesNotExist:
+        raise Http404('Địa chỉ không còn tồn tại.')
+    except DatabaseError:
+        messages.error(request, 'Chưa đổi được địa chỉ mặc định. Vui lòng thử lại.')
+    else:
+        messages.success(request, 'Đã đặt địa chỉ mặc định cho các đơn hàng tiếp theo.')
+    return redirect('buyer_addresses')
 
 
 def safe_auth_next(request, default='buyer_cart'):

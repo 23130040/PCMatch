@@ -9,8 +9,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import user_passes_test
 from django.core.mail import send_mail
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Prefetch, Q
+from django.db import DatabaseError
+from django.db.models import Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
 from django.urls import reverse, reverse_lazy
@@ -20,7 +22,11 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST
 
 from orders.models import Order, OrderItem, OrderStatusHistory, Return
-from products.models import Brand, Category, Product, ProductAnswer, ProductQuestion
+from orders.services import fulfill_order, shop_status
+from products.models import Brand, Category, Product, ProductQuestion
+from products.forms import ProductAnswerForm
+from products.services import append_question_message, conversation_messages
+from django.db.models.functions import Coalesce
 from users.models import EmailVerificationToken, User
 from users.views import finish_auth_login, is_active_seller, safe_auth_next
 
@@ -255,9 +261,10 @@ def shop_notifications(request):
 
 
 ORDER_LABELS = {
-    'PENDING': 'Chờ xác nhận', 'COMFIRMED': 'Đã xác nhận',
+    'AWAITING_PAYMENT': 'Chờ thanh toán VNPay',
+    'PENDING': 'Chờ admin xác nhận', 'COMFIRMED': 'Admin đã xác nhận',
     'PROCESSING': 'Đang xử lý', 'SHIPPING': 'Đang giao',
-    'DELIVERED': 'Đã giao', 'CANCELLED': 'Đã hủy', 'RETURNED': 'Đã hoàn hàng',
+    'DELIVERED': 'Hoàn thành', 'CANCELLED': 'Đã hủy', 'RETURNED': 'Đã hoàn hàng',
 }
 RETURN_LABELS = {'REQUESTED': 'Chờ xử lý', 'APPROVED': 'Đã duyệt', 'REJECTED': 'Từ chối', 'REFUNDED': 'Đã hoàn tiền'}
 TITLES = {
@@ -278,6 +285,7 @@ def _orders(shop):
     ).order_by('-created_at', '-pk')
     rows = list(queryset)
     for order in rows:
+        order.order_status = shop_status(order, order.shop_items)
         order.shop_total = sum((item.subtotal for item in order.shop_items), Decimal('0'))
         order.status_label = ORDER_LABELS.get(order.order_status, order.get_order_status_display())
         order.status_css = 'success' if order.order_status == 'DELIVERED' else 'error' if order.order_status in {'CANCELLED', 'RETURNED'} else 'info'
@@ -347,9 +355,11 @@ def shop_page(request, page):
         'order_statuses': [{'code': code, 'label': label, 'count': sum(order.order_status == code for order in orders)} for code, label in ORDER_LABELS.items()],
         'revenue': _revenue(orders, 30), 'top_products': products.order_by('-sold_quantity', 'pk')[:5],
     })
-    questions = ProductQuestion.objects.filter(product__shop=shop).select_related('product', 'user').prefetch_related('answers') if shop else ProductQuestion.objects.none()
+    questions = ProductQuestion.objects.filter(product__shop=shop).select_related('product', 'user').prefetch_related(
+        Prefetch('answers', queryset=conversation_messages(), to_attr='thread_messages'),
+    ).annotate(latest_activity=Coalesce(Max('answers__created_at'), 'created_at')) if shop else ProductQuestion.objects.none()
     context['question_pending'] = questions.filter(status=False).count()
-    context['recent_questions'] = questions.filter(status=False).order_by('-created_at')[:3]
+    context['recent_questions'] = questions.filter(status=False).order_by('-latest_activity', '-pk')[:3]
 
     if page in {'offers', 'inventory'}:
         if q:
@@ -374,7 +384,7 @@ def shop_page(request, page):
     elif page in {'orders', 'order', 'fulfillment'}:
         filtered = [order for order in orders if (not status or order.order_status == status) and (not q or q.lower() in order.order_code.lower() or q.lower() in order.user.full_name.lower())]
         context['orders_page'] = Paginator(filtered, 10).get_page(request.GET.get('page'))
-        context['processing_orders'] = [order for order in orders if order.order_status in {'COMFIRMED', 'PROCESSING'}]
+        context['processing_orders'] = [order for order in orders if order.order_status == 'PROCESSING']
         context['shipping_orders'] = [order for order in orders if order.order_status == 'SHIPPING']
         context['order'] = None
         if page == 'order' and request.GET.get('id'):
@@ -383,7 +393,7 @@ def shop_page(request, page):
     elif page == 'questions':
         answered = request.GET.get('answered') == '1'
         context['answered'] = answered
-        context['questions_page'] = Paginator(questions.filter(status=answered).order_by('-created_at'), 10).get_page(request.GET.get('page'))
+        context['questions_page'] = Paginator(questions.filter(status=answered).order_by('-latest_activity', '-pk'), 10).get_page(request.GET.get('page'))
     elif page == 'aftersales':
         cases = Return.objects.filter(order__order_items__shop=shop).distinct().select_related('order', 'user').order_by('-created_at') if shop else Return.objects.none()
         if status in RETURN_LABELS:
@@ -546,36 +556,21 @@ def shop_order_update_status(request, order_id):
     note = request.POST.get('note', '').strip()
     redirect_to = request.POST.get('redirect', '')
 
-    valid_transitions = {
-        'PENDING': ['COMFIRMED', 'CANCELLED'],
-        'COMFIRMED': ['PROCESSING', 'CANCELLED'],
-        'PROCESSING': ['SHIPPING'],
-        'SHIPPING': ['DELIVERED', 'CANCELLED'],
-    }
-
-    allowed = valid_transitions.get(order.order_status, [])
-    if new_status not in allowed:
-        messages.error(request, 'Không thể chuyển sang trạng thái này.')
+    try:
+        fulfill_order(
+            order.pk, shop, request.user, new_status,
+            cod_collected=request.POST.get('cod_collected') == 'yes', note=note,
+        )
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
         return redirect('shop_orders')
-
-    old_status = order.order_status
-    order.order_status = new_status
-    order.save(update_fields=['order_status', 'updated_at'])
-
-    OrderStatusHistory.objects.create(
-        order=order,
-        changed_by=request.user,
-        old_status=old_status,
-        new_status=new_status,
-        note=note,
-    )
 
     label = ORDER_LABELS.get(new_status, new_status)
     messages.success(request, f'Đơn {order.order_code} đã chuyển sang "{label}".')
 
     if redirect_to == 'fulfillment':
         return redirect('shop_fulfillment')
-    return redirect('shop_order')
+    return redirect(f'{reverse("shop_order")}?id={order.pk}')
 
 
 @require_POST
@@ -584,25 +579,22 @@ def shop_question_answer(request, question_id):
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
 
-    question = get_object_or_404(
-        ProductQuestion.objects.filter(product__shop=shop),
-        pk=question_id,
-    )
-
-    answer_text = request.POST.get('answer', '').strip()
-    if not answer_text:
-        messages.error(request, 'Câu trả lời không được để trống.')
+    owned_questions = ProductQuestion.objects.filter(product__shop=shop, pk=question_id)
+    question = get_object_or_404(owned_questions)
+    form = ProductAnswerForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, form.errors['answer'][0])
         return redirect('shop_questions')
-
-    ProductAnswer.objects.create(
-        question=question,
-        user=request.user,
-        answer=answer_text,
-    )
-    question.status = True
-    question.save(update_fields=['status'])
+    try:
+        append_question_message(question.pk, request.user, form.cleaned_data['answer'], is_shop_reply=True)
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+        return redirect('shop_questions')
+    except DatabaseError:
+        messages.error(request, 'Chưa gửi được câu trả lời. Vui lòng thử lại.')
+        return redirect('shop_questions')
     messages.success(request, 'Đã gửi câu trả lời.')
-    return redirect('shop_questions')
+    return redirect(f'{reverse("shop_questions")}?answered=1')
 
 
 @require_POST

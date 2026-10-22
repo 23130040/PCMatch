@@ -5,6 +5,45 @@ from shops.models import Shop
 from .models import Brand, Category, ProductSpecification
 
 
+class ProductQuestionForm(forms.Form):
+    question = forms.CharField(
+        label='Câu hỏi của bạn', max_length=1000,
+        error_messages={
+            'required': 'Vui lòng nhập câu hỏi về sản phẩm.',
+            'max_length': 'Câu hỏi không được vượt quá 1.000 ký tự.',
+        },
+        widget=forms.Textarea(attrs={
+            'rows': 4, 'maxlength': 1000,
+            'placeholder': 'Bạn muốn hỏi shop về thông số, bảo hành hoặc tình trạng sản phẩm?',
+            'aria-describedby': 'product-question-help',
+        }),
+    )
+
+
+class ProductAnswerForm(forms.Form):
+    answer = forms.CharField(
+        max_length=500,
+        error_messages={
+            'required': 'Vui lòng nhập câu trả lời.',
+            'max_length': 'Câu trả lời không được vượt quá 500 ký tự.',
+        },
+    )
+
+
+class ProductFollowupForm(forms.Form):
+    reply = forms.CharField(
+        label='Nội dung hỏi thêm', max_length=1000,
+        error_messages={
+            'required': 'Vui lòng nhập nội dung muốn trao đổi.',
+            'max_length': 'Nội dung không được vượt quá 1.000 ký tự.',
+        },
+        widget=forms.Textarea(attrs={
+            'rows': 3, 'maxlength': 1000,
+            'placeholder': 'Hỏi thêm hoặc tham gia trao đổi về câu hỏi này...',
+        }),
+    )
+
+
 class AdminProductFilterForm(forms.Form):
     search = forms.CharField(
         label='Tìm kiếm', required=False, max_length=255,

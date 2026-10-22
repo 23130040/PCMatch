@@ -1,81 +1,53 @@
 {% extends 'includes/buyer_base.html' %}
 {% block title %}Địa chỉ — PCMatch{% endblock %}
 {% block content %}
-<div class="page-head">
-    <div>
-        <h1>
-            Địa chỉ giao hàng
-        </h1>
-        <p>
-            Đơn đã đặt giữ nguyên bản chụp địa chỉ.
-        </p>
-    </div>
-    <div class="cluster">
-    </div>
-</div>
+<header class="page-head">
+    <div><h1>Địa chỉ giao hàng</h1><p>Địa chỉ mặc định sẽ dùng khi đặt hàng. Thay đổi địa chỉ không ảnh hưởng đến đơn đã đặt.</p></div>
+    <a class="btn btn--secondary" href="{% url 'buyer_checkout' %}">Tiếp tục thanh toán</a>
+</header>
 <div class="two-col">
-    <section class="stack">
-        <section class="empty">
-            <h2>
-                Chưa có địa chỉ
-            </h2>
-            <p>
-                Thêm địa chỉ nhận hàng vào biểu mẫu bên cạnh.
-            </p>
-        </section>
+    <section class="stack" aria-label="Địa chỉ đã lưu">
+        {% for address in addresses %}
+        <article class="panel panel--padded stack">
+            <div class="cluster"><h2>{{ address.receiver_name }}</h2>{% if address.is_default %}<span class="status">Mặc định</span>{% endif %}</div>
+            <p>{{ address.receiver_phone }}</p>
+            <p>{{ address.detail_address }}, {{ address.ward }}{% if address.district %}, {{ address.district }}{% endif %}, {{ address.province }}</p>
+            <div class="cluster">
+                <a class="btn btn--secondary" href="{% url 'buyer_addresses' %}?edit={{ address.pk }}#address-form">Sửa địa chỉ</a>
+                {% if not address.is_default %}
+                <form method="post" action="{% url 'buyer_address_default' address.pk %}">
+                    {% csrf_token %}
+                    <button class="btn btn--secondary" type="submit">Đặt mặc định</button>
+                </form>
+                {% endif %}
+            </div>
+        </article>
+        {% empty %}
+        <section class="empty"><h2>Chưa có địa chỉ</h2><p>Thêm địa chỉ nhận hàng vào biểu mẫu bên cạnh.</p></section>
+        {% endfor %}
     </section>
-    <section class="panel panel--padded">
-        <h2>
-            Thêm địa chỉ
-        </h2>
-        <section class="stack" id="[object HTMLInputElement]" data-backend-form="pending">
-            <input type="hidden" name="id" value="">
-            <label class="field">
-                <span>
-                    Người nhận
-                </span>
-                <input name="name" type="text" value="" required="" maxlength="80">
-            </label>
-            <label class="field">
-                <span>
-                    Điện thoại (10 chữ số)
-                </span>
-                <input name="phone" type="tel" value="" required="" pattern="0[0-9]{9}">
-            </label>
-            <label class="field">
-                <span>
-                    Khu vực
-                </span>
-                <select name="region">
-                    <option value="HCM" selected="">
-                        TP. Hồ Chí Minh
-                    </option>
-                    <option value="HN">
-                        Hà Nội
-                    </option>
-                    <option value="DN">
-                        Đà Nẵng
-                    </option>
-                    <option value="OTHER">
-                        Ngoài vùng giao demo
-                    </option>
-                </select>
-            </label>
-            <label class="field">
-                <span>
-                    Địa chỉ chi tiết, phường/xã
-                </span>
-                <input name="detail" type="text" value="" required="" minlength="8" maxlength="240">
-            </label>
-            <button class="btn btn--primary" type="button" disabled="">
-                Lưu địa chỉ
-            </button>
-            <a class="btn btn--secondary" href="/buyer/addresses/">
-                Hủy sửa
-            </a>
-            <p class="form-error" role="alert">
-            </p>
-        </section>
+    <section class="panel panel--padded" aria-labelledby="address-form-title">
+        <h2 id="address-form-title">{% if editing_address %}Sửa địa chỉ{% else %}Thêm địa chỉ{% endif %}</h2>
+        <form id="address-form" class="stack" method="post" action="{% url 'buyer_addresses' %}">
+            {% csrf_token %}
+            <input type="hidden" name="address_id" value="{{ editing_address.pk|default:'' }}">
+            {% for error in form.non_field_errors %}<p class="message message--error" role="alert">{{ error }}</p>{% endfor %}
+            {% for field in form %}
+                {% if field.name == 'is_default' %}
+                <label class="check" for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>
+                {% else %}
+                <div class="field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            <div class="cluster">
+                <button class="btn btn--primary" type="submit">Lưu địa chỉ</button>
+                {% if editing_address %}<a class="btn btn--secondary" href="{% url 'buyer_addresses' %}">Hủy sửa</a>{% endif %}
+            </div>
+        </form>
     </section>
 </div>
 {% endblock %}

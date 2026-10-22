@@ -69,14 +69,16 @@
                             {{ question.question }}
                         </td>
                         <td>
-                            {{ question.created_at|date:'d/m/Y H:i' }}
+                            {{ question.latest_activity|date:'d/m/Y H:i' }}
                         </td>
                         <td>
-                            {% for answer in question.answers.all %}
-                                <div class="sa-q-answered">
-                                    {{ answer.answer }}
+                            {% for answer in question.thread_messages %}
+                                <div class="sa-q-message {% if answer.is_shop_reply %}sa-q-answered{% else %}sa-q-followup{% endif %}">
+                                    <strong>{% if answer.is_shop_reply %}Shop trả lời{% else %}{{ answer.user.full_name|default:'Người mua' }} · Hỏi thêm{% endif %}</strong>
+                                    <small>{{ answer.created_at|date:'d/m/Y H:i' }}</small>
+                                    <p>{{ answer.answer }}</p>
                                 </div>
-                            {% empty %}
+                            {% endfor %}
                                 <form method="post" action="{% url 'shop_question_answer' question.pk %}" class="sa-q-reply-form">
                                     {% csrf_token %}
                                     <input name="answer" maxlength="500" placeholder="Nhập câu trả lời..." required
@@ -85,7 +87,6 @@
                                         Gửi trả lời
                                     </button>
                                 </form>
-                            {% endfor %}
                         </td>
                     </tr>
                 {% empty %}
