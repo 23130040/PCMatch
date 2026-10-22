@@ -1,5 +1,6 @@
 {% extends 'includes/buyer_base.html' %}
 {% load cart_prices %}
+{% load static %}
 {% block title %}Thanh toán — PCMatch{% endblock %}
 {% block content %}
 <header class="page-head">
@@ -7,7 +8,9 @@
     <a class="btn btn--secondary" href="{% url 'buyer_cart' %}">Sửa giỏ hàng</a>
 </header>
 {% if cart_items %}
-<div class="checkout-layout">
+<form class="checkout-layout" method="POST" action="{% url 'buyer_place_order' %}">
+{% csrf_token %}
+    <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
     <div class="stack">
         <section class="panel panel--padded" aria-labelledby="buyer-information-title">
             <h2 id="buyer-information-title">Thông tin người mua</h2>
@@ -19,6 +22,7 @@
         </section>
         <section class="panel panel--padded" aria-labelledby="shipping-address-title">
             <h2 id="shipping-address-title">Địa chỉ nhận hàng</h2>
+            <a href="{% url 'buyer_addresses' %}">{% if shipping_address %}Đổi hoặc sửa địa chỉ{% else %}Thêm địa chỉ nhận hàng{% endif %}</a>
             {% if shipping_address %}
                 <p><strong>{{ shipping_address.receiver_name }}</strong> · {{ shipping_address.receiver_phone }}{% if shipping_address.is_default %} <span class="muted">(Mặc định)</span>{% endif %}</p>
                 <p>{{ shipping_address.detail_address }}{% if shipping_address.ward %}, {{ shipping_address.ward }}{% endif %}{% if shipping_address.district %}, {{ shipping_address.district }}{% endif %}{% if shipping_address.province %}, {{ shipping_address.province }}{% endif %}</p>
@@ -48,6 +52,34 @@
             {% endfor %}
         </section>
         {% endfor %}
+        <section class="panel panel--padded" aria-labelledby="payment-methods-title">
+            <h2 id="payment-methods-title">Phương thức thanh toán</h2>
+            {% if not vnpay_ready %}<p class="muted">VNPay sandbox chưa được cấu hình. Bạn có thể đặt hàng bằng COD.</p>{% endif %}
+            <div class="payment-method-list" role="radiogroup" aria-labelledby="payment-methods-title">
+                <label class="payment-option" for="cod">
+                    <input type="radio" id="cod" name="paymentMethod" value="COD" checked>
+                    <div class="payment-info">
+                        <span class="payment-logo">
+                            <svg width="44" height="32" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                                <rect x="2" y="4" width="28" height="16" rx="2"/>
+                                <circle cx="16" cy="12" r="4"/>
+                                <path d="M6 9h3M23 15h3"/>
+                            </svg>
+                        </span>
+                        <strong>Thanh toán khi nhận hàng (COD)</strong>
+                    </div>
+                </label>
+                <label class="payment-option" for="vnpay">
+                    <input type="radio" id="vnpay" name="paymentMethod" value="VNPAY">
+                    <div class="payment-info">
+                        <span class="payment-logo">
+                            <img src="{% static 'images/vnpay-logo.png' %}" alt="Logo VNPay" width="72" height="72">
+                        </span>
+                        <strong>Thanh toán qua VNPay</strong>
+                    </div>
+                </label>
+            </div>
+        </section>
     </div>
     <aside class="panel panel--padded" aria-labelledby="checkout-summary-title">
         <h2 id="checkout-summary-title">Tóm tắt đơn hàng</h2>
@@ -57,9 +89,9 @@
             <div><dt>Phí vận chuyển</dt><dd>0 đ</dd></div>
             <div class="total"><dt>Tổng</dt><dd>{{ subtotal|vnd }} đ</dd></div>
         </dl>
-        <button class="btn btn--primary" type="button" title="Đặt hàng">Đặt hàng</button>
+        <button class="btn btn--primary" type="submit" title="Đặt hàng">Đặt hàng</button>
     </aside>
-</div>
+</form>
 {% else %}
 <section class="empty"><h2>Giỏ hàng đang trống</h2><p>Thêm sản phẩm vào giỏ hàng để tiếp tục thanh toán.</p><a class="btn btn--primary" href="{% url 'buyer_search' %}">Khám phá sản phẩm</a></section>
 {% endif %}

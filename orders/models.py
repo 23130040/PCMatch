@@ -7,17 +7,19 @@ class Order(models.Model):
         ('VNPAY', 'VNPay'),
     ]
     PAYMENT_STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('PAID', 'Paid'),
-        ('FAILED', 'Failed'),
-        ('REFUNDED', 'Refunded'),
+        ('UNPAID', 'Chưa thanh toán'),
+        ('PENDING', 'Chờ thanh toán'),
+        ('PAID', 'Đã thanh toán'),
+        ('FAILED', 'Thanh toán thất bại'),
+        ('REFUNDED', 'Đã hoàn tiền'),
     ]
     ORDER_STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('COMFIRMED', 'Comfirmed'),
-        ('PROCESSING', 'Processing'),
-        ('SHIPPING', 'Shipping'),
-        ('DELIVERED', 'Delivered'),
+        ('AWAITING_PAYMENT', 'Chờ thanh toán VNPay'),
+        ('PENDING', 'Chờ admin xác nhận'),
+        ('COMFIRMED', 'Admin đã xác nhận'),
+        ('PROCESSING', 'Shop đang xử lý'),
+        ('SHIPPING', 'Đang giao hàng'),
+        ('DELIVERED', 'Hoàn thành'),
         ('CANCELLED', 'Cancelled'),
         ('RETURNED', 'Returned'),
     ]
@@ -26,12 +28,13 @@ class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     address = models.ForeignKey('users.Address', on_delete=models.CASCADE, related_name='orders')
     order_code = models.CharField(max_length=50, unique=True)
+    checkout_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     subtotal = models.DecimalField(max_digits=15, decimal_places=2)
     shipping_fee = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     platform_fee = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=15, decimal_places=2)
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES)
-    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='PENDING')
+    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
     order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

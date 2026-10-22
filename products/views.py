@@ -5,11 +5,15 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from urllib.parse import urlencode
-from django.db.models import Count, Q
-from .forms import AdminProductFilterForm, CatalogFilterForm
-from .models import Category, Product
+from django.db.models import Count, Prefetch, Q
+from django.db import DatabaseError
+from .forms import AdminProductFilterForm, CatalogFilterForm, ProductFollowupForm, ProductQuestionForm
+from .models import Category, Product, ProductQuestion
+from .services import append_question_message, conversation_messages
+from django.core.exceptions import ValidationError
+from users.views import is_active_buyer
 from shops.models import Shop
 from .comparison import SESSION_KEY, comparison_products, parse_product_ids, session_products
 
@@ -266,17 +270,88 @@ def buyer_shop(request):
         return redirect(reverse('buyer_search') + '?' + urlencode({'shop': value}))
     return redirect('buyer_search')
 
-def product_detail(request, product_id):
-    product = get_object_or_404(
+def _detail_product(product_id):
+    return get_object_or_404(
         Product.objects.select_related('category', 'brand', 'shop').prefetch_related('specifications'),
         product_id=product_id,
     )
 
+
+def _render_product_detail(request, product, question_form=None, status=200, reply_form=None, reply_question=None):
+    questions = product.questions.select_related('user').prefetch_related(
+        Prefetch('answers', queryset=conversation_messages(), to_attr='thread_messages'),
+    ).order_by('-created_at', '-pk')
+    page_number = _question_page(reply_question) if reply_question else request.GET.get('questions_page')
+    questions_page = Paginator(questions, 10).get_page(page_number)
+    for question in questions_page:
+        question.reply_form = reply_form if reply_question and question.pk == reply_question.pk else ProductFollowupForm(auto_id=f'id_reply_{question.pk}_%s')
     context = {
         'page_name': 'model',
         'page_section': 'buyer',
         'catalog_source': 'database',
         'selected_product': product,
+        'questions_page': questions_page,
+        'question_form': question_form if question_form is not None else ProductQuestionForm(),
+        'can_ask_question': is_active_buyer(request.user),
+        'questions_open': product.status != 'INACTIVE' and product.shop.status == 'ACTIVE',
+        'question_login_url': reverse('auth_login') + '?' + urlencode({
+            'next': reverse('buyer_product_detail', args=[product.pk]) + '#product-questions',
+        }),
     }
 
-    return render(request, 'buyer/model.html', context)
+    return render(request, 'buyer/model.html', context, status=status)
+
+
+def _question_page(question):
+    newer = Q(created_at__gt=question.created_at) | Q(created_at=question.created_at, pk__gt=question.pk)
+    return ProductQuestion.objects.filter(newer, product_id=question.product_id).count() // 10 + 1
+
+
+@require_GET
+def product_detail(request, product_id):
+    return _render_product_detail(request, _detail_product(product_id))
+
+
+@require_POST
+def product_question_create(request, product_id):
+    product = _detail_product(product_id)
+    if not is_active_buyer(request.user):
+        messages.info(request, 'Vui lòng đăng nhập bằng tài khoản người mua để gửi câu hỏi.')
+        target = reverse('buyer_product_detail', args=[product.pk]) + '#product-questions'
+        return redirect(reverse('auth_login') + '?' + urlencode({'next': target}))
+    form = ProductQuestionForm(request.POST)
+    if not form.is_valid():
+        return _render_product_detail(request, product, question_form=form, status=400)
+    if product.status == 'INACTIVE' or product.shop.status != 'ACTIVE':
+        form.add_error(None, 'Sản phẩm hoặc gian hàng hiện không nhận câu hỏi mới.')
+        return _render_product_detail(request, product, question_form=form, status=400)
+    try:
+        ProductQuestion.objects.create(product=product, user=request.user, question=form.cleaned_data['question'])
+    except DatabaseError:
+        form.add_error(None, 'Chưa gửi được câu hỏi. Vui lòng thử lại.')
+        return _render_product_detail(request, product, question_form=form, status=503)
+    messages.success(request, 'Đã gửi câu hỏi. Shop sẽ trả lời tại phần hỏi đáp sản phẩm.')
+    return redirect(reverse('buyer_product_detail', args=[product.pk]) + '#product-questions')
+
+
+@require_POST
+def product_question_followup(request, product_id, question_id):
+    product = _detail_product(product_id)
+    question = get_object_or_404(ProductQuestion, pk=question_id, product=product)
+    target = reverse('buyer_product_detail', args=[product.pk]) + f'?questions_page={_question_page(question)}#product-question-{question.pk}'
+    if not is_active_buyer(request.user):
+        messages.info(request, 'Vui lòng đăng nhập bằng tài khoản người mua để tham gia trao đổi.')
+        return redirect(reverse('auth_login') + '?' + urlencode({'next': target}))
+    form = ProductFollowupForm(request.POST, auto_id=f'id_reply_{question.pk}_%s')
+    if not form.is_valid():
+        return _render_product_detail(request, product, status=400, reply_form=form, reply_question=question)
+    try:
+        append_question_message(question.pk, request.user, form.cleaned_data['reply'], is_shop_reply=False)
+    except ValidationError as error:
+        form.add_error(None, error.messages[0])
+        return _render_product_detail(request, product, status=400, reply_form=form, reply_question=question)
+    except DatabaseError:
+        form.add_error(None, 'Chưa gửi được phản hồi. Vui lòng thử lại.')
+        return _render_product_detail(request, product, status=503, reply_form=form, reply_question=question)
+    messages.success(request, 'Đã gửi nội dung hỏi thêm. Shop sẽ tiếp tục trả lời trong cuộc trao đổi này.')
+    return redirect(target)

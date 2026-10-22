@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -146,3 +147,9 @@ MEDIA_URL = '/media/'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 AUTH_USER_MODEL = 'users.User'
+
+# VNPay sandbox
+VNPAY_TMN_CODE = os.environ.get('VNPAY_TMN_CODE', '')
+VNPAY_HASH_SECRET = os.environ.get('VNPAY_HASH_SECRET', '')
+VNPAY_RETURN_URL = os.environ.get('VNPAY_RETURN_URL', '')
+VNPAY_PAYMENT_URL = os.environ.get('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')

@@ -1,8 +1,27 @@
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth import get_user_model
+from .models import Address
 
 User = get_user_model()
+
+
+class BuyerAddressForm(forms.ModelForm):
+    receiver_name = forms.CharField(label='Người nhận', max_length=150, widget=forms.TextInput(attrs={'autocomplete': 'name'}))
+    receiver_phone = forms.RegexField(
+        label='Số điện thoại', regex=r'\A0[0-9]{9}\Z', max_length=10,
+        error_messages={'invalid': 'Nhập số điện thoại gồm 10 chữ số, bắt đầu bằng 0.'},
+        widget=forms.TextInput(attrs={'type': 'tel', 'autocomplete': 'tel-national', 'inputmode': 'tel', 'pattern': '0[0-9]{9}', 'placeholder': '0901234567'}),
+    )
+    province = forms.CharField(label='Tỉnh / thành phố', max_length=100, widget=forms.TextInput(attrs={'autocomplete': 'address-level1'}))
+    district = forms.CharField(label='Quận / huyện (nếu có)', max_length=100, required=False)
+    ward = forms.CharField(label='Phường / xã', max_length=100, widget=forms.TextInput(attrs={'autocomplete': 'address-level2'}))
+    detail_address = forms.CharField(label='Số nhà, tên đường', max_length=255, widget=forms.TextInput(attrs={'autocomplete': 'street-address'}))
+    is_default = forms.BooleanField(label='Đặt làm địa chỉ mặc định', required=False)
+
+    class Meta:
+        model = Address
+        fields = ['receiver_name', 'receiver_phone', 'province', 'district', 'ward', 'detail_address', 'is_default']
 
 
 class BuyerRegisterForm(forms.Form):

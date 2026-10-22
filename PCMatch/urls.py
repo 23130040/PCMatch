@@ -9,6 +9,7 @@ from django.views.generic import TemplateView
 from analytics import views as analytics_views
 from carts import views as cart_views
 from orders import views as order_views
+from payments import views as payment_views
 from products import views as product_views
 from shops import views as shop_views
 from users import views as user_views
@@ -45,6 +46,8 @@ urlpatterns = [
 
     path('', product_views.buyer_home, name='home'),
     path('buyer/products/<int:product_id>/', product_views.product_detail, name='buyer_product_detail'),
+    path('buyer/products/<int:product_id>/questions/', product_views.product_question_create, name='buyer_product_question_create'),
+    path('buyer/products/<int:product_id>/questions/<int:question_id>/reply/', product_views.product_question_followup, name='buyer_product_question_followup'),
     path('staff/logout/', user_views.auth_logout, name='staff_logout'),
     path('staff/shop/<int:shop_id>/approve/',
          staff_required(shop_views.staff_shop_approve),
@@ -92,6 +95,10 @@ urlpatterns = [
          shop_views.shop_required(shop_views.shop_return_update),
          name='shop_return_update',
     ),
+    path('buyer/orders/create/', order_views.place_order, name='buyer_place_order',),
+    path('buyer/addresses/<int:address_id>/default/', user_views.buyer_address_default, name='buyer_address_default'),
+    path('payments/vnpay/ipn/', payment_views.vnpay_ipn, name='vnpay_ipn'),
+    path('payments/vnpay/return/', payment_views.vnpay_return, name='vnpay_return'),
 ]
 
 for section, pages in PAGE_GROUPS.items():
@@ -113,6 +120,12 @@ for section, pages in PAGE_GROUPS.items():
             view = product_views.buyer_product_compare
         elif section == 'buyer' and page == 'checkout':
             view = cart_views.cart_checkout
+        elif section == 'buyer' and page == 'orders':
+            view = order_views.buyer_orders
+        elif section == 'buyer' and page == 'addresses':
+            view = user_views.buyer_addresses
+        elif section == 'buyer' and page in {'order', 'payment'}:
+            view = order_views.buyer_order
             
         
         elif section == 'staff' and page == 'dashboard':

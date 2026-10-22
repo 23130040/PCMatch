@@ -22,6 +22,7 @@
     {% include 'admin/sidebar.html' %}
 
     <main class="shell__content admin-dashboard-content" id="main">
+        {% for message in messages %}<p class="message" role="status">{{ message }}</p>{% endfor %}
         <div class="admin-page-head">
             <div>
                 <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý đơn hàng</span></nav>
@@ -150,7 +151,7 @@
         </td>
 
         
-        <td class="order-price">{{ order.total_amount }} ₫</td>
+        <td class="order-price">{{ order.total_amount }} ₫<br><small>{{ order.get_payment_method_display }} · {{ order.get_payment_status_display }}</small></td>
 
       
         <td class="order-address">
@@ -161,12 +162,14 @@
         <td>
             {% if order.order_status == 'PENDING' %}
                 <span class="status order-status order-status--pending">Chờ xác nhận</span>
+            {% elif order.order_status == 'AWAITING_PAYMENT' %}<span class="status">Chờ thanh toán VNPay</span>
+            {% elif order.order_status == 'PROCESSING' %}<span class="status">Shop đang xử lý</span>
             {% elif order.order_status == 'COMFIRMED' %}
                 <span class="status order-status order-status--confirmed">Đã xác nhận</span>
             {% elif order.order_status == 'SHIPPING' %}
                 <span class="status order-status order-status--shipping">Đang giao</span>
             {% elif order.order_status == 'DELIVERED' %}
-                <span class="status order-status order-status--delivered">Đã giao</span>
+                <span class="status order-status order-status--delivered">Hoàn thành</span>
             {% elif order.order_status == 'CANCELLED' %}
                 <span class="status order-status order-status--cancelled">Đã hủy</span>
             {% elif order.order_status == 'RETURNED' %}
@@ -183,11 +186,11 @@
     </button>
 
     {% if order.order_status == 'PENDING' %}
-      
-        <a href="{% url 'update_order_status' order.order_id %}?status=COMFIRMED" class="btn btn-sm btn-success" style="font-size: 12px; margin-left: 5px;">Xác nhận</a>
-    {% elif order.order_status == 'COMFIRMED' %}
-      
-        <a href="{% url 'update_order_status' order.order_id %}?status=SHIPPING" class="btn btn-sm btn-primary" style="font-size: 12px; margin-left: 5px;">Giao hàng</a>
+        <form method="post" action="{% url 'update_order_status' order.order_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="COMFIRMED">
+            <button class="btn btn--primary" type="submit">Xác nhận đơn</button>
+        </form>
     {% endif %}
 </td>
     </tr>

@@ -82,6 +82,7 @@ class ProductAnswer(models.Model):
     question = models.ForeignKey(ProductQuestion, on_delete=models.CASCADE, related_name='answers')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='product_answers')
     answer = models.TextField()
+    is_shop_reply = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

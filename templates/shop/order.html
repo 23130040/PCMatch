@@ -101,67 +101,32 @@
                     </p>
                     <div class="stack">
                         {% if order.order_status == 'PENDING' %}
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="COMFIRMED">
-                                <button class="btn btn--primary" type="submit">
-                                    Xác nhận đơn
-                                </button>
-                            </form>
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="CANCELLED">
-                                <label class="field">
-                                    <span>
-                                        Lý do hủy
-                                    </span>
-                                    <input name="note" placeholder="Nhập lý do...">
-                                </label>
-                                <button class="btn btn--danger" type="submit">
-                                    Hủy đơn
-                                </button>
-                            </form>
+                            <p>Đang chờ admin xác nhận đơn hàng.</p>
+                        {% elif order.order_status == 'AWAITING_PAYMENT' %}
+                            <p>Đang chờ người mua thanh toán VNPay.</p>
                         {% elif order.order_status == 'COMFIRMED' %}
                             <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="new_status" value="PROCESSING">
-                                <button class="btn btn--primary" type="submit">
-                                    Bắt đầu xử lý
-                                </button>
-                            </form>
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="CANCELLED">
-                                <label class="field">
-                                    <span>
-                                        Lý do hủy
-                                    </span>
-                                    <input name="note" placeholder="Nhập lý do...">
-                                </label>
-                                <button class="btn btn--danger" type="submit">
-                                    Hủy đơn
-                                </button>
+                                <button class="btn btn--primary" type="submit">Bắt đầu xử lý</button>
                             </form>
                         {% elif order.order_status == 'PROCESSING' %}
                             <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="new_status" value="SHIPPING">
-                                <button class="btn btn--primary" type="submit">
-                                    Bắt đầu giao hàng
-                                </button>
+                                <button class="btn btn--primary" type="submit">Bắt đầu giao hàng</button>
                             </form>
                         {% elif order.order_status == 'SHIPPING' %}
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" class="stack">
                                 {% csrf_token %}
                                 <input type="hidden" name="new_status" value="DELIVERED">
-                                <button class="btn btn--primary" type="submit">
-                                    Xác nhận đã giao
-                                </button>
+                                {% if order.payment_method == 'COD' %}
+                                <label class="check"><input type="checkbox" name="cod_collected" value="yes" required> Đã thu đủ {{ order.shop_total|vnd }} ₫ tiền COD của shop</label>
+                                {% endif %}
+                                <button class="btn btn--primary" type="submit">Xác nhận đã giao và hoàn thành</button>
                             </form>
                         {% else %}
-                            <p>
-                                Đơn hàng đã hoàn tất xử lý.
-                            </p>
+                            <p>Đơn hàng đã hoàn tất xử lý.</p>
                         {% endif %}
                     </div>
                 </section>

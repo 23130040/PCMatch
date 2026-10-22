@@ -84,9 +84,13 @@ def cart_remove(request, item_id):
 @require_GET
 @buyer_required
 def cart_checkout(request):
-    address = request.user.addresses.order_by('-is_default', 'pk').first()
+    from orders.services import checkout_token
+    from payments.vnpay import configured
+    address = request.user.addresses.filter(is_archived=False).order_by('-is_default', 'pk').first()
     return render(request, 'buyer/checkout.html', {
         'page_name': 'checkout', 'page_section': 'buyer',
         'checkout_user': request.user, 'shipping_address': address,
+        'checkout_token': checkout_token(request.user),
+        'vnpay_ready': configured(),
         **cart_summary(request.user),
     })

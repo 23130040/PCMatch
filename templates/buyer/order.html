@@ -1,201 +1,37 @@
 {% extends 'includes/buyer_base.html' %}
-{% block title %}Đơn PCM-260916-014 — PCMatch{% endblock %}
+{% load cart_prices %}
+{% block title %}{{ order.order_code }} — PCMatch{% endblock %}
 {% block content %}
-<div class="page-head">
-    <div>
-        <h1>
-            PCM-260916-014
-        </h1>
-        <p>
-            00:06:50 16/10/2026
-        </p>
-    </div>
-    <div class="cluster">
-        <a class="btn btn--secondary" href="/buyer/orders/">
-            Lịch sử đơn
-        </a>
-        <button type="button" class="btn btn--secondary" data-id="PCM-260916-014" disabled="">
-            Tải biên nhận demo
-        </button>
-    </div>
-</div>
-<div class="message message--info">
-    Đã thanh toán mô phỏng
-</div>
-<section class="panel panel--padded">
-    <h2>
-        Người nhận
-    </h2>
-    <p>
-        Nguyễn Minh · 0900000128
-        <br>
-        72 Nguyễn Thị Minh Khai, Phường Xuân Hòa · TP. Hồ Chí Minh
-    </p>
+<header class="page-head">
+    <div><h1>Chi tiết đơn hàng</h1><p>{{ order.order_code }} · {{ order.created_at|date:'d/m/Y H:i' }}</p></div>
+    <a class="btn btn--secondary" href="{% url 'buyer_orders' %}">Lịch sử đơn hàng</a>
+</header>
+<section class="panel panel--padded stack">
+    <h2>Trạng thái đơn hàng</h2>
+    <p><strong>{{ order.get_order_status_display }}</strong> · {{ order.get_payment_method_display }} · {{ order.get_payment_status_display }}</p>
+    {% if order.order_status == 'AWAITING_PAYMENT' %}
+    <p>Đang chờ xác nhận thanh toán từ VNPay. Vui lòng tải lại trang sau ít phút. Nếu bạn đã bị trừ tiền nhưng trạng thái chưa cập nhật, liên hệ hỗ trợ và cung cấp mã đơn hàng.</p>
+    {% elif order.order_status == 'PENDING' %}
+    <p>Đơn hàng đang chờ admin xác nhận trước khi chuyển cho shop xử lý.</p>
+    {% endif %}
+    <p>Tổng thanh toán: <strong>{{ order.total_amount|vnd }} ₫</strong></p>
 </section>
-<dl class="money-summary">
-    <div>
-        <dt>
-            Tiền hàng
-        </dt>
-        <dd>
-            10.370.000
-            &nbsp;
-            ₫
-        </dd>
-    </div>
-    <div>
-        <dt>
-            Phí giao ước tính
-        </dt>
-        <dd>
-            65.000
-            &nbsp;
-            ₫
-        </dd>
-    </div>
-    <div>
-        <dt>
-            Lắp ráp một shop
-        </dt>
-        <dd>
-            0
-            &nbsp;
-            ₫
-        </dd>
-    </div>
-    <div>
-        <dt>
-            Ưu đãi đã phân bổ
-        </dt>
-        <dd>
-            −200.000
-            &nbsp;
-            ₫
-        </dd>
-    </div>
-    <div class="total">
-        <dt>
-            Tổng demo
-        </dt>
-        <dd data-total="">
-            10.235.000
-            &nbsp;
-            ₫
-        </dd>
-    </div>
-</dl>
 <section class="panel panel--padded">
-    <h2>
-        BuildPro Sài Gòn · SUB-BP-002
-    </h2>
-    <div class="cluster">
-        <span class="status">
-            Chờ shop xác nhận
-        </span>
-        <span class="status">
-            Giao nhận: Chưa tạo vận đơn
-        </span>
-    </div>
+    <h2>Người nhận</h2>
+    <p>{{ order.address.receiver_name }} · {{ order.address.receiver_phone }}</p>
+    <p>{{ order.address.detail_address }}, {{ order.address.ward }}, {{ order.address.district }}, {{ order.address.province }}</p>
+</section>
+<section class="panel panel--padded">
+    <h2>Sản phẩm đã đặt</h2>
+    {% for item in order.order_items.all %}
     <article class="list-row">
-        <div>
-            <h3>
-                <a href="/buyer/model/?id=CPU-7600">
-                    AMD Ryzen 5 7600
-                </a>
-            </h3>
-            <p>
-                BP-CPU-7600 · 1 × 4.690.000
-                &nbsp;
-                ₫ · BH 36 tháng
-            </p>
-            <p>
-                Serial demo:
-            </p>
-        </div>
+        <div><h3>{{ item.product.product_name }}</h3><p>{{ item.shop.shop_name }} · {{ item.quantity }} × {{ item.unit_price|vnd }} ₫</p></div>
+        <strong>{{ item.subtotal|vnd }} ₫</strong>
     </article>
-    <article class="list-row">
-        <div>
-            <h3>
-                <a href="/buyer/model/?id=MB-B650">
-                    MSI PRO B650M-A WIFI
-                </a>
-            </h3>
-            <p>
-                BP-MB-B650 · 1 × 3.890.000
-                &nbsp;
-                ₫ · BH 36 tháng
-            </p>
-            <p>
-                Serial demo:
-            </p>
-        </div>
-    </article>
-    <article class="list-row">
-        <div>
-            <h3>
-                <a href="/buyer/model/?id=SSD-SN770">
-                    WD Black SN770 1TB
-                </a>
-            </h3>
-            <p>
-                BP-SSD-SN770 · 1 × 1.790.000
-                &nbsp;
-                ₫ · BH 60 tháng
-            </p>
-            <p>
-                Serial demo:
-            </p>
-        </div>
-    </article>
-    <p>
-        Tiền hàng 10.370.000
-        &nbsp;
-        ₫ − ưu đãi 200.000
-        &nbsp;
-        ₫ + giao 65.000
-        &nbsp;
-        ₫ + lắp 0
-        &nbsp;
-        ₫ =
-        <strong>
-            10.235.000
-            &nbsp;
-            ₫
-        </strong>
-    </p>
-    <details>
-        <summary>
-            Theo dõi giao nhận / lịch sử
-        </summary>
-        <p>
-            Đơn vị giao: nhà vận chuyển mô phỏng · Dịch vụ Tiêu chuẩn · dự kiến 3–5 ngày
-        </p>
-        <p>
-            Vận đơn demo: Chưa tạo
-        </p>
-        <ul>
-            <li>
-                00:06:50 16/10/2026 · Thanh toán thành công; chờ shop xác nhận
-            </li>
-        </ul>
-    </details>
-    <div class="cluster">
-        <button type="button" class="btn btn--secondary" data-id="SUB-BP-002" disabled="">
-            Yêu cầu hủy đơn con
-        </button>
-        <a class="btn btn--secondary" href="/buyer/cases/?new=complaint&amp;order=PCM-260916-014&amp;sub=SUB-BP-002">
-            Hỗ trợ / khiếu nại
-        </a>
-    </div>
-    <details class="demo-scenarios">
-        <summary>
-            Mô phỏng xử lý đơn con
-        </summary>
-        <div class="cluster">
-            <button type="button" class="btn btn--secondary" data-id="SUB-BP-002" disabled="">
-                Shop xác nhận
-            </button>
-        </div>
-    </details>
+    {% endfor %}
+</section>
+<section class="panel panel--padded">
+    <h2>Lịch sử xử lý</h2>
+    <ul>{% for event in order.status_history.all %}<li>{{ event.changed_at|date:'d/m/Y H:i' }} · {{ event.note }}</li>{% empty %}<li>Chưa có cập nhật.</li>{% endfor %}</ul>
 </section>
 {% endblock %}
