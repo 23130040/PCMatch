@@ -38,8 +38,10 @@ urlpatterns = [
     path('buyer/cart/items/<int:item_id>/remove/', cart_views.cart_remove, name='buyer_cart_remove'),
     path('buyer/compare/selection/', product_views.buyer_comparison_update, name='buyer_comparison_update'),
 
-    
-    path('staff/orders/', staff_required(order_views.order_list), name='load_ListOrder'),
+    path('staff/orders/', staff_required(order_views.orderList), name='loadOrder'),
+    path('staff/orders/many/', staff_required(order_views.changeManyStatus), name='updateOrderStatus'),
+    path('staff/order/<int:orderid>/update/', order_views.changeStatus, name='updateStatus'),
+    path('staff/products/', staff_required(product_views.load_products), name='load_products'),
     path('staff/products/<int:product_id>/toggle/', product_views.showORhide_Product, name='showORhide_Product'),
     path('staff/order/<int:order_id>/update/', order_views.changeStatus, name='update_order_status'),
     path('staff/guest/<int:user_id>/toggle/', staff_required(user_views.toggle_user_lock), name='staff_guest_toggle'),
@@ -131,7 +133,7 @@ for section, pages in PAGE_GROUPS.items():
         elif section == 'staff' and page == 'dashboard':
             view = staff_required(analytics_views.dashboard_view)
         elif section == 'staff' and (page == 'order' or page == 'orders'):
-            view = staff_required(order_views.order_list)
+            staff_required(order_views.orderList)
         elif section == 'staff' and page == 'products':
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
