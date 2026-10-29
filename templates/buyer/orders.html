@@ -3,14 +3,28 @@
 {% block title %}Đơn hàng — PCMatch{% endblock %}
 {% block content %}
 <header class="page-head"><div><h1>Lịch sử đơn hàng</h1><p>Theo dõi thanh toán và tiến độ xử lý đơn hàng.</p></div></header>
-<form method="get" class="cluster">
+<form method="get" class="cluster buyer-order-search">
     <label class="field"><span>Tìm mã đơn</span><input name="q" value="{{ q }}" placeholder="Nhập mã đơn hàng"></label>
     <button class="btn btn--primary" type="submit">Tìm đơn</button>
 </form>
 {% for order in orders_page %}
-<article class="panel panel--padded list-row">
-    <div><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p></div>
-    <a class="btn btn--secondary" href="{% url 'buyer_order' %}?id={{ order.order_code }}">Xem đơn</a>
+<article class="panel panel--padded buyer-order-card">
+    <div class="buyer-order-card__summary"><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p></div>
+    <div class="buyer-order-card__products" aria-label="Sản phẩm trong đơn {{ order.order_code }}">
+        {% for item in order.order_items.all %}
+        <div class="buyer-order-product">
+            <span class="buyer-order-product__image">{% if item.product.thumbnail %}<img src="{{ item.product.thumbnail.url }}" alt="{{ item.product.product_name }}" loading="lazy">{% else %}<span>Chưa có ảnh</span>{% endif %}</span>
+            <span class="buyer-order-product__name">{{ item.product.product_name }}</span>
+            <span class="buyer-order-product__quantity">×{{ item.quantity }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="buyer-order-card__actions">
+        <a class="btn btn--secondary" href="{% url 'buyer_order' %}?id={{ order.order_code }}">Xem đơn</a>
+        {% if order.payment_method == 'VNPAY' and order.payment_status == 'FAILED' %}
+        <form method="post" action="{% url 'buyer_retry_vnpay_payment' order.pk %}">{% csrf_token %}<button class="btn btn--primary" type="submit">Thanh toán lại</button></form>
+        {% endif %}
+    </div>
 </article>
 {% empty %}<section class="empty"><h2>Chưa có đơn hàng</h2><a href="{% url 'buyer_cart' %}">Về giỏ hàng</a></section>{% endfor %}
 <nav class="cluster" aria-label="Phân trang đơn hàng">

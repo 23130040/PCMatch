@@ -663,10 +663,26 @@ def staff_shop_list(request):
     })
 
 
-def _staff_shop_return(request):
+def _staff_shop_return(request, shop=None):
+    return_to = request.POST.get('return_to')
+    if return_to == 'dashboard':
+        return reverse('staff_dashboard')
+    if return_to == 'detail' and shop is not None:
+        return reverse('staff_shop_detail', args=[shop.pk])
     query = {key: request.POST[key] for key in ('search', 'status', 'page') if request.POST.get(key)}
     url = reverse('staff_shop')
     return f'{url}?{urlencode(query)}' if query else url
+
+
+@require_GET
+def staff_shop_detail(request, shop_id):
+    shop = get_object_or_404(Shop.objects.select_related('owner'), pk=shop_id)
+    shop.document_count = int(bool(shop.id_card)) + int(bool(shop.business_license))
+    return render(request, 'admin/shop_detail.html', {
+        'page_name': 'shop',
+        'page_section': 'staff',
+        'shop': shop,
+    })
 
 
 @require_POST
@@ -678,7 +694,7 @@ def staff_shop_approve(request, shop_id):
         shop.status = 'ACTIVE'
         shop.save()
         messages.success(request, f'Đã duyệt shop "{shop.shop_name}". Chủ shop đã được thông báo.')
-    return redirect(_staff_shop_return(request))
+    return redirect(_staff_shop_return(request, shop))
 
 
 @require_POST
@@ -697,4 +713,4 @@ def staff_shop_suspend(request, shop_id):
             type='SHOP_SUSPENDED',
         )
         messages.success(request, f'Đã tạm ngưng shop "{shop.shop_name}".')
-    return redirect(_staff_shop_return(request))
+    return redirect(_staff_shop_return(request, shop))

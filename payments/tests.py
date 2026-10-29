@@ -26,7 +26,8 @@ class VNPayTests(TestCase):
     def signed_params(self, **overrides):
         params = {
             'vnp_TmnCode': settings.VNPAY_TMN_CODE, 'vnp_TxnRef': self.payment.transaction_code,
-            'vnp_Amount': '20000000', 'vnp_ResponseCode': '00', 'vnp_TransactionStatus': '00',
+            'vnp_Amount': '20000000', 'vnp_CurrCode': 'VND',
+            'vnp_ResponseCode': '00', 'vnp_TransactionStatus': '00',
             'vnp_TransactionNo': '1234567', 'vnp_PayDate': '20261022123000',
             'vnp_OrderInfo': f'Thanh toan {self.order.order_code}',
         }
@@ -64,12 +65,13 @@ class VNPayTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 3)
 
-    def test_browser_return_never_marks_order_paid(self):
+    def test_signed_browser_return_marks_payment_paid(self):
         response = self.client.get(reverse('vnpay_return'), self.signed_params())
         self.assertEqual(response.status_code, 302)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.payment_status, 'PENDING')
-        self.assertEqual(self.order.order_status, 'AWAITING_PAYMENT')
+        self.payment.refresh_from_db()
+        self.assertEqual((self.order.payment_status, self.order.order_status), ('PAID', 'PENDING'))
+        self.assertEqual(self.payment.gateway_transaction_no, '1234567')
 
     def test_signature_amount_merchant_reference_and_duplicate_parameters(self):
         params = self.signed_params()
@@ -105,14 +107,14 @@ class VNPayTests(TestCase):
 
     def test_admin_cannot_approve_unpaid_vnpay(self):
         self.client.force_login(self.admin)
-        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'status': 'COMFIRMED'})
+        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'order_status': 'COMFIRMED'})
         self.order.refresh_from_db()
         self.assertEqual(self.order.order_status, 'AWAITING_PAYMENT')
 
     def test_paid_vnpay_fulfillment_keeps_paid_without_cod_checkbox(self):
         self.ipn()
         self.client.force_login(self.admin)
-        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'status': 'COMFIRMED'})
+        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'order_status': 'COMFIRMED'})
         self.client.force_login(self.owner)
         for status in ['PROCESSING', 'SHIPPING', 'DELIVERED']:
             self.client.post(reverse('shop_order_update_status', args=[self.order.pk]), {'new_status': status})

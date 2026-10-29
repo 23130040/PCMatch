@@ -16,6 +16,24 @@ The repaired environment uses Python 3.12. From the project directory:
 .venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
+## VNPay Sandbox
+
+Set `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET` and `VNPAY_RETURN_URL` in the local
+environment. The return URL must be the public HTTPS URL for
+`/payments/vnpay/return/`. Configure the separate VNPay IPN/notification URL in
+the merchant portal as the public HTTPS URL for `/payments/vnpay/ipn/`; for local
+development, the server needs a public tunnel so VNPay can reach this endpoint.
+Keep the hash secret private and use sandbox credentials for local testing.
+
+Checkout records the order and payment as `PENDING`, reserves stock, and redirects
+to VNPay. Both the signed browser return and the signed IPN verify the merchant,
+reference and amount before recording `PAID` or a confirmed terminal failure. The
+IPN handles payments even when the buyer does not return to the site. Confirmed
+failure cancels the order and restores stock; pending, reversed or suspicious
+results stay pending for reconciliation. A paid order then follows the normal
+admin order confirmation and shop fulfillment flow. VNPay checkout requires an
+order total of at least 5,000 VND.
+
 To create an environment on another machine, install Python 3.12 or later and run
 `py -3.12 -m venv .venv` before installing dependencies. Virtual environments depend
 on their base Python installation; do not copy a virtual environment between machines.

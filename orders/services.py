@@ -52,8 +52,11 @@ def create_order(user, payment_method, checkout_token):
         subtotal += product.price * item.quantity
     if subtotal > Decimal('9999999999999.99'):
         raise ValidationError('Giá trị đơn hàng vượt giới hạn cho phép.')
-    if payment_method == 'VNPAY' and (subtotal != subtotal.to_integral_value() or subtotal * 100 > 999999999999):
-        raise ValidationError('VNPay yêu cầu số tiền nguyên VND và trong giới hạn giao dịch.')
+    if payment_method == 'VNPAY':
+        if subtotal < Decimal('5000'):
+            raise ValidationError('VNPay chỉ hỗ trợ thanh toán đơn hàng từ 5.000 ₫.')
+        if subtotal != subtotal.to_integral_value() or subtotal * 100 > 999999999999:
+            raise ValidationError('VNPay yêu cầu số tiền nguyên VND và trong giới hạn giao dịch.')
     is_cod = payment_method == 'COD'
     order = Order.objects.create(
         user=user, address=address, checkout_token=checkout_token,
@@ -83,6 +86,46 @@ def create_order(user, payment_method, checkout_token):
 
 
 @transaction.atomic
+def retry_vnpay_payment(order_id, buyer):
+    Order.objects.filter(pk=order_id, user=buyer).update(updated_at=timezone.now())
+    order = Order.objects.select_for_update().get(pk=order_id, user=buyer)
+    if not (
+        order.payment_method == 'VNPAY'
+        and order.payment_status == 'FAILED'
+        and order.order_status == 'CANCELLED'
+    ):
+        raise ValidationError('Chỉ có thể thanh toán lại đơn VNPay đã thanh toán thất bại.')
+
+    items = list(order.order_items.select_for_update().order_by('product_id'))
+    products = {
+        product.pk: product for product in Product.objects.select_for_update()
+        .select_related('shop').filter(pk__in=[item.product_id for item in items]).order_by('pk')
+    }
+    for item in items:
+        product = products.get(item.product_id)
+        if product is None or product.shop.status != 'ACTIVE':
+            raise ValidationError('Một hoặc nhiều sản phẩm không còn được bán.')
+        validate_quantity(product, item.quantity)
+        reserved = Product.objects.filter(
+            pk=product.pk, status='ACTIVE', stock_quantity__gte=item.quantity,
+        ).update(stock_quantity=F('stock_quantity') - item.quantity)
+        if not reserved:
+            raise ValidationError('Tồn kho đã thay đổi. Vui lòng kiểm tra lại đơn hàng.')
+
+    old_status = order.order_status
+    order.payment_status = 'PENDING'
+    order.order_status = 'AWAITING_PAYMENT'
+    order.save(update_fields=['payment_status', 'order_status', 'updated_at'])
+    order.order_items.update(item_status='AWAITING_PAYMENT')
+    payment = Payment.objects.create(
+        order=order, transaction_code=uuid4().hex, payment_method='VNPAY',
+        amount=order.total_amount, status='PENDING',
+    )
+    history(order, buyer, old_status, 'Người mua thanh toán lại đơn hàng qua VNPay.')
+    return payment
+
+
+@transaction.atomic
 def confirm_order(order_id, actor):
     Order.objects.filter(pk=order_id).update(updated_at=timezone.now())
     order = Order.objects.select_for_update().get(pk=order_id)
@@ -91,7 +134,7 @@ def confirm_order(order_id, actor):
     if order.payment_method == 'VNPAY' and order.payment_status != 'PAID':
         raise ValidationError('Đơn VNPay phải thanh toán thành công trước khi xác nhận.')
     old_status = order.order_status
-    order.order_status = 'COMFIRMED'  # Keep the existing database status code.
+    order.order_status = 'COMFIRMED'
     order.save(update_fields=['order_status', 'updated_at'])
     order.order_items.update(item_status='COMFIRMED')
     history(order, actor, old_status, 'Admin xác nhận và chuyển cho shop xử lý.')

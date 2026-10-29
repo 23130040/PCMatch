@@ -11,7 +11,7 @@ from orders.models import Order
 
 from users.views import buyer_required, staff_required
 from payments.vnpay import configured, payment_url
-from .services import confirm_order, create_order
+from .services import confirm_order, create_order, retry_vnpay_payment
 
 def orderList(request):
     search = request.GET.get('search', '').strip()
@@ -53,7 +53,7 @@ def orderList(request):
 @staff_required
 def changeStatus(request, orderid):
     if request.method == 'POST':
-        order = Order.objects.get(pk=orderid)
+        order = get_object_or_404(Order, pk=orderid)
         newStatus = request.POST.get('order_status')
         valid = ['PENDING', 'COMFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED']
         
@@ -64,7 +64,15 @@ def changeStatus(request, orderid):
                     for item in items.all():
                         item.product.sold_quantity += item.quantity
                         item.product.save()
-            
+
+            if newStatus == 'COMFIRMED':
+                try:
+                    confirm_order(order.pk, request.user)
+                    messages.success(request, 'Đã xác nhận đơn hàng.')
+                except ValidationError as error:
+                    messages.error(request, error.messages[0])
+                return redirect('loadOrder')
+
             order.order_status = newStatus
             order.save()
             messages.success(request, f'Đã cập nhật đơn hàng thành {newStatus}.')
@@ -97,10 +105,27 @@ def place_order(request):
     return redirect(f'{reverse("buyer_order")}?id={order.order_code}')
 
 
+@require_POST
+@buyer_required
+def buyer_retry_vnpay_payment(request, order_id):
+    if not configured():
+        messages.error(request, 'VNPay chưa được cấu hình sandbox. Vui lòng thử lại sau.')
+        return redirect('buyer_orders')
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    try:
+        payment = retry_vnpay_payment(order.pk, request.user)
+        return redirect(payment_url(payment, request.META.get('REMOTE_ADDR', '127.0.0.1')))
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+    except DatabaseError:
+        messages.error(request, 'Hệ thống đang bận. Vui lòng thử lại.')
+    return redirect(f'{reverse("buyer_order")}?id={order.order_code}')
+
+
 @require_GET
 @buyer_required
 def buyer_orders(request):
-    orders = Order.objects.filter(user=request.user).order_by('-created_at', '-pk')
+    orders = Order.objects.filter(user=request.user).prefetch_related('order_items__product').order_by('-created_at', '-pk')
     query = request.GET.get('q', '').strip()
     if query:
         orders = orders.filter(order_code__icontains=query)

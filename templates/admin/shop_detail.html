@@ -1,0 +1,91 @@
+{% load static %}
+<!doctype html>
+<html lang="vi" data-page="shop" data-section="staff">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ shop.shop_name }} — Hồ sơ shop — PCMatch Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20261030-shop-review">
+    {% include 'includes/frontend_config.html' %}
+</head>
+<body class="admin-dashboard">
+<a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
+{% include 'admin/header.html' %}
+<div class="shell">
+    {% include 'admin/sidebar.html' %}
+    <main class="shell__content operations-page admin-dashboard-content" id="main">
+        {% for message in messages %}
+        <div class="message{% if message.tags == 'error' %} message--error{% endif %}" role="status">{{ message }}</div>
+        {% endfor %}
+        <header class="admin-page-head">
+            <div>
+                <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><a href="{% url 'staff_shop' %}">Quản lý shop</a><span>Hồ sơ shop</span></nav>
+                <h1>Hồ sơ {{ shop.shop_name }}</h1>
+                <p>Kiểm tra thông tin và hồ sơ pháp lý trước khi phê duyệt shop tham gia sàn.</p>
+            </div>
+            <a class="btn btn--secondary" href="{% url 'staff_shop' %}?status=PENDING"><i class="fa-solid fa-arrow-left"></i> Danh sách chờ duyệt</a>
+        </header>
+
+        <section class="panel admin-shop-review">
+            <header class="admin-shop-review__head">
+                <div class="admin-section-title">
+                    <span class="admin-icon admin-icon--blue">{% if shop.logo %}<img src="{{ shop.logo.url }}" alt="">{% else %}<i class="fa-solid fa-store"></i>{% endif %}</span>
+                    <div>
+                        <h2>{{ shop.shop_name }}</h2>
+                        <p>Mã shop: SH-{{ shop.pk }} · Đăng ký {{ shop.created_at|date:'d/m/Y H:i' }}</p>
+                    </div>
+                </div>
+                {% if shop.status == 'PENDING' %}<span class="status status--warn">Chờ duyệt</span>{% elif shop.status == 'ACTIVE' %}<span class="status status--active">Đang hoạt động</span>{% else %}<span class="status status--suspended">Tạm ngưng</span>{% endif %}
+            </header>
+
+            <div class="admin-shop-review__grid">
+                <section>
+                    <h3>Thông tin shop</h3>
+                    <dl class="admin-shop-review__details">
+                        <div><dt>Tên shop</dt><dd>{{ shop.shop_name }}</dd></div>
+                        <div><dt>Số điện thoại</dt><dd>{{ shop.phone|default:'Chưa cập nhật' }}</dd></div>
+                        <div><dt>Địa chỉ</dt><dd>{{ shop.address|default:'Chưa cập nhật' }}</dd></div>
+                        <div><dt>Phí sàn</dt><dd>{{ shop.platform_fee_percent }}%</dd></div>
+                        <div class="admin-shop-review__wide"><dt>Mô tả</dt><dd>{{ shop.description|default:'Chưa có mô tả.' }}</dd></div>
+                    </dl>
+                </section>
+                <section>
+                    <h3>Chủ shop</h3>
+                    <dl class="admin-shop-review__details">
+                        <div><dt>Họ và tên</dt><dd>{{ shop.owner.full_name|default:shop.owner.username }}</dd></div>
+                        <div><dt>Email</dt><dd>{{ shop.owner.email }}</dd></div>
+                        <div><dt>Số điện thoại</dt><dd>{{ shop.owner.phone|default:'Chưa cập nhật' }}</dd></div>
+                        <div><dt>Tài khoản</dt><dd>{{ shop.owner.username }}</dd></div>
+                    </dl>
+                </section>
+            </div>
+
+            <section class="admin-shop-review__documents">
+                <div><h3>Hồ sơ pháp lý</h3><p>{% if shop.legal_submitted_at %}Đã nộp lúc {{ shop.legal_submitted_at|date:'d/m/Y H:i' }}{% else %}Shop chưa nộp đủ hồ sơ pháp lý.{% endif %}</p></div>
+                <div class="admin-shop-review__document-links">
+                    {% if shop.id_card %}<a class="btn btn--secondary" href="{{ shop.id_card.url }}" target="_blank" rel="noopener"><i class="fa-regular fa-id-card"></i> CMND/CCCD</a>{% else %}<span>Chưa có CMND/CCCD</span>{% endif %}
+                    {% if shop.business_license %}<a class="btn btn--secondary" href="{{ shop.business_license.url }}" target="_blank" rel="noopener"><i class="fa-regular fa-file-lines"></i> Giấy phép kinh doanh</a>{% else %}<span>Chưa có giấy phép kinh doanh</span>{% endif %}
+                </div>
+            </section>
+
+            {% if shop.status == 'PENDING' %}
+            <footer class="admin-shop-review__actions">
+                <form method="post" action="{% url 'staff_shop_approve' shop.pk %}">
+                    {% csrf_token %}<input type="hidden" name="return_to" value="detail">
+                    <button class="btn btn--primary" type="submit"><i class="fa-solid fa-check"></i> Duyệt shop</button>
+                </form>
+                <a class="btn btn--secondary" href="{% url 'staff_shop' %}?status=PENDING">Quay lại danh sách</a>
+            </footer>
+            {% endif %}
+        </section>
+    </main>
+</div>
+{% include 'includes/admin_interface_controls.html' %}
+<script src="{% static 'js/admin-interface.js' %}" defer></script>
+</body>
+</html>

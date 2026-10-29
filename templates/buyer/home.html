@@ -46,6 +46,9 @@
             </p>
         {% endfor %}
     </div>
+    <div class="home-recommended-more">
+        <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Xem thêm</a>
+    </div>
 </section>
 {% endif %}
 
@@ -75,7 +78,6 @@
     <div class="section-heading"><h2 id="bestsellers-title">Sản phẩm bán chạy</h2><a class="btn btn--secondary" href="{% url 'buyer_search' %}?sort=sold">Xem tất cả</a></div>
     <div class="catalog-grid">{% for product in bestselling_products %}{% include 'includes/product_card.html' %}{% empty %}<p class="muted">Chưa có sản phẩm đang bán.</p>{% endfor %}</div>
 </section>
-<section class="build-entry"><div><h2>Cần chọn cả cấu hình?</h2><p>Tự chọn từng linh kiện hoặc gửi nhu cầu để shop đề xuất.</p></div><div class="cluster"><a class="btn btn--secondary" href="{% url 'buyer_builder' %}">Tự build PC</a><a class="btn btn--secondary" href="{% url 'buyer_requests' %}">Build theo ngân sách</a></div></section>
 <section aria-labelledby="shops-title"><div class="section-heading"><h2 id="shops-title">Gian hàng trên PCMatch</h2></div>
     <div class="shop-strip">
         {% for shop in shops %}<a href="{% url 'buyer_search' %}?shop={{ shop.pk }}"><strong>{{ shop.shop_name }}</strong><span>Khám phá sản phẩm</span></a>
