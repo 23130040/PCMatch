@@ -1,4 +1,4 @@
-{% load static %}
+{% load static cart_prices %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
 <head>
@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
-    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20261030-period-compact">
     <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
     {% include 'includes/frontend_config.html' %}
 </head>
@@ -28,49 +28,69 @@
                 <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Tổng quan vận hành</span></nav>
                 <h1>Tổng quan vận hành sàn</h1>
                 <p>Doanh thu sàn, phí nền tảng và hiệu quả kinh doanh của các shop được tách riêng để đối soát.</p>
-                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lần cuối: 20/09/2026 · 08:44
-                    · Đang xem: Hôm nay · 26/09/2026</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lúc {{ dashboard_updated_at|date:'d/m/Y H:i' }} · Đang xem: {{ period_label }}</p>
             </div>
-            <div class="cluster admin-page-actions">
-                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
-                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
-                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            <div class="dashboard-period" data-dashboard-period>
+                <button class="dashboard-period__trigger" type="button" aria-expanded="false" aria-controls="dashboard-period-menu">
+                    <i class="fa-regular fa-calendar"></i><span>{{ period_label }}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="dashboard-period__menu" id="dashboard-period-menu" hidden>
+                    <form class="dashboard-period__presets" method="get" aria-label="Khoảng thời gian nhanh">
+                        <button type="submit" name="preset" value="all"{% if active_preset == 'all' %} class="is-active"{% endif %}>Tất cả</button>
+                        <button type="submit" name="preset" value="7days"{% if active_preset == '7days' %} class="is-active"{% endif %}>7 ngày qua</button>
+                        <button type="submit" name="preset" value="30days"{% if active_preset == '30days' %} class="is-active"{% endif %}>30 ngày qua</button>
+                        <button type="submit" name="preset" value="month"{% if active_preset == 'month' %} class="is-active"{% endif %}>Tháng này</button>
+                        <button type="submit" name="preset" value="quarter"{% if active_preset == 'quarter' %} class="is-active"{% endif %}>Quý này</button>
+                        <button type="submit" name="preset" value="year"{% if active_preset == 'year' %} class="is-active"{% endif %}>Năm nay</button>
+                    </form>
+                    <div class="dashboard-period__tabs" role="tablist" aria-label="Kiểu lọc thời gian">
+                        <button{% if active_picker_tab == 'month' %} class="is-active"{% endif %} type="button" role="tab" aria-selected="{% if active_picker_tab == 'month' %}true{% else %}false{% endif %}" data-period-tab="month">Tháng</button>
+                        <button{% if active_picker_tab == 'year' %} class="is-active"{% endif %} type="button" role="tab" aria-selected="{% if active_picker_tab == 'year' %}true{% else %}false{% endif %}" data-period-tab="year">Năm</button>
+                    </div>
+                    <form class="dashboard-period__form" method="get" data-period-form="month"{% if active_picker_tab != 'month' %} hidden{% endif %}>
+                        <label><span class="sr-only">Chọn tháng</span><input type="month" name="period_month" value="{{ month_input_value }}"></label>
+                        <button class="btn btn--primary" type="submit">Áp dụng</button>
+                    </form>
+                    <form class="dashboard-period__form" method="get" data-period-form="year"{% if active_picker_tab != 'year' %} hidden{% endif %}>
+                        <label><span class="sr-only">Chọn năm</span><input type="number" name="year" min="2000" max="{{ current_year|add:1 }}" value="{{ selected_year }}"></label>
+                        <button class="btn btn--primary" type="submit">Áp dụng</button>
+                    </form>
+                    <form class="dashboard-period__custom" method="get">
+                        <strong>Khoảng tùy chỉnh</strong>
+                        <div>
+                            <label><span class="sr-only">Từ ngày</span><input type="date" name="from_date" value="{{ from_date }}" required></label>
+                            <span aria-hidden="true">–</span>
+                            <label><span class="sr-only">Đến ngày</span><input type="date" name="to_date" value="{{ to_date }}" required></label>
+                        </div>
+                        <button class="btn btn--primary" type="submit">Áp dụng khoảng</button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <section class="dashboard-metrics admin-metrics" aria-label="Chỉ số tổng quan">
-            <!-- 1. Doanh thu -->
             <article class="panel metric-panel admin-metric admin-metric--blue">
                 <span class="metric-label">Tổng doanh thu</span>
-                <strong class="metric-value">
-                    {{ total_revenue }} ₫
-                </strong>
-                <p>Tổng giá trị giao dịch đơn hàng thành công</p>
+                <strong class="metric-value">{{ period_revenue|compact_vnd }} <small>₫</small></strong>
+                <p>Đơn hàng đã giao trong {{ period_label|lower }}</p>
             </article>
 
-            <!-- 2. Phí & Hoa hồng -->
             <article class="panel metric-panel admin-metric admin-metric--amber">
                 <span class="metric-label">Phí &amp; hoa hồng thu được</span>
-                <strong class="metric-value">76,2 <small>triệu ₫</small></strong>
-                <p>Phí sàn và hoa hồng đã ghi nhận</p>
+                <strong class="metric-value">{{ period_fee|compact_vnd }} <small>₫</small></strong>
+                <p>Phí sàn của đơn hàng đã giao</p>
             </article>
 
-            <!-- 3. Tổng đơn hàng -->
             <article class="panel metric-panel admin-metric admin-metric--plain">
                 <span class="metric-label">Đơn hàng phát sinh</span>
-                <strong class="metric-value">
-                    {{ total_orders_count }} <small>đơn</small>
-                </strong>
-                <p>Tổng số đơn hàng ghi nhận trên hệ thống</p>
+                <strong class="metric-value">{{ period_order_count|vnd }} <small>đơn</small></strong>
+                <p>Tổng số đơn hàng trong kỳ đã chọn</p>
             </article>
 
-            <!-- 4. Tổng sản phẩm -->
             <article class="panel metric-panel admin-metric admin-metric--blue">
-                <span class="metric-label">Tổng sản phẩm</span>
-                <strong class="metric-value">
-                    {{ total_products_count }} <small>sản phẩm</small>
-                </strong>
-                <p>Sản phẩm đang có trong danh mục</p>
+                <span class="metric-label">Shop đang hoạt động</span>
+                <strong class="metric-value">{{ period_active_shop_count|vnd }} <small>shop</small></strong>
+                <p>Shop có phát sinh đơn trong kỳ đã chọn</p>
             </article>
         </section>
 
@@ -81,7 +101,7 @@
                         <span class="admin-icon admin-icon--blue"><i class="fa-solid fa-chart-simple"></i></span>
                         <div>
                             <h2>Doanh thu sàn &amp; phí thu được</h2>
-                            <p>Diễn biến theo ngày · Năm 2026</p>
+                            <p>Diễn biến theo tháng · {{ period_label }}</p>
                         </div>
                     </div>
                     <div class="admin-chart-legend">
@@ -91,16 +111,21 @@
                     </div>
                 </div>
                 <div class="admin-chart-summary">
-                    <div><span>Tổng doanh thu kỳ này</span><strong>11,7 tỷ ₫</strong></div>
-                    <div><span>Tổng phí &amp; hoa hồng</span><strong class="amber-text">0,485 tỷ ₫</strong></div>
-                    <div><span>Tỷ lệ thu phí bình quân</span><strong>4.15%</strong></div>
+                    <div><span>Tổng doanh thu kỳ này</span><strong>{{ chart_total_revenue|compact_vnd }} ₫</strong></div>
+                    <div><span>Tổng phí &amp; hoa hồng</span><strong class="amber-text">{{ chart_total_fee|compact_vnd }} ₫</strong></div>
+                    <div><span>Tỷ lệ thu phí bình quân</span><strong>{{ chart_fee_rate|floatformat:2 }}%</strong></div>
                 </div>
 
-                <div class="admin-chart-wrap" style="position: relative; height: 320px; width: 100%; padding: 10px;">
+                <div class="admin-chart-wrap">
                     <canvas id="bieuDoDoanhThu"></canvas>
+                    <div class="admin-chart-tooltip" id="adminRevenueTooltip" aria-hidden="true">
+                        <strong data-chart-tooltip-title></strong>
+                        <div><i class="tooltip-dot revenue"></i><span>Doanh thu:</span><b data-chart-tooltip-revenue></b></div>
+                        <div><i class="tooltip-dot fee"></i><span>Phí &amp; hoa hồng:</span><b data-chart-tooltip-fee></b></div>
+                    </div>
                 </div>
 
-                <p class="admin-chart-note">Trục trái: doanh thu 12 tháng năm 2026</p>
+                <p class="admin-chart-note">Trục trái: doanh thu (₫) · Trục phải: phí &amp; hoa hồng thu được (₫)</p>
             </article>
 
             <div class="admin-side-stack">
@@ -109,53 +134,24 @@
                         <div class="admin-section-title">
                             <span class="admin-icon admin-icon--blue"><i class="fa-solid fa-bag-shopping"></i></span>
                             <div>
-    <h3>Trạng thái đơn hàng hôm nay</h3>
-    <p>Tổng {{ total_orders }} đơn phát sinh</p>
-</div>
-
-
-<div class="order-status-visual" style="display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 15px;">
-    
-    
-    <div style="position: relative; height: 160px; width: 160px; flex-shrink: 0;">
-        <canvas id="bieuDoTron"></canvas>
-    </div>
-
-    
-    <div class="status-list" style="flex-grow: 1;">
-        <div><span><i class="status-dot dot-amber"></i>Chờ xác nhận</span><strong>{{ order_Pending }} <small>đơn</small></strong></div>
-        <div><span><i class="status-dot dot-blue"></i>Đã xác nhận</span><strong>{{ order_Comfirm }} <small>đơn</small></strong></div>
-        <div><span><i class="status-dot dot-slate" style="background:#10b981;"></i>Đã giao</span><strong>{{ order_Delivered }} <small>đơn</small></strong></div>
-        <div><span><i class="status-dot dot-orange" style="background:#ef4444;"></i>Đã hủy</span><strong>{{ order_Cancelled }} <small>đơn</small></strong></div>
-    </div>
-
-</div>
-                </article>
-
-                <article class="panel admin-health-panel">
-                    <div class="panel__head admin-panel-head">
-                        <div class="admin-section-title">
-                            <span class="admin-icon admin-icon--blue"><i class="fa-solid fa-wave-square"></i></span>
-                            <div>
-                                <h3>Sức khỏe vận hành sàn</h3>
-                                <p>Các chỉ số cốt lõi theo 7 ngày gần nhất</p>
+                                <h3>Trạng thái đơn hàng hôm nay</h3>
+                                <p>Tổng {{ total_orders|vnd }} đơn phát sinh</p>
                             </div>
                         </div>
                     </div>
-                    <div class="health-item">
-                        <div><span>Tỷ lệ đơn giao thành công</span><strong>97.8%</strong></div>
-                        <div class="health-track"><span style="width:97.8%"></span></div>
-                        <small>Không gồm đơn đang xử lý</small>
-                    </div>
-                    <div class="health-item">
-                        <div><span>Tỷ lệ đơn hoàn trả</span><strong>4.2%</strong></div>
-                        <div class="health-track health-track--amber"><span style="width:4.2%"></span></div>
-                        <small>Tăng 0,3% so với tuần trước</small>
-                    </div>
-                    <div class="health-item">
-                        <div><span>Shop nợ phí sàn quá hạn</span><strong>8.6%</strong></div>
-                        <div class="health-track health-track--slate"><span style="width:8.6%"></span></div>
-                        <small>36 shop cần nhắc thanh toán</small>
+                    <div class="order-status-visual">
+                        <div class="order-status-donut">
+                            <canvas id="bieuDoTron"></canvas>
+                            <div class="order-status-donut__center"><strong>{{ total_orders|vnd }}</strong><span>Tổng đơn</span></div>
+                        </div>
+                        <div class="status-list">
+                            {% for status in order_status_overview %}
+                            <div>
+                                <span><i class="status-dot" style="background:{{ status.color }}"></i>{{ status.label }}</span>
+                                <strong>{{ status.count|vnd }} <small>{{ status.percent|floatformat:1 }}%</small></strong>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </article>
             </div>
@@ -171,26 +167,43 @@
                             <p>Xếp hạng theo doanh thu và số đơn phát sinh trong kỳ</p>
                         </div>
                     </div>
-                    <div class="segmented">
-                        <button class="is-active">Doanh thu</button>
-                        <button>Số đơn</button>
+                    <div class="segmented" role="tablist" aria-label="Cách xếp hạng shop" data-shop-ranking-tabs>
+                        <button class="is-active" type="button" role="tab" aria-selected="true" aria-controls="ranking-by-revenue" data-ranking-target="revenue">Doanh thu</button>
+                        <button type="button" role="tab" aria-selected="false" aria-controls="ranking-by-orders" data-ranking-target="orders">Số đơn</button>
                     </div>
                 </div>
-                <div class="ranking-list">
-                    {% for p in top10SPsale %}
+                <div class="ranking-list" id="ranking-by-revenue" role="tabpanel" data-ranking-panel="revenue">
+                    {% for shop in top_shops_by_revenue %}
                         <div class="ranking-row">
                             <b class="rank rank-{{ forloop.counter }}">{{ forloop.counter }}</b>
                             <div class="rank-shop">
-                                <strong>{{ p.product_name }}</strong>
-                                <small>Mã SP: #{{ p.product_id }}</small>
+                                <strong>{{ shop.shop_name }}</strong>
+                                <small>Mã shop: SH-{{ shop.pk }}</small>
                             </div>
                             <div class="rank-number">
-                                <strong>{{ p.price }} đ</strong>
-                                <small>Đã bán: {{ p.sold_quantity }}</small>
+                                <strong>{{ shop.delivered_revenue|vnd }} ₫</strong>
+                                <small>{{ shop.order_count|vnd }} đơn phát sinh</small>
                             </div>
                         </div>
                     {% empty %}
-                        <p style="padding: 15px; color: #6b7280;">Chưa có dữ liệu sản phẩm.</p>
+                        <p class="admin-empty-state">Chưa có shop nào phát sinh đơn hàng.</p>
+                    {% endfor %}
+                </div>
+                <div class="ranking-list" id="ranking-by-orders" role="tabpanel" data-ranking-panel="orders" hidden>
+                    {% for shop in top_shops_by_orders %}
+                        <div class="ranking-row">
+                            <b class="rank rank-{{ forloop.counter }}">{{ forloop.counter }}</b>
+                            <div class="rank-shop">
+                                <strong>{{ shop.shop_name }}</strong>
+                                <small>Mã shop: SH-{{ shop.pk }}</small>
+                            </div>
+                            <div class="rank-number">
+                                <strong>{{ shop.order_count|vnd }} đơn</strong>
+                                <small>Doanh thu: {{ shop.delivered_revenue|vnd }} ₫</small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="admin-empty-state">Chưa có shop nào phát sinh đơn hàng.</p>
                     {% endfor %}
                 </div>
             </article>
@@ -204,59 +217,30 @@
                             <p>Hồ sơ đang chờ bạn quản trị xác nhận</p>
                         </div>
                     </div>
-                    <span class="status status--warn">4 hồ sơ</span>
+                    <span class="status status--warn">{{ pending_shop_count }} hồ sơ</span>
                 </div>
                 <div class="new-shop-list">
-                    <div class="new-shop">
-                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
+                    {% for shop in pending_shops %}
+                    <article class="new-shop">
+                        <div class="shop-avatar">{% if shop.logo %}<img src="{{ shop.logo.url }}" alt="">{% else %}<i class="fa-solid fa-shop"></i>{% endif %}</div>
                         <div>
-                            <strong>Board Mạch Maker</strong>
-                            <small>Kit phát triển</small>
-                            <span>◷ 20/09/2026 · 07:12 &nbsp;·&nbsp; 3 tài liệu</span>
+                            <strong>{{ shop.shop_name }}</strong>
+                            <small>{{ shop.owner.full_name|default:shop.owner.username }} · {{ shop.phone }}</small>
+                            <span>◷ {% if shop.legal_submitted_at %}{{ shop.legal_submitted_at|date:'d/m/Y H:i' }}{% else %}Chưa nộp hồ sơ pháp lý{% endif %} · {{ shop.document_count }} tài liệu</span>
                         </div>
                         <div class="new-shop-actions">
-                            <button class="btn btn--primary">✓ Duyệt</button>
-                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
+                            <form method="post" action="{% url 'staff_shop_approve' shop.pk %}">
+                                {% csrf_token %}<input type="hidden" name="return_to" value="dashboard">
+                                <button class="btn btn--primary" type="submit"><i class="fa-solid fa-check"></i> Duyệt</button>
+                            </form>
+                            <a class="btn btn--secondary" href="{% url 'staff_shop_detail' shop.pk %}"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</a>
                         </div>
-                    </div>
-                    <div class="new-shop">
-                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
-                        <div>
-                            <strong>Cảm Biến 24H</strong>
-                            <small>Cảm biến &amp; module</small>
-                            <span>◷ 19/09/2026 · 21:40 &nbsp;·&nbsp; 2 tài liệu</span>
-                        </div>
-                        <div class="new-shop-actions">
-                            <button class="btn btn--primary">✓ Duyệt</button>
-                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
-                        </div>
-                    </div>
-                    <div class="new-shop">
-                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
-                        <div>
-                            <strong>Đèn LED Pro</strong>
-                            <small>Đèn &amp; hiển thị</small>
-                            <span>◷ 19/09/2026 · 16:05 &nbsp;·&nbsp; 4 tài liệu</span>
-                        </div>
-                        <div class="new-shop-actions">
-                            <button class="btn btn--primary">✓ Duyệt</button>
-                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
-                        </div>
-                    </div>
-                    <div class="new-shop">
-                        <div class="shop-avatar"><i class="fa-solid fa-shop"></i></div>
-                        <div>
-                            <strong>Hàn Điện Tử Việt</strong>
-                            <small>Dụng cụ &amp; thiết bị đo</small>
-                            <span>◷ 19/09/2026 · 09:38 &nbsp;·&nbsp; 3 tài liệu</span>
-                        </div>
-                        <div class="new-shop-actions">
-                            <button class="btn btn--primary">✓ Duyệt</button>
-                            <button class="btn btn--secondary"><i class="fa-regular fa-file-lines"></i> Xem hồ sơ</button>
-                        </div>
-                    </div>
+                    </article>
+                    {% empty %}
+                    <p class="admin-empty-state">Không có hồ sơ shop nào đang chờ duyệt.</p>
+                    {% endfor %}
                 </div>
-                <a class="admin-see-all" href="#">Xem tất cả 19 hồ sơ chờ duyệt →</a>
+                {% if pending_shop_count %}<a class="admin-see-all" href="{% url 'staff_shop' %}?status=PENDING">Xem tất cả {{ pending_shop_count }} hồ sơ chờ duyệt →</a>{% endif %}
             </article>
         </section>
 </main>
@@ -271,17 +255,136 @@
 <script>
     
     const dataCot = {{ list_DoanhThu_12Months|safe }};
-    
+    const dataPhi = {{ list_Phi_12Months|safe }};
+    const dinhDangTien = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+    const dinhDangTruc = (value) => value >= 1000000000
+        ? `${(value / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ`
+        : value >= 1000000
+            ? `${(value / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} tr`
+            : dinhDangTien.format(value);
+    const chartTooltip = document.getElementById('adminRevenueTooltip');
+    const chartTooltipTitle = chartTooltip.querySelector('[data-chart-tooltip-title]');
+    const chartTooltipRevenue = chartTooltip.querySelector('[data-chart-tooltip-revenue]');
+    const chartTooltipFee = chartTooltip.querySelector('[data-chart-tooltip-fee]');
+
+    const dottedRevenueGrid = {
+        id: 'dottedRevenueGrid',
+        beforeDatasetsDraw(chart) {
+            const { ctx, chartArea, scales: { revenue } } = chart;
+            ctx.save();
+            ctx.strokeStyle = '#d9e0e8';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 4]);
+            revenue.ticks.forEach((_, index) => {
+                const y = revenue.getPixelForTick(index);
+                if (y < chartArea.top || y > chartArea.bottom) return;
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y);
+                ctx.lineTo(chartArea.right, y);
+                ctx.stroke();
+            });
+            ctx.restore();
+        },
+    };
+
+    const externalRevenueTooltip = ({ chart, tooltip }) => {
+        if (tooltip.opacity === 0) {
+            chartTooltip.classList.remove('is-visible');
+            chartTooltip.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const revenuePoint = tooltip.dataPoints.find((point) => point.datasetIndex === 0);
+        const feePoint = tooltip.dataPoints.find((point) => point.datasetIndex === 1);
+        if (!revenuePoint || !feePoint) return;
+        chartTooltipTitle.textContent = tooltip.title[0];
+        chartTooltipRevenue.textContent = `${dinhDangTien.format(revenuePoint.raw)} ₫`;
+        chartTooltipFee.textContent = `${dinhDangTien.format(feePoint.raw)} ₫`;
+        chartTooltip.classList.add('is-visible');
+        chartTooltip.setAttribute('aria-hidden', 'false');
+
+        const wrapper = chart.canvas.parentElement;
+        const tooltipWidth = chartTooltip.offsetWidth;
+        const tooltipHeight = chartTooltip.offsetHeight;
+        const desiredLeft = chart.canvas.offsetLeft + tooltip.caretX - tooltipWidth / 2;
+        const desiredTop = chart.canvas.offsetTop + tooltip.caretY + 18;
+        const left = Math.max(8, Math.min(desiredLeft, wrapper.clientWidth - tooltipWidth - 8));
+        const top = desiredTop + tooltipHeight > wrapper.clientHeight - 6
+            ? Math.max(8, chart.canvas.offsetTop + tooltip.caretY - tooltipHeight - 18)
+            : desiredTop;
+        chartTooltip.style.left = `${left}px`;
+        chartTooltip.style.top = `${top}px`;
+    };
+
     new Chart(document.getElementById('bieuDoDoanhThu'), {
         type: 'bar',
         data: {
-            labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
-            datasets: [{ 
-                label: 'Doanh thu (VNĐ)', 
-                data: dataCot, 
-                backgroundColor: '#3b82f6' 
-            }]
-        }
+            labels: {{ chart_labels|safe }},
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Doanh thu',
+                    data: dataCot,
+                    yAxisID: 'revenue',
+                    order: 2,
+                    backgroundColor: '#2f6ee8',
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 32,
+                },
+                {
+                    type: 'line',
+                    label: 'Phí & hoa hồng',
+                    data: dataPhi,
+                    yAxisID: 'fee',
+                    order: 1,
+                    borderColor: '#ed8b0c',
+                    backgroundColor: '#ed8b0c',
+                    pointBackgroundColor: '#ed8b0c',
+                    pointBorderColor: '#ed8b0c',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 3,
+                    tension: 0.35,
+                    fill: false,
+                },
+            ],
+        },
+        plugins: [dottedRevenueGrid],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: true },
+            layout: { padding: { top: 22, right: 4, left: 4, bottom: 0 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: false,
+                    external: externalRevenueTooltip,
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: { color: '#64748b', font: { size: 11 } },
+                },
+                revenue: {
+                    beginAtZero: true,
+                    position: 'left',
+                    border: { display: false },
+                    grid: { display: false },
+                    ticks: { color: '#64748b', font: { size: 11 }, callback: dinhDangTruc },
+                },
+                fee: {
+                    beginAtZero: true,
+                    position: 'right',
+                    border: { display: false },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#64748b', font: { size: 11 }, callback: dinhDangTruc },
+                },
+            },
+        },
     });
 
    
@@ -292,28 +395,88 @@ const dataTron = {{ listOrder|safe }};
 new Chart(document.getElementById('bieuDoTron'), {
     type: 'doughnut',
     data: {
-        labels: ['Chờ xác nhận', 'Đã xác nhận', 'Đang xử lý', 'Đang giao', 'Đã giao', 'Đã hủy', 'Trả hàng'],
+        labels: {{ status_labels|safe }},
         datasets: [{
             data: dataTron,
             backgroundColor: [
-                '#f59e0b', // Vàng
-                '#3b82f6', // Xanh dương
-                '#06b6d4', // Xanh biển
-                '#8b5cf6', // Tím
-                '#10b981', // Xanh lá
-                '#ef4444', // Đỏ
-                '#6b7280'  // Xám
-            ]
+                '#ed8b0c', '#2f6ee8', '#747e88', '#ef6c00',
+            ],
+            borderWidth: 0,
         }]
     },
     options: {
+        cutout: '65%',
+        rotation: -90,
         plugins: {
             legend: {
-                display: false 
-            }
+                display: false,
+            },
+            tooltip: {
+                backgroundColor: '#172033',
+                padding: 10,
+                displayColors: true,
+            },
         },
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
     }
+});
+
+document.querySelectorAll('[data-dashboard-period]').forEach((picker) => {
+    const trigger = picker.querySelector('.dashboard-period__trigger');
+    const menu = picker.querySelector('.dashboard-period__menu');
+    const tabs = Array.from(picker.querySelectorAll('[data-period-tab]'));
+    const forms = Array.from(picker.querySelectorAll('[data-period-form]'));
+    const close = () => {
+        picker.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+        menu.hidden = true;
+    };
+
+    trigger.addEventListener('click', () => {
+        const willOpen = menu.hidden;
+        if (willOpen) {
+            picker.classList.add('is-open');
+            trigger.setAttribute('aria-expanded', 'true');
+            menu.hidden = false;
+        } else {
+            close();
+        }
+    });
+
+    tabs.forEach((tab) => tab.addEventListener('click', () => {
+        const target = tab.dataset.periodTab;
+        tabs.forEach((item) => {
+            const active = item === tab;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-selected', String(active));
+        });
+        forms.forEach((form) => {
+            form.hidden = form.dataset.periodForm !== target;
+        });
+    }));
+
+    document.addEventListener('click', (event) => {
+        if (!picker.contains(event.target)) close();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') close();
+    });
+});
+
+document.querySelectorAll('[data-shop-ranking-tabs]').forEach((tablist) => {
+    const tabs = Array.from(tablist.querySelectorAll('[data-ranking-target]'));
+    const panels = Array.from(document.querySelectorAll('[data-ranking-panel]'));
+    tabs.forEach((tab) => tab.addEventListener('click', () => {
+        const target = tab.dataset.rankingTarget;
+        tabs.forEach((item) => {
+            const active = item === tab;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-selected', String(active));
+        });
+        panels.forEach((panel) => {
+            panel.hidden = panel.dataset.rankingPanel !== target;
+        });
+    }));
 });
 </script>
 

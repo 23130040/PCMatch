@@ -11,10 +11,17 @@
     <p><strong>{{ order.get_order_status_display }}</strong> · {{ order.get_payment_method_display }} · {{ order.get_payment_status_display }}</p>
     {% if order.order_status == 'AWAITING_PAYMENT' %}
     <p>Đang chờ xác nhận thanh toán từ VNPay. Vui lòng tải lại trang sau ít phút. Nếu bạn đã bị trừ tiền nhưng trạng thái chưa cập nhật, liên hệ hỗ trợ và cung cấp mã đơn hàng.</p>
+    {% elif order.payment_status == 'FAILED' %}
+    <p>VNPay xác nhận thanh toán thất bại. Đơn hàng đã được hủy và số lượng sản phẩm được trả lại vào kho.</p>
     {% elif order.order_status == 'PENDING' %}
     <p>Đơn hàng đang chờ admin xác nhận trước khi chuyển cho shop xử lý.</p>
     {% endif %}
     <p>Tổng thanh toán: <strong>{{ order.total_amount|vnd }} ₫</strong></p>
+    {% if order.payment_method == 'VNPAY' and order.payment_status == 'FAILED' %}
+    <form method="post" action="{% url 'buyer_retry_vnpay_payment' order.pk %}">
+        {% csrf_token %}<button class="btn btn--primary" type="submit">Thanh toán lại qua VNPay</button>
+    </form>
+    {% endif %}
 </section>
 <section class="panel panel--padded">
     <h2>Người nhận</h2>
@@ -24,8 +31,9 @@
 <section class="panel panel--padded">
     <h2>Sản phẩm đã đặt</h2>
     {% for item in order.order_items.all %}
-    <article class="list-row">
-        <div><h3>{{ item.product.product_name }}</h3><p>{{ item.shop.shop_name }} · {{ item.quantity }} × {{ item.unit_price|vnd }} ₫</p></div>
+    <article class="buyer-order-detail-item">
+        <span class="buyer-order-product__image buyer-order-detail-item__image">{% if item.product.thumbnail %}<img src="{{ item.product.thumbnail.url }}" alt="{{ item.product.product_name }}">{% else %}<span>Chưa có ảnh</span>{% endif %}</span>
+        <div class="buyer-order-detail-item__info"><h3>{{ item.product.product_name }}</h3><p>{{ item.shop.shop_name }} · {{ item.quantity }} × {{ item.unit_price|vnd }} ₫</p></div>
         <strong>{{ item.subtotal|vnd }} ₫</strong>
     </article>
     {% endfor %}

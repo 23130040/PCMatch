@@ -36,6 +36,29 @@ def vnpay_return(request):
         Payment.objects.select_related('order'), transaction_code=request.GET.get('vnp_TxnRef'),
         payment_method='VNPAY', order__user=request.user,
     )
+    try:
+        code, message = process_notification(request.GET)
+
+        if code != '00':
+            logger.warning(
+                'VNPay RETURN not processed: code=%s, message=%s, '
+                'txn_ref=%s, response_code=%s, transaction_status=%s',
+                code,
+                message,
+                request.GET.get('vnp_TxnRef'),
+                request.GET.get('vnp_ResponseCode'),
+                request.GET.get('vnp_TransactionStatus'),
+            )
+        else:
+            logger.info(
+                'VNPay RETURN processed successfully: txn_ref=%s',
+                request.GET.get('vnp_TxnRef'),
+            )
+
+    except DatabaseError:
+        logger.exception('VNPay return could not be persisted')
+    payment.refresh_from_db()
+    payment.order.refresh_from_db()
     if payment.status == 'PAID':
         messages.success(request, 'Thanh toán thành công. Đơn hàng đang chờ admin xác nhận.')
     elif payment.status == 'FAILED':
