@@ -41,24 +41,6 @@ document.addEventListener('click', event => {
     });
 });
 
-const chat = document.querySelector('#buyer-chat');
-document.querySelectorAll('[data-ui-chat]').forEach(button => button.addEventListener('click', () => {
-    if (menu?.open) menu.close();
-    chat.showModal();
-}));
-document.querySelector('[data-ui-chat-close]')?.addEventListener('click', () => chat.close());
-document.querySelectorAll('[data-chat-interface]').forEach(root => {
-    root.querySelectorAll('[data-ui-thread]').forEach(button => button.addEventListener('click', () => {
-        root.querySelectorAll('[data-ui-thread]').forEach(node => node.setAttribute('aria-current', String(node === button)));
-        root.querySelectorAll('[data-ui-conversation]').forEach(panel => panel.hidden = panel.dataset.uiConversation !== button.dataset.uiThread);
-        root.classList.add('has-thread');
-    }));
-    root.querySelectorAll('[data-ui-chat-back]').forEach(button => button.addEventListener('click', () => root.classList.remove('has-thread')));
-    root.querySelector('[data-ui-chat-search]')?.addEventListener('input', event => {
-        root.querySelectorAll('[data-ui-thread]').forEach(button => button.hidden = !button.textContent.toLocaleLowerCase('vi').includes(event.target.value.toLocaleLowerCase('vi')));
-    });
-});
-
 const filterDrawer = document.querySelector('#filter-drawer');
 const filterHome = document.querySelector('#filter-home');
 const filterForm = document.querySelector('#catalog-filters');

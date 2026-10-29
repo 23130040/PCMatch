@@ -155,7 +155,7 @@ for section, pages in PAGE_GROUPS.items():
             )
             if (section == 'buyer' and page in {
                 'checkout', 'payment', 'orders', 'order', 'account', 'addresses',
-                'builds', 'consultation', 'requests', 'proposals', 'cases', 'notifications', 'chat',
+                'builds', 'consultation', 'requests', 'proposals', 'cases', 'notifications',
             }):
                 view = user_views.buyer_required(view)
 

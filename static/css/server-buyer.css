@@ -199,9 +199,8 @@
 .server-buyer .cart-row{grid-template-columns:minmax(0,1fr) 116px 140px;gap:16px}.server-buyer .cart-row form{margin:0}.server-buyer .cart-row>div:last-child{justify-items:end;text-align:right}
 .server-buyer .auth-surface{width:min(560px,100%)}.server-buyer .auth-surface h1{font-size:2rem}.server-buyer .field input{width:100%}
 .server-buyer .errorlist{padding-left:20px;margin:0}.server-buyer .field-error{color:var(--color-red-deep,#a02323);font-size:.875rem}
-.header-chat-toggle{border:0;background:none;font-family:inherit}.server-buyer .header-utilities .header-chat-toggle{font-size:.75rem}.no-script-nav{display:flex!important;align-items:center}
-.chat-window{padding:0}.chat-window[open]{display:flex;flex-direction:column}.chat-window::backdrop{background:rgba(21,32,43,.25)}.chat-window .chat-layout{min-height:0;flex:1;height:auto;overflow:hidden}.chat-conversation[hidden],.chat-thread[hidden]{display:none!important}
-.interface-ready .chat-bubble{display:flex}.chat-bubble{display:none}.server-buyer .auth-surface{width:min(560px,100%)}
+.no-script-nav{display:flex!important;align-items:center}
+.server-buyer .auth-surface{width:min(560px,100%)}
 .server-buyer .password-wrap{position:relative;display:block}.server-buyer .password-wrap input{padding-right:44px}.server-buyer .password-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;padding:6px;font-size:18px}
 .social-login{display:grid;grid-template-columns:1fr 1fr;gap:12px}.social-btn{display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--color-border);background:white;padding:12px;font:inherit}.social-btn svg{width:22px;height:22px}.social-btn:disabled{opacity:.65;cursor:not-allowed}
 @media(max-width:767px){.interface-ready .server-buyer .filter-sidebar{display:none}.server-buyer #filter-drawer{width:min(380px,calc(100% - 24px));max-height:90dvh;overflow:auto}.server-buyer #filter-drawer .stack{padding:16px}}
