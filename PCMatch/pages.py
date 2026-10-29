@@ -12,9 +12,8 @@ SHOP_PAGES = (
 )
 
 STAFF_PAGES = (
-    'dashboard', 'order', 'transaction', 'return', 'shop', 'products',
-    'categories', 'guest', 'review', 'complain', 'authorization',
-    'activityLog', 'activity-log', 'profile', 'password', 'policies',
+    'dashboard', 'order', 'shop', 'products',
+    'guest', 'profile', 'password',
     'support',
 )
 
@@ -24,7 +23,6 @@ PAGE_GROUPS = {
     'shop': {page: f'shop/{page}.html' for page in SHOP_PAGES},
     'staff': {
         **{page: f'admin/{page}.html' for page in STAFF_PAGES},
-        'fee-policies': 'admin/fee&policies.html',
     },
     'auth': {'login': 'auth/login.html'},
 }

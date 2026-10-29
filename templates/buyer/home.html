@@ -23,6 +23,32 @@
     <a href="{% url 'buyer_search' %}?q=Vỏ+máy"><strong>CASE</strong><span>Vỏ máy</span></a>
     <a href="{% url 'buyer_search' %}?q=Tản+nhiệt"><strong>COOL</strong><span>Tản nhiệt</span></a>
 </nav>
+
+{% if request.user.is_authenticated %}
+<section aria-labelledby="recommended-title">
+    <div class="section-heading">
+        <div>
+            <h2 id="recommended-title">
+                Sản phẩm dành cho bạn
+            </h2>
+            <p class="muted">
+                Gợi ý dựa trên hoạt động của bạn trên PCMatch.
+            </p>
+        </div>
+    </div>
+
+    <div class="catalog-grid">
+        {% for product in recommended_products %}
+            {% include 'includes/product_card.html' %}
+        {% empty %}
+            <p class="muted">
+                Chưa có sản phẩm phù hợp để đề xuất.
+            </p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 <section class="home-newest" role="region" aria-roledescription="banner luân phiên" tabindex="0" aria-labelledby="newest-title" data-home-carousel>
     <header class="home-newest-heading"><h2 id="newest-title">Sản phẩm mới nhất</h2><p>Khám phá linh kiện mới thêm vào PCMatch</p></header>
     <div class="home-newest-stage">

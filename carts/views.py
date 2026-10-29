@@ -14,7 +14,7 @@ from users.views import buyer_required, is_active_buyer
 from .forms import CartQuantityForm
 from .models import CartItem
 from .services import add_product, cart_summary, validate_quantity
-
+from interactions.models import UserProductInteraction
 
 @buyer_required
 def cart_detail(request):
@@ -57,8 +57,17 @@ def cart_add(request, product_id):
 
             try:
                 add_product(request.user, product_id, quantity)
+
+                UserProductInteraction.objects.create(
+                    user=request.user,
+                    product=product,
+                    interacted_type='CART',
+                    quantity=quantity,
+                )
+
                 message = 'Đã thêm sản phẩm vào giỏ hàng thành công!'
                 error = False
+
             except ValidationError as exc:
                 message = exc.messages[0]
                 error = True

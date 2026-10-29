@@ -77,6 +77,21 @@
             </dl>
         </section>
 
+        {% if frequently_bought_together %}
+            <section class="panel panel--padded">
+                <h2>Sản phẩm thường được mua kèm</h2>
+                <p class="muted">
+                    Gợi ý dựa trên các đơn hàng đã hoàn thành trên PCMatch.
+                </p>
+
+                <div class="catalog-grid">
+                    {% for product in frequently_bought_together %}
+                        {% include 'includes/product_card.html' %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
         <section id="product-questions" class="panel panel--padded product-questions stack"
                  aria-labelledby="product-questions-title">
             <div>
