@@ -18,7 +18,6 @@
             </div>
         </div>
         <div class="header-utilities">
-            <button class="header-utility header-chat-toggle" type="button" data-ui-chat>{% include 'includes/buyer_icon.html' with icon='chat' %}<span>Chat</span></button>
             <a class="header-utility" href="{% url 'buyer_notifications' %}">{% include 'includes/buyer_icon.html' with icon='bell' %}<span>Thông báo</span></a>
             <details class="header-cart header-dropdown">
                 <summary class="header-utility cart-link" aria-label="Xem nhanh giỏ hàng">{% include 'includes/buyer_icon.html' with icon='cart' %}<span>Giỏ hàng</span><b id="cart-count">{{ database_cart_count }}</b></summary>
@@ -62,7 +61,7 @@
                 <summary>{% include 'includes/buyer_icon.html' with icon='build' %}Dịch vụ build PC{% include 'includes/buyer_icon.html' with icon='chevron' %}</summary>
                 <div class="header-popover"><a href="{% url 'buyer_builder' %}"><strong>Tự build PC</strong><small>Tự chọn linh kiện và kiểm tra cấu hình</small></a><a href="{% url 'buyer_requests' %}"><strong>Build theo ngân sách</strong><small>Gửi nhu cầu để shop đề xuất</small></a></div>
             </details>
-            <div class="header-mobile-links"><button class="btn btn--secondary" type="button" data-ui-chat>Chat với shop</button><a href="{% url 'buyer_notifications' %}">Thông báo</a><a href="{% url 'buyer_help' %}">Trợ giúp</a><div class="header-account-links">{% include 'includes/buyer_account_links.html' %}</div></div>
+            <div class="header-mobile-links"><a href="{% url 'buyer_notifications' %}">Thông báo</a><a href="{% url 'buyer_help' %}">Trợ giúp</a><div class="header-account-links">{% include 'includes/buyer_account_links.html' %}</div></div>
             <span class="header-nav-note">Linh kiện từ nhiều shop</span>
         </nav>
     </div>

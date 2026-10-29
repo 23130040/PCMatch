@@ -34,6 +34,19 @@ def add_product(user, product_id, quantity):
         product = Product.objects.select_for_update().get(pk=product_id)
     except Product.DoesNotExist:
         raise ValidationError('Sản phẩm không còn tồn tại.')
+
+    # Kiểm tra trạng thái hoạt động của shop
+    if product.shop.status == 'PENDING':
+        raise ValidationError('Shop hiện đang chờ xét duyệt và không thể bán sản phẩm. Vui lòng quay lại sau!')
+    if product.shop.status == 'SUSPENDED':
+        raise ValidationError('Shop hiện không kinh doanh trên hệ thống. Sản phẩm tạm thời không thể mua.')
+
+    # Kiểm tra trạng thái của sản phẩm
+    if product.status == 'INACTIVE':
+        raise ValidationError('Sản phẩm hiện không được phép bán!')
+    if product.status == 'OUT_OF_STOCK':
+        raise ValidationError('Sản phẩm hiện hết hàng!')
+
     validate_quantity(product, quantity)
     cart, _ = Cart.objects.get_or_create(user=user)
     item = CartItem.objects.select_for_update().filter(cart=cart, product=product).first()

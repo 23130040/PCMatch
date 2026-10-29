@@ -9,13 +9,13 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-
+from dotenv import load_dotenv
 from pathlib import Path
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -26,8 +26,15 @@ SECRET_KEY = 'django-insecure-n8f&%gmxzdzf&j&o6a$qsj(iqm*=+^yxks9+gl47(1xkn5q709
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'drapery-pessimist-unmatched.ngrok-free.dev',
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://drapery-pessimist-unmatched.ngrok-free.dev',
+]
 
 # Application definition
 
@@ -149,7 +156,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 AUTH_USER_MODEL = 'users.User'
 
 # VNPay sandbox
-VNPAY_TMN_CODE = os.environ.get('VNPAY_TMN_CODE', '')
-VNPAY_HASH_SECRET = os.environ.get('VNPAY_HASH_SECRET', '')
-VNPAY_RETURN_URL = os.environ.get('VNPAY_RETURN_URL', '')
-VNPAY_PAYMENT_URL = os.environ.get('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '')
+VNPAY_HASH_SECRET = os.getenv('VNPAY_HASH_SECRET', '')
+VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', '')
+VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
