@@ -60,153 +60,164 @@
             </article>
         </section>
 
-        <section class="panel order-panel" aria-label="Danh sách đơn hàng" data-selection-container
-                 data-selection-actions="Xác nhận đơn|Bàn giao vận chuyển|Đánh dấu đã giao|Hủy đơn">
-            <div class="order-toolbar">
+        <section class="panel order-panel" aria-label="Danh sách đơn hàng">
+            <!-- Form Lọc Tìm kiếm & Chọn Shop -->
+            <form method="GET" action="{% url 'loadOrder' %}" class="order-toolbar">
+                <input type="hidden" name="status" value="{{ locStatus }}">
                 <div class="order-toolbar__top">
                     <label class="order-toolbar__search">
                         <span class="sr-only">Tìm đơn hàng</span>
-                        <input id="orderSearch" type="search"
-                               placeholder="Tìm theo mã đơn, người mua, shop hoặc sản phẩm">
+                        <input id="orderSearch" type="search" name="search" value="{{ search }}"
+                               placeholder="Tìm theo mã đơn hàng...">
                     </label>
                     <label class="order-toolbar__select">
                         <span class="sr-only">Lọc theo shop</span>
-                        <select id="shopFilter">
+                        <select id="shopFilter" name="shop" onchange="this.form.submit()">
                             <option value="">Tất cả shop</option>
-                            <option>Linh Kiện Sao Việt</option>
-                            <option>Đèn LED &amp; Hiển Thị Pro</option>
-                            <option>Linh Kiện TechZone</option>
-                            <option>Module &amp; Cảm Biến 24H</option>
-                            <option>Board Mạch Thông Minh</option>
-                            <option>PCB Express Việt</option>
-                            <option>Nguồn &amp; Adapter Pro</option>
+                            {% for s in shops %}
+                                <option value="{{ s.pk }}" {% if idOfShop == s.pk|stringformat:"i" %}selected{% endif %}>
+                                    {{ s.name|default:s.shop_name }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </label>
-                    <span class="order-result-count"><strong id="resultCount">12</strong> đơn khớp bộ lọc</span>
+                    
                 </div>
-            </div>
+            </form>
 
+            
+            
             <div class="order-tabs" role="tablist" aria-label="Lọc đơn hàng theo trạng thái">
-                <button class="order-tab is-active" type="button" data-status="all">Tất cả <span
-                        class="tab-count">12</span></button>
-                <button class="order-tab" type="button" data-status="pending">Chờ xác nhận <span
-                        class="tab-count">2</span></button>
-                <button class="order-tab" type="button" data-status="confirmed">Đã xác nhận <span
-                        class="tab-count">2</span></button>
-                <button class="order-tab" type="button" data-status="shipping">Đang giao <span
-                        class="tab-count">2</span></button>
-                <button class="order-tab" type="button" data-status="delivered">Đã giao <span class="tab-count">3</span>
-                </button>
-                <button class="order-tab" type="button" data-status="cancelled">Đã hủy <span class="tab-count">1</span>
-                </button>
-                <button class="order-tab" type="button" data-status="return">Trả hàng <span class="tab-count">2</span>
-                </button>
-            </div>
+                <a href="{% url 'loadOrder' %}?status=ALL&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'ALL' or locStatus == '' %}is-active{% endif %}" style="text-decoration: none;">Tất cả</a>
+                <a href="{% url 'loadOrder' %}?status=PENDING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'PENDING' %}is-active{% endif %}" style="text-decoration: none;">Chờ xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=COMFIRMED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'COMFIRMED' %}is-active{% endif %}" style="text-decoration: none;">Đã xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=SHIPPING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'SHIPPING' %}is-active{% endif %}" style="text-decoration: none;">Đang giao</a>
+                <a href="{% url 'loadOrder' %}?status=DELIVERED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'DELIVERED' %}is-active{% endif %}" style="text-decoration: none;">Đã giao</a>
+                <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
+                <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
+             </div>
 
-            <div class="admin-table-wrap">
-                <table class="order-table" data-selectable-table data-selection-noun="đơn hàng" data-selection-limit="8">
-                    <thead>
-                    <tr>
-                        <th><input id="selectAll" class="order-checkbox" type="checkbox" aria-label="Chọn tất cả"></th>
-                        <th>MÃ ĐƠN</th>
-                        <th>NGƯỜI MUA</th>
-                        <th>SHOP</th>
-                        <th>SẢN PHẨM</th>
-                        <th>GIÁ TRỊ</th>
-                        <th>ĐỊA CHỈ GIAO</th>
-                        <th>TRẠNG THÁI</th>
-                        <th>THAO TÁC</th>
-                    </tr>
-                    </thead>
-                   <tbody id="orderBody">
-    {% for order in showOrder %}
-    <tr data-status="{{ order.order_status|lower }}">
-        <td>
-            <input class="order-checkbox row-check" type="checkbox" aria-label="Chọn {{ order.order_code }}">
-        </td>
-        
-       
-        <td class="order-code">
-            <strong>{{ order.order_code }}</strong>
-            <small>{{ order.created_at|date:"d/m/Y · H:i" }}</small>
-        </td>
+            
+            <form method="POST" action="{% url 'updateOrderStatus' %}">
+                {% csrf_token %}
+                <div class="cluster" style="margin: 12px; gap: 8px;">
+                    <select name="action_status" class="btn btn--secondary" required style="padding: 6px 12px;">
+                        <option value=""></option>
+                        <option value="COMFIRMED">Đã xác nhận</option>
+                        <option value="SHIPPING">Đang giao</option>
+                        <option value="DELIVERED">Đã giao</option>
+                        <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                    <button type="submit" class="btn btn--primary">Áp dụng</button>
+                </div>
 
-       
-        <td class="order-buyer">
-            <strong>{{ order.user.full_name|default:order.user.username }}</strong>
-            <small>{{ order.user.phone|default:"Chưa có SĐT" }}</small>
-        </td>
+                <div class="admin-table-wrap">
+                    <table class="order-table">
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th>MÃ ĐƠN</th>
+                            <th>NGƯỜI MUA</th>
+                            <th>SHOP</th>
+                            <th>SẢN PHẨM</th>
+                            <th>GIÁ TRỊ</th>
+                            <th>ĐỊA CHỈ GIAO</th>
+                            <th>TRẠNG THÁI</th>
+                            <th>THAO TÁC</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orderBody">
+                        {% for order in showOrder %}
+                        <tr data-status="{{ order.order_status|lower }}">
+                            <td>
+                                <input class="order-checkbox row-check" type="checkbox" name="order_ids" value="{{ order.order_id }}">
+                            </td>
+                            
+                            <td class="order-code">
+                                <strong>{{ order.order_code|default:order.order_id }}</strong><br>
+                                <small>{{ order.created_at|date:"d/m/Y · H:i" }}</small>
+                            </td>
 
-       
-        <td class="order-shop">
-            <strong>{{ order.order_items.first.shop.shop_name|default:"Hệ thống" }}</strong>
-        </td>
+                            <td class="order-buyer">
+                                <strong>{{ order.user.full_name|default:order.user.username }}</strong><br>
+                                <small>{{ order.user.phone|default:"Chưa có SĐT" }}</small>
+                            </td>
 
-    
-        <td class="order-product">
-            <strong>{{ order.order_items.first.product.product_name|default:"Đơn hàng" }}</strong>
-            {% if order.order_items.first %}
-            <small>SL: {{ order.order_items.first.quantity }}</small>
-            {% endif %}
-        </td>
+                            <td class="order-shop">
+                                <strong>{{ order.order_items.first.shop.shop_name|default:"Hệ thống" }}</strong>
+                            </td>
 
-        
-        <td class="order-price">{{ order.total_amount }} ₫<br><small>{{ order.get_payment_method_display }} · {{ order.get_payment_status_display }}</small></td>
+                            <td class="order-product">
+                                <strong>{{ order.order_items.first.product.product_name|default:"Đơn hàng" }}</strong>
+                                {% if order.order_items.first %}
+                                <br><small>SL: {{ order.order_items.first.quantity }}</small>
+                                {% endif %}
+                            </td>
 
-      
-        <td class="order-address">
-            <small>{{ order.address }}</small>
-        </td>
+                            <td class="order-price">{{ order.total_amount }} ₫</td>
 
-       
-        <td>
-            {% if order.order_status == 'PENDING' %}
-                <span class="status order-status order-status--pending">Chờ xác nhận</span>
-            {% elif order.order_status == 'AWAITING_PAYMENT' %}<span class="status">Chờ thanh toán VNPay</span>
-            {% elif order.order_status == 'PROCESSING' %}<span class="status">Shop đang xử lý</span>
-            {% elif order.order_status == 'COMFIRMED' %}
-                <span class="status order-status order-status--confirmed">Đã xác nhận</span>
-            {% elif order.order_status == 'SHIPPING' %}
-                <span class="status order-status order-status--shipping">Đang giao</span>
-            {% elif order.order_status == 'DELIVERED' %}
-                <span class="status order-status order-status--delivered">Hoàn thành</span>
-            {% elif order.order_status == 'CANCELLED' %}
-                <span class="status order-status order-status--cancelled">Đã hủy</span>
-            {% elif order.order_status == 'RETURNED' %}
-                <span class="status order-status order-status--return">Trả hàng</span>
-            {% else %}
-                <span class="status order-status">{{ order.order_status }}</span>
-            {% endif %}
-        </td>
+                            <td class="order-address">
+                                <small>{{ order.address }}</small>
+                            </td>
 
-  
-<td>
-    <button class="admin-detail-button btn btn--secondary order-detail-btn" type="button">
-        <i class="fa-regular fa-eye"></i><span>Chi tiết</span>
-    </button>
+                            <td>
+                                {% if order.order_status == 'PENDING' %}
+                                    <span class="status order-status order-status--pending">Chờ xác nhận</span>
+                                {% elif order.order_status == 'COMFIRMED' %}
+                                    <span class="status order-status order-status--confirmed">Đã xác nhận</span>
+                                {% elif order.order_status == 'SHIPPING' %}
+                                    <span class="status order-status order-status--shipping">Đang giao</span>
+                                {% elif order.order_status == 'DELIVERED' %}
+                                    <span class="status order-status order-status--delivered">Hoàn thành</span>
+                                {% elif order.order_status == 'CANCELLED' %}
+                                    <span class="status order-status order-status--cancelled">Đã hủy</span>
+                                {% elif order.order_status == 'RETURNED' %}
+                                    <span class="status order-status order-status--return">Trả hàng</span>
+                                {% else %}
+                                    <span class="status order-status">{{ order.order_status }}</span>
+                                {% endif %}
+                            </td>
 
-    {% if order.order_status == 'PENDING' %}
-        <form method="post" action="{% url 'update_order_status' order.order_id %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="COMFIRMED">
-            <button class="btn btn--primary" type="submit">Xác nhận đơn</button>
-        </form>
-    {% endif %}
-</td>
-    </tr>
-    {% endfor %}
-</tbody>
-                </table>
-            </div>
+                            <td>
+                                <!-- Dropdown cập nhật trạng thái từng đơn -->
+                                <form method="POST" action="{% url 'updateStatus' order.order_id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <select name="order_status" onchange="this.form.submit()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+                                        <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Chờ xác nhận</option>
+                                        <option value="COMFIRMED" {% if order.order_status == 'COMFIRMED' %}selected{% endif %}>Đã xác nhận</option>
+                                        <option value="PROCESSING" {% if order.order_status == 'PROCESSING' %}selected{% endif %}>Đang xử lý</option>
+                                        <option value="SHIPPING" {% if order.order_status == 'SHIPPING' %}selected{% endif %}>Đang giao</option>
+                                        <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Đã giao</option>
+                                        <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Đã hủy</option>
+                                    </select>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
 
+            <!-- Phân trang chuẩn CSS -->
             <div class="order-pagination">
-                <span>Hiển thị <strong id="rangeStart">1</strong>–<strong id="rangeEnd">8</strong> trên <strong
-                        id="totalRows">12</strong> bản ghi</span>
+                <span>Trang <strong>{{ showOrder.number }}</strong> / <strong>{{ showOrder.paginator.num_pages }}</strong></span>
                 <div class="order-pagination__buttons">
-                    <button class="order-page-btn" id="prevPage" type="button" disabled>‹</button>
-                    <button class="order-page-btn is-active" type="button">1</button>
-                    <button class="order-page-btn" type="button">2</button>
-                    <button class="order-page-btn" id="nextPage" type="button">›</button>
+                    {% if showOrder.has_previous %}
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.previous_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">‹</a>
+                    {% endif %}
+
+                    {% for i in showOrder.paginator.page_range %}
+                        {% if showOrder.number == i %}
+                            <button class="order-page-btn is-active" type="button">{{ i }}</button>
+                        {% else %}
+                            <a href="{% url 'loadOrder' %}?page={{ i }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">{{ i }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if showOrder.has_next %}
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.next_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">›</a>
+                    {% endif %}
                 </div>
             </div>
         </section>
