@@ -16,16 +16,38 @@ from django.core.exceptions import ValidationError
 from users.views import is_active_buyer
 from shops.models import Shop
 from .comparison import SESSION_KEY, comparison_products, parse_product_ids, session_products
-
+from recommendations.services import get_recommended_products
+from recommendations.services import get_frequently_bought_together
 
 def buyer_home(request):
-    products = Product.objects.filter(status='ACTIVE').select_related('category', 'brand', 'shop').prefetch_related('specifications')
+    products = (
+        Product.objects
+        .filter(status='ACTIVE')
+        .select_related('category', 'brand', 'shop')
+        .prefetch_related('specifications')
+    )
+
+    recommended_products = get_recommended_products(
+        request.user,
+        limit=8,
+    )
+
     return render(request, 'buyer/home.html', {
-        'page_name': 'home', 'page_section': 'buyer',
-        'categories': Category.objects.filter(status=True).order_by('category_name'),
-        'newest_products': products.order_by('-created_at', '-pk')[:4],
-        'bestselling_products': products.order_by('-sold_quantity', '-created_at', '-pk')[:4],
-        'shops': Shop.objects.filter(status='ACTIVE').order_by('shop_name')[:6],
+        'page_name': 'home',
+        'page_section': 'buyer',
+        'categories': Category.objects.filter(
+            status=True
+        ).order_by('category_name'),
+        'newest_products': products.order_by(
+            '-created_at', '-pk'
+        )[:4],
+        'bestselling_products': products.order_by(
+            '-sold_quantity', '-created_at', '-pk'
+        )[:4],
+        'recommended_products': recommended_products,
+        'shops': Shop.objects.filter(
+            status='ACTIVE'
+        ).order_by('shop_name')[:6],
     })
 
 def load_products(request):
@@ -106,6 +128,57 @@ def buyer_product_list(request):
     filter_form = CatalogFilterForm(request.GET)
     if filter_form.is_valid():
         filters = filter_form.cleaned_data
+        if request.user.is_authenticated:
+            from interactions.models import FilterHistory
+
+            filter_data = {
+                'q': filters.get('q') or '',
+                'category': (
+                    str(filters['category'].pk)
+                    if filters.get('category') else ''
+                ),
+                'brand': (
+                    str(filters['brand'].pk)
+                    if filters.get('brand') else ''
+                ),
+                'min': (
+                    str(filters['min'])
+                    if filters.get('min') is not None else ''
+                ),
+                'max': (
+                    str(filters['max'])
+                    if filters.get('max') is not None else ''
+                ),
+                'shop': (
+                    str(filters['shop'].pk)
+                    if filters.get('shop') else ''
+                ),
+                'availability': filters.get('availability') or '',
+                'sort': filters.get('sort') or '',
+                'technical': {
+                    name[5:]: filters[name]
+                    for name in filter_form.technical_names
+                    if filters.get(name)
+                },
+            }
+
+            has_filter = any([
+                filter_data['q'],
+                filter_data['category'],
+                filter_data['brand'],
+                filter_data['min'],
+                filter_data['max'],
+                filter_data['shop'],
+                filter_data['availability'],
+                filter_data['sort'],
+                filter_data['technical'],
+            ])
+
+            if has_filter:
+                FilterHistory.objects.create(
+                    user=request.user,
+                    filters=filter_data,
+                )
         keyword = filters['q']
         if keyword:
             products = products.filter(
@@ -297,6 +370,10 @@ def _render_product_detail(request, product, question_form=None, status=200, rep
         'question_login_url': reverse('auth_login') + '?' + urlencode({
             'next': reverse('buyer_product_detail', args=[product.pk]) + '#product-questions',
         }),
+        'frequently_bought_together': get_frequently_bought_together(
+            product.pk,
+            limit=4,
+        ),
     }
 
     return render(request, 'buyer/model.html', context, status=status)
@@ -309,7 +386,17 @@ def _question_page(question):
 
 @require_GET
 def product_detail(request, product_id):
-    return _render_product_detail(request, _detail_product(product_id))
+    product = _detail_product(product_id)
+
+    if request.user.is_authenticated:
+        from interactions.models import ProductView
+
+        ProductView.objects.create(
+            user=request.user,
+            product=product,
+        )
+
+    return _render_product_detail(request, product)
 
 
 @require_POST
