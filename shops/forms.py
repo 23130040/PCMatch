@@ -1,5 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
+from PIL import Image, UnidentifiedImageError
+
+from users.forms import BuyerSetPasswordForm
 
 from .models import Shop
 
@@ -17,6 +20,20 @@ class ShopLoginForm(forms.Form):
         label='Mật khẩu', required=True,
         widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
     )
+
+
+class SellerForgotPasswordForm(forms.Form):
+    email = forms.EmailField(
+        label='Email đăng ký',
+        widget=forms.EmailInput(attrs={'autocomplete': 'email', 'autofocus': True}),
+    )
+
+    def clean_email(self):
+        return self.cleaned_data['email'].strip().lower()
+
+
+class SellerSetPasswordForm(BuyerSetPasswordForm):
+    pass
 
 
 class SellerRegisterForm(forms.Form):
@@ -63,34 +80,11 @@ class SellerRegisterForm(forms.Form):
                 self.add_error('password1', error)
         return cleaned
 
-    def save(self):
-        return User.objects.create_user(
-            username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
-            password=self.cleaned_data['password1'],
-            full_name=self.cleaned_data['username'],
-            role='SELLER',
-            status='ACTIVE',
-        )
-
-
-class PhoneOTPForm(forms.Form):
-    """Step 2b: phone OTP. The code is stored in the session, not in the database."""
-
-    phone = forms.CharField(
-        label='Số điện thoại', max_length=20, required=True,
-        widget=forms.TextInput(attrs={'autocomplete': 'tel', 'inputmode': 'numeric'}),
+class SellerVerificationEmailForm(forms.Form):
+    email = forms.EmailField(
+        label='Email đăng ký',
+        widget=forms.EmailInput(attrs={'autocomplete': 'email'}),
     )
-    code = forms.CharField(
-        label='Mã OTP', max_length=6, required=True,
-        widget=forms.TextInput(attrs={'autocomplete': 'one-time-code', 'inputmode': 'numeric'}),
-    )
-
-    def clean_phone(self):
-        phone = self.cleaned_data['phone'].strip()
-        if not phone.replace(' ', '').isdigit():
-            raise forms.ValidationError('Số điện thoại chỉ gồm chữ số.')
-        return phone
 
 
 class ShopProfileForm(forms.ModelForm):
@@ -126,3 +120,37 @@ class ShopLegalForm(forms.ModelForm):
         self.fields['id_card'].label = 'CMND/CCCD'
         self.fields['business_license'].required = True
         self.fields['business_license'].label = 'Giấy phép kinh doanh'
+
+    def clean_id_card(self):
+        return self._validate_document(self.cleaned_data['id_card'])
+
+    def clean_business_license(self):
+        return self._validate_document(self.cleaned_data['business_license'])
+
+    @staticmethod
+    def _validate_document(upload):
+        if not upload:
+            return upload
+        if upload.size > 10 * 1024 * 1024:
+            raise forms.ValidationError('Mỗi giấy tờ không được vượt quá 10 MB.')
+
+        suffix = upload.name.rsplit('.', 1)[-1].lower() if '.' in upload.name else ''
+        if suffix not in {'pdf', 'jpg', 'jpeg', 'png'}:
+            raise forms.ValidationError('Chỉ chấp nhận tệp PDF, JPG hoặc PNG.')
+
+        header = upload.read(8)
+        upload.seek(0)
+        if suffix == 'pdf':
+            valid = header.startswith(b'%PDF-')
+        else:
+            try:
+                image = Image.open(upload)
+                valid = image.format in {'JPEG', 'PNG'}
+                image.verify()
+            except (UnidentifiedImageError, OSError):
+                valid = False
+            finally:
+                upload.seek(0)
+        if not valid:
+            raise forms.ValidationError('Nội dung tệp không khớp với định dạng được hỗ trợ.')
+        return upload

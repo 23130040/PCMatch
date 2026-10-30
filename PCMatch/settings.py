@@ -144,7 +144,21 @@ MEDIA_URL = '/media/'
 #         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
 #     },
 # }
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pcmatchcomputer@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pcmatchcomputer@gmail.com')
+BUYER_OTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+SHOP_PUBLIC_BASE_URL = os.environ.get(
+    'SHOP_PUBLIC_BASE_URL',
+    'http://127.0.0.1:8000',
+).rstrip('/')
 
 AUTH_USER_MODEL = 'users.User'
 

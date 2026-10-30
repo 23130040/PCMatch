@@ -1,17 +1,17 @@
 from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
-from time import time
 from urllib.parse import urlencode
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import user_passes_test
-from django.core.mail import send_mail
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.files.storage import default_storage
+from django.http import FileResponse, Http404
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.db.models import Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
@@ -19,7 +19,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from orders.models import Order, OrderItem, OrderStatusHistory, Return
 from orders.services import fulfill_order, shop_status
@@ -27,17 +27,32 @@ from products.models import Brand, Category, Product, ProductQuestion
 from products.forms import ProductAnswerForm
 from products.services import append_question_message, conversation_messages
 from django.db.models.functions import Coalesce
-from users.models import EmailVerificationToken, User
+from users.models import EmailVerificationToken, PasswordResetToken, User
 from users.views import finish_auth_login, is_active_seller, safe_auth_next
 
-from .forms import PhoneOTPForm, SellerRegisterForm, ShopLegalForm, ShopLoginForm, ShopProfileForm
+from .email_services import (
+    SellerPasswordResetError,
+    SellerVerificationError,
+    send_seller_password_reset_email,
+    send_seller_draft_verification_email,
+    send_seller_verification_email,
+)
+from .forms import (
+    SellerForgotPasswordForm,
+    SellerRegisterForm,
+    SellerSetPasswordForm,
+    SellerVerificationEmailForm,
+    ShopLegalForm,
+    ShopLoginForm,
+    ShopProfileForm,
+)
 from .models import Shop
 
 
 shop_required = user_passes_test(is_active_seller, login_url=reverse_lazy('shop_login'))
 
-OTP_SESSION_KEY = 'shop_phone_otp'
-OTP_TTL_SECONDS = 300
+SELLER_DRAFT_SESSION_KEY = 'shop_seller_registration'
+SELLER_EMAIL_TOKEN_TTL = timedelta(hours=24)
 
 
 def _owned_shop(user):
@@ -57,6 +72,8 @@ def shop_login(request):
         )
         if account is None:
             form.add_error(None, 'Tên tài khoản hoặc mật khẩu không đúng, hoặc tài khoản đã bị khóa.')
+        elif account.role == 'SELLER' and not account.email_verified:
+            form.add_error(None, 'Email chưa được xác thực. Vui lòng gửi lại liên kết kích hoạt.')
         elif not is_active_seller(account):
             form.add_error(None, 'Tài khoản không thuộc khu vực người bán.')
         else:
@@ -71,32 +88,140 @@ def shop_login(request):
     })
 
 
-def _send_verification_email(request, account, token):
+@require_http_methods(['GET', 'POST'])
+def shop_forgot_password(request):
+    form = SellerForgotPasswordForm(request.POST or None)
+    submitted = False
+    if request.method == 'POST' and form.is_valid():
+        submitted = True
+        matching_accounts = list(
+            User.objects.filter(
+                email__iexact=form.cleaned_data['email'],
+                role='SELLER',
+                is_staff=False,
+                is_superuser=False,
+            ).order_by('pk')[:2]
+        )
+        account = matching_accounts[0] if len(matching_accounts) == 1 else None
+        if account is not None:
+            token = get_random_string(48)
+            reset_url = request.build_absolute_uri(
+                reverse('shop_reset_password', args=[token])
+            )
+            try:
+                with transaction.atomic():
+                    account = User.objects.select_for_update().filter(
+                        pk=account.pk,
+                        email__iexact=form.cleaned_data['email'],
+                        role='SELLER',
+                        is_staff=False,
+                        is_superuser=False,
+                    ).first()
+                    if account is not None:
+                        PasswordResetToken.objects.filter(
+                            user=account, used=False,
+                        ).update(used=True)
+                        PasswordResetToken.objects.create(
+                            user=account,
+                            token=token,
+                            expires_at=timezone.now() + timedelta(hours=1),
+                        )
+                        send_seller_password_reset_email(account.email, reset_url)
+            except SellerPasswordResetError as error:
+                submitted = False
+                messages.error(request, str(error))
+        return render(request, 'shop/forgot_password.html', {
+            'page_name': 'forgot-password',
+            'page_section': 'shop',
+            'page_title': 'Khôi phục mật khẩu',
+            'form': form,
+            'submitted': submitted,
+        })
+    return render(request, 'shop/forgot_password.html', {
+        'page_name': 'forgot-password',
+        'page_section': 'shop',
+        'page_title': 'Khôi phục mật khẩu',
+        'form': form,
+        'submitted': submitted,
+    })
 
-    link = request.build_absolute_uri(reverse('shop_verify_email_confirm', args=[token.token]))
-    send_mail(
-        'Kích hoạt tài khoản người bán PCMatch',
-        f'Vui lòng kiểm tra email và bấm vào liên kết sau để kích hoạt tài khoản người bán:\n{link}',
-        None,
-        [account.email],
-        fail_silently=True,
+
+@require_http_methods(['GET', 'POST'])
+def shop_reset_password(request, token):
+    record = (
+        PasswordResetToken.objects.filter(
+            token=token,
+            used=False,
+            expires_at__gt=timezone.now(),
+            user__role='SELLER',
+            user__is_staff=False,
+            user__is_superuser=False,
+        )
+        .select_related('user')
+        .first()
     )
+    if record is None:
+        messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+        return redirect('shop_login')
+
+    form = SellerSetPasswordForm(request.POST or None, user=record.user)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            account = User.objects.select_for_update().filter(
+                pk=record.user_id,
+                role='SELLER',
+                is_staff=False,
+                is_superuser=False,
+            ).first()
+            record = None if account is None else (
+                PasswordResetToken.objects.select_for_update()
+                .filter(
+                    pk=record.pk,
+                    user=account,
+                    used=False,
+                    expires_at__gt=timezone.now(),
+                )
+                .first()
+            )
+            if record is None:
+                messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+                return redirect('shop_login')
+            account.set_password(form.cleaned_data['password1'])
+            account.save(update_fields=['password'])
+            PasswordResetToken.objects.filter(user=account, used=False).update(used=True)
+
+        try:
+            send_seller_password_reset_email(account.email, '', changed=True)
+        except SellerPasswordResetError as error:
+            messages.error(
+                request,
+                f'Mật khẩu đã được thay đổi nhưng chưa gửi được email thông báo. {error}',
+            )
+        else:
+            messages.success(request, 'Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.')
+        return redirect('shop_login')
+
+    return render(request, 'shop/reset_password.html', {
+        'page_name': 'reset-password',
+        'page_section': 'shop',
+        'page_title': 'Đặt lại mật khẩu',
+        'form': form,
+    })
 
 
 def shop_register(request):
     if is_active_seller(request.user) and _owned_shop(request.user):
         return redirect('shop_dashboard')
     form = SellerRegisterForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        account = form.save()
-        token = EmailVerificationToken.objects.create(
-            user=account,
-            token=get_random_string(48),
-            expires_at=timezone.now() + timedelta(days=1),
-        )
-        _send_verification_email(request, account, token)
-        login(request, account)
-        return redirect('shop_verify_email')
+    if request.method == 'POST':
+        if form.is_valid():
+            request.session[SELLER_DRAFT_SESSION_KEY] = {
+                'username': form.cleaned_data['username'],
+                'email': form.cleaned_data['email'],
+                'password': make_password(form.cleaned_data['password1']),
+                'email_verified': False,
+            }
+            return redirect('shop_verify_email')
     return render(request, 'shop/register.html', {
         'page_name': 'register',
         'page_section': 'shop',
@@ -105,88 +230,177 @@ def shop_register(request):
     })
 
 
-@require_GET
+@require_http_methods(['GET', 'POST'])
 def shop_verify_email(request):
-    if not is_active_seller(request.user):
-        return redirect('shop_login')
-    if request.user.email_verified:
-        return redirect('shop_verify_phone')
-    token = EmailVerificationToken.objects.filter(
-        user=request.user, verified_at__isnull=True,
-    ).order_by('-created_at').first()
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if draft and draft.get('email_verified'):
+        return redirect('shop_onboarding_profile')
+    if is_active_seller(request.user) and request.user.email_verified:
+        return redirect('shop_onboarding_profile')
+
+    form = SellerVerificationEmailForm(
+        request.POST or None,
+        initial={'email': draft['email']} if draft else None,
+    )
+    if request.method == 'POST' and form.is_valid():
+        email = form.cleaned_data['email'].strip().lower()
+        if draft:
+            if email != draft['email'].lower():
+                form.add_error('email', 'Email phải trùng với địa chỉ đã nhập ở bước đăng ký.')
+            else:
+                token = get_random_string(48)
+                draft['email_token_hash'] = make_password(token)
+                draft['email_token_expires'] = (
+                    timezone.now() + SELLER_EMAIL_TOKEN_TTL
+                ).timestamp()
+                request.session[SELLER_DRAFT_SESSION_KEY] = draft
+                try:
+                    send_seller_draft_verification_email(email, token)
+                except SellerVerificationError as error:
+                    draft.pop('email_token_hash', None)
+                    draft.pop('email_token_expires', None)
+                    request.session[SELLER_DRAFT_SESSION_KEY] = draft
+                    messages.error(request, str(error))
+                else:
+                    messages.success(request, 'Đã gửi liên kết xác thực. Vui lòng kiểm tra hộp thư đến.')
+                return redirect('shop_verify_email')
+        else:
+            account = User.objects.filter(
+                email__iexact=email,
+                role='SELLER',
+                status__in=['ACTIVE', 'INACTIVE'],
+                email_verified=False,
+                is_active=True,
+            ).first()
+            if account:
+                try:
+                    send_seller_verification_email(request, account)
+                except SellerVerificationError as error:
+                    messages.error(request, str(error))
+                else:
+                    messages.success(request, 'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
+            else:
+                messages.success(request, 'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
+            return redirect('shop_verify_email')
+
     return render(request, 'shop/verify_email.html', {
         'page_name': 'verify-email',
         'page_section': 'shop',
         'page_title': 'Xác thực email',
-        'activation_url': reverse('shop_verify_email_confirm', args=[token.token]) if token else None,
+        'form': form,
     })
 
 
 @require_GET
 def shop_verify_email_confirm(request, token):
-    record = get_object_or_404(EmailVerificationToken, token=token)
-    if record.verified_at is not None or record.expires_at < timezone.now():
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if draft:
+        token_hash = draft.get('email_token_hash')
+        expires_at = draft.get('email_token_expires', 0)
+        if (
+            not token_hash
+            or expires_at <= timezone.now().timestamp()
+            or not check_password(token, token_hash)
+        ):
+            messages.error(request, 'Liên kết xác thực không hợp lệ hoặc đã hết hạn.')
+            return redirect('shop_verify_email')
+        draft['email_verified'] = True
+        draft.pop('email_token_hash', None)
+        draft.pop('email_token_expires', None)
+        request.session[SELLER_DRAFT_SESSION_KEY] = draft
+        messages.success(request, 'Email đã được xác thực. Hãy tiếp tục hoàn thiện hồ sơ shop.')
+        return redirect('shop_onboarding_profile')
+
+    record = EmailVerificationToken.objects.select_related('user').filter(
+        token=token,
+        user__role='SELLER',
+    ).first()
+    if record is None:
         messages.error(request, 'Liên kết xác thực không hợp lệ hoặc đã hết hạn.')
         return redirect('shop_verify_email')
-    record.verified_at = timezone.now()
-    record.save(update_fields=['verified_at'])
-    account = record.user
-    account.email_verified = True
-    account.save(update_fields=['email_verified'])
-    if not request.user.is_authenticated:
-        login(request, account)
-    return redirect('shop_verify_phone')
+    if (record.verified_at is not None or record.invalidated_at is not None
+            or record.expires_at <= timezone.now()):
+        messages.error(request, 'Liên kết xác thực đã hết hạn hoặc không còn sử dụng được.')
+        return redirect('shop_verify_email')
+    with transaction.atomic():
+        account = User.objects.select_for_update().get(pk=record.user_id)
+        locked_token = EmailVerificationToken.objects.select_for_update().get(pk=record.pk)
+        if (locked_token.verified_at is not None or locked_token.invalidated_at is not None
+                or locked_token.expires_at <= timezone.now() or account.email_verified):
+            messages.error(request, 'Liên kết xác thực đã hết hạn hoặc đã được sử dụng.')
+            return redirect('shop_verify_email')
+        locked_token.verified_at = timezone.now()
+        locked_token.save(update_fields=['verified_at'])
+        account.email_verified = True
+        account.status = 'ACTIVE'
+        account.save(update_fields=['email_verified', 'status'])
+    login(request, account)
+    shop = _owned_shop(account)
+    if shop and shop.legal_submitted_at:
+        return redirect('shop_onboarding_pending')
+    return redirect('shop_onboarding_profile')
 
 
 def shop_verify_phone(request):
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if draft:
+        destination = (
+            'shop_onboarding_profile'
+            if draft.get('email_verified')
+            else 'shop_verify_email'
+        )
+        return redirect(destination)
     if not is_active_seller(request.user):
         return redirect('shop_login')
     if not request.user.email_verified:
         return redirect('shop_verify_email')
-    if request.user.phone_verified:
-        return redirect('shop_onboarding_profile')
-
-    otp = request.session.get(OTP_SESSION_KEY)
-    form = PhoneOTPForm(request.POST or None, initial={'phone': request.user.phone})
-    if request.method == 'POST' and form.is_valid():
-        code = form.cleaned_data['code'].strip()
-        if otp and otp.get('code') == code and otp.get('expires', 0) > time():
-            request.user.phone = form.cleaned_data['phone']
-            request.user.phone_verified = True
-            request.user.save(update_fields=['phone', 'phone_verified'])
-            request.session.pop(OTP_SESSION_KEY, None)
-            return redirect('shop_onboarding_profile')
-        form.add_error('code', 'Mã OTP không đúng hoặc đã hết hạn.')
-
-    if not otp or otp.get('expires', 0) <= time():
-        otp = {'code': get_random_string(6, allowed_chars='0123456789'), 'expires': time() + OTP_TTL_SECONDS}
-        request.session[OTP_SESSION_KEY] = otp
-    return render(request, 'shop/verify_phone.html', {
-        'page_name': 'verify-phone',
-        'page_section': 'shop',
-        'page_title': 'Xác thực số điện thoại',
-        'form': form,
-        'dev_otp': otp['code'] if settings.DEBUG else None,
-    })
+    return redirect('shop_onboarding_profile')
 
 
 def _onboarding_account_ready(request):
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if draft:
+        if not draft.get('email_verified'):
+            return redirect('shop_verify_email')
+        return None
     if not request.user.email_verified:
         return redirect('shop_verify_email')
-    if not request.user.phone_verified:
-        return redirect('shop_verify_phone')
     return None
 
 
 def shop_onboarding_profile(request):
-    if not is_active_seller(request.user):
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if not draft and not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
     if blocked:
         return blocked
-    shop = _owned_shop(request.user)
-    form = ShopProfileForm(request.POST or None, request.FILES or None, instance=shop)
+    shop = None if draft else _owned_shop(request.user)
+    form = ShopProfileForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=shop,
+        initial=draft.get('profile', {}) if draft else None,
+    )
     if request.method == 'POST' and form.is_valid():
+        if draft:
+            profile = {
+                key: form.cleaned_data[key]
+                for key in ('shop_name', 'address', 'phone', 'description')
+            }
+            uploaded_logo = form.cleaned_data.get('logo')
+            if uploaded_logo:
+                old_logo = draft.get('logo_path')
+                if old_logo:
+                    default_storage.delete(old_logo)
+                logo_filename = uploaded_logo.name.replace('\\', '/').rsplit('/', 1)[-1]
+                draft['logo_path'] = default_storage.save(
+                    f'shop_onboarding/{get_random_string(24)}/{logo_filename}',
+                    uploaded_logo,
+                )
+            draft['profile'] = profile
+            request.session[SELLER_DRAFT_SESSION_KEY] = draft
+            return redirect('shop_onboarding_legal')
         shop = form.save(commit=False)
         shop.owner = request.user
         shop.status = 'PENDING'
@@ -202,18 +416,77 @@ def shop_onboarding_profile(request):
 
 
 def shop_onboarding_legal(request):
-    if not is_active_seller(request.user):
+    draft = request.session.get(SELLER_DRAFT_SESSION_KEY)
+    if not draft and not is_active_seller(request.user):
         return redirect('shop_login')
     blocked = _onboarding_account_ready(request)
     if blocked:
         return blocked
-    shop = _owned_shop(request.user)
-    if shop is None:
+    shop = None if draft else _owned_shop(request.user)
+    if shop is None and not draft:
         return redirect('shop_onboarding_profile')
-    if shop.legal_submitted_at is not None:
+    if shop and shop.legal_submitted_at is not None:
         return redirect('shop_onboarding_pending')
     form = ShopLegalForm(request.POST or None, request.FILES or None, instance=shop)
     if request.method == 'POST' and form.is_valid():
+        if draft:
+            profile = draft.get('profile')
+            if not profile:
+                return redirect('shop_onboarding_profile')
+            try:
+                with transaction.atomic():
+                    if User.objects.filter(username__iexact=draft['username']).exists():
+                        form.add_error(None, 'Tên đăng nhập đã được sử dụng. Vui lòng đăng ký lại.')
+                        return render(request, 'shop/onboarding_legal.html', {
+                            'page_name': 'onboarding-legal',
+                            'page_section': 'shop',
+                            'page_title': 'Xác thực pháp lý',
+                            'form': form,
+                            'shop': None,
+                        })
+                    if User.objects.filter(email__iexact=draft['email']).exists():
+                        form.add_error(None, 'Email đã được đăng ký. Vui lòng đăng ký lại.')
+                        return render(request, 'shop/onboarding_legal.html', {
+                            'page_name': 'onboarding-legal',
+                            'page_section': 'shop',
+                            'page_title': 'Xác thực pháp lý',
+                            'form': form,
+                            'shop': None,
+                        })
+                    account = User(
+                        username=draft['username'],
+                        email=draft['email'],
+                        password=draft['password'],
+                        full_name=draft['username'],
+                        phone=profile['phone'],
+                        role='SELLER',
+                        status='ACTIVE',
+                        email_verified=True,
+                    )
+                    account.save()
+                    shop = form.save(commit=False)
+                    shop.owner = account
+                    shop.shop_name = profile['shop_name']
+                    shop.address = profile['address']
+                    shop.phone = profile['phone']
+                    shop.description = profile['description']
+                    shop.logo.name = draft.get('logo_path', '')
+                    shop.status = 'PENDING'
+                    shop.legal_submitted_at = timezone.now()
+                    shop.save()
+            except DatabaseError:
+                messages.error(request, 'Chưa lưu được hồ sơ đăng ký. Vui lòng thử lại.')
+                return render(request, 'shop/onboarding_legal.html', {
+                    'page_name': 'onboarding-legal',
+                    'page_section': 'shop',
+                    'page_title': 'Xác thực pháp lý',
+                    'form': form,
+                    'shop': None,
+                })
+            request.session.pop(SELLER_DRAFT_SESSION_KEY, None)
+            login(request, account)
+            messages.success(request, 'Hồ sơ đã được gửi và đang chờ admin xét duyệt.')
+            return redirect('shop_onboarding_pending')
         shop = form.save(commit=False)
         shop.status = 'PENDING'
         shop.legal_submitted_at = timezone.now()
@@ -674,11 +947,43 @@ def staff_shop_approve(request, shop_id):
     shop = get_object_or_404(Shop, pk=shop_id)
     if shop.status == 'ACTIVE':
         messages.info(request, f'Shop "{shop.shop_name}" đã được duyệt trước đó.')
+    elif not shop.is_ready_for_approval():
+        messages.error(
+            request,
+            f'Shop "{shop.shop_name}" cần xác thực email và nộp đủ hồ sơ pháp lý trước khi duyệt.',
+        )
     else:
         shop.status = 'ACTIVE'
         shop.save()
         messages.success(request, f'Đã duyệt shop "{shop.shop_name}". Chủ shop đã được thông báo.')
     return redirect(_staff_shop_return(request))
+
+
+@require_GET
+def staff_shop_document(request, shop_id, document_type):
+    shop = get_object_or_404(Shop, pk=shop_id)
+    document_fields = {
+        'id-card': shop.id_card,
+        'business-license': shop.business_license,
+    }
+    document = document_fields.get(document_type)
+    if document is None or not document or not shop.legal_submitted_at:
+        raise Http404('Không tìm thấy giấy tờ pháp lý.')
+    try:
+        file_handle = document.open('rb')
+    except (OSError, ValueError) as error:
+        raise Http404('Không thể mở giấy tờ pháp lý.') from error
+    return FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=document.name.rsplit('/', 1)[-1].rsplit('\\', 1)[-1],
+        content_type='application/octet-stream',
+    )
+
+
+@require_GET
+def public_shop_document_denied(request, path):
+    raise Http404
 
 
 @require_POST

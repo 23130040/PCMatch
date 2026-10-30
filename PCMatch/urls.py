@@ -21,6 +21,9 @@ urlpatterns = [
     path('django-admin/', admin.site.urls),
     path('auth/logout/', user_views.auth_logout, name='auth_logout'),
     path('auth/register/', partial(user_views.auth_login, register=True), name='auth_register'),
+    path('auth/forgot/', user_views.buyer_forgot_password, name='buyer_forgot_password'),
+    path('auth/reset/<str:token>/', user_views.buyer_reset_password, name='buyer_reset_password'),
+    path('auth/verify-email/', user_views.buyer_verify_email, name='auth_verify_email'),
     path('shop/register/', shop_views.shop_register, name='shop_register'),
     path('shop/verify/email/', shop_views.shop_verify_email, name='shop_verify_email'),
     path('shop/verify/email/<str:token>/', shop_views.shop_verify_email_confirm, name='shop_verify_email_confirm'),
@@ -29,7 +32,8 @@ urlpatterns = [
     path('shop/onboarding/legal/', shop_views.shop_onboarding_legal, name='shop_onboarding_legal'),
     path('shop/onboarding/pending/', shop_views.shop_onboarding_pending, name='shop_onboarding_pending'),
     path('shop/notifications/', shop_views.shop_notifications, name='shop_notifications'),
-    path('shop/forgot/', partial(user_views.legacy_auth, destination='shop_dashboard'), name='shop_forgot'),
+    path('shop/forgot/', shop_views.shop_forgot_password, name='shop_forgot'),
+    path('shop/reset/<str:token>/', shop_views.shop_reset_password, name='shop_reset_password'),
     path('staff/login/', user_views.staff_login, name='staff_login'),
     path('staff/forgot/', user_views.staff_forgot_password, name='staff_forgot'),
     path('staff/reset/<str:token>/', user_views.staff_reset_password, name='staff_reset_password'),
@@ -52,6 +56,10 @@ urlpatterns = [
     path('staff/shop/<int:shop_id>/approve/',
          staff_required(shop_views.staff_shop_approve),
          name='staff_shop_approve',
+    ),
+    path('staff/shop/<int:shop_id>/documents/<str:document_type>/',
+         staff_required(shop_views.staff_shop_document),
+         name='staff_shop_document',
     ),
     path('staff/shop/<int:shop_id>/suspend/',
          staff_required(shop_views.staff_shop_suspend),
@@ -166,4 +174,11 @@ for section, pages in PAGE_GROUPS.items():
         ))
 
 if settings.DEBUG:
+    urlpatterns += [
+        path(
+            'media/shop_docs/<path:path>',
+            shop_views.public_shop_document_denied,
+            name='public_shop_document_denied',
+        ),
+    ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

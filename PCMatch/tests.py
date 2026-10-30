@@ -175,6 +175,7 @@ class FrontendPagesTests(TestCase):
             'includes/admin_product_drawers.html',
             'includes/admin_support_drawers.html',
             'includes/compare_button.html', 'includes/compare_tray.html',
+            'auth/verify_email.html',
             'shop/register.html', 'shop/verify_email.html', 'shop/verify_phone.html',
             'shop/onboarding_profile.html', 'shop/onboarding_legal.html',
             'shop/onboarding_pending.html', 'shop/notifications.html',

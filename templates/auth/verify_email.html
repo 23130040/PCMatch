@@ -1,0 +1,47 @@
+{% extends 'includes/buyer_base.html' %}
+{% block title %}Xác thực email — PCMatch{% endblock %}
+{% block content %}
+<section class="auth-surface stack" aria-labelledby="auth-title">
+  <header class="auth-title">
+    <h1 id="auth-title">Xác thực email</h1>
+    <p>Nhập mã OTP 6 chữ số đã gửi tới email của bạn. Mã có hiệu lực trong 3 phút.</p>
+  </header>
+
+  {% if show_email_form %}
+  <form method="post" action="{% url 'auth_verify_email' %}" class="stack">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="request" />
+    {% for field in email_form %}
+    <label class="field" for="{{ field.id_for_label }}">
+      <span>{{ field.label }}</span>
+      {{ field }}
+    </label>
+    {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+    {% endfor %}
+    <button class="btn btn--primary" type="submit">Gửi mã OTP</button>
+  </form>
+  {% else %}
+  <p>Mã xác thực đã được gửi tới <strong>{{ email }}</strong>.</p>
+  <form method="post" action="{% url 'auth_verify_email' %}" class="stack">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="message message--error" role="alert">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+    <label class="field" for="{{ field.id_for_label }}">
+      <span>{{ field.label }}</span>
+      {{ field }}
+    </label>
+    {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+    {% endfor %}
+    <button class="btn btn--primary" type="submit">Xác thực</button>
+  </form>
+  <form method="post" action="{% url 'auth_verify_email' %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="resend" />
+    <button class="linklike" type="submit">Gửi lại mã OTP</button>
+  </form>
+  {% endif %}
+  <a href="{% url 'auth_login' %}">Quay lại đăng nhập</a>
+</section>
+{% endblock %}

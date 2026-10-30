@@ -1,15 +1,21 @@
 from decimal import Decimal
+from datetime import timedelta
+import re
+from smtplib import SMTPException
 import tempfile
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from notifications.models import Notification
 from orders.models import Order, OrderItem, Return
 from products.models import Brand, Category, Product, ProductQuestion
-from users.models import Address, EmailVerificationToken
+from users.models import Address, EmailVerificationSend, EmailVerificationToken, PasswordResetToken
 from .models import Shop
 
 
@@ -17,7 +23,7 @@ class ShopBackendLayoutsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
-        cls.owner = User.objects.create_user(username='shop-owner', email='owner@example.test', password='ShopOwner!789', full_name='Chủ gian hàng', role='SELLER', status='ACTIVE')
+        cls.owner = User.objects.create_user(username='shop-owner', email='owner@example.test', password='ShopOwner!789', full_name='Chủ gian hàng', role='SELLER', status='ACTIVE', email_verified=True)
         cls.other = User.objects.create_user(username='other-owner', email='other@example.test', password='OtherOwner!789', full_name='Chủ khác', role='SELLER', status='ACTIVE')
         cls.buyer = User.objects.create_user(username='shop-buyer', email='shopbuyer@example.test', password='ShopBuyer!789', full_name='Khách hàng', role='BUYER', status='ACTIVE')
         cls.seller_without_shop = User.objects.create_user(username='seller-no-shop', email='noshop@example.test', password='NoShop!7891', full_name='Người bán mới', role='SELLER', status='ACTIVE')
@@ -131,6 +137,134 @@ class ShopBackendLayoutsTests(TestCase):
         self.assertEqual(self.product.price, Decimal('100000'))
 
 
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class SellerPasswordRecoveryTests(TestCase):
+    old_password = 'SellerOld!82734'
+    new_password = 'SellerNew!82734'
+
+    def setUp(self):
+        self.seller = get_user_model().objects.create_user(
+            username='recovery-seller',
+            email='recovery-seller@example.test',
+            password=self.old_password,
+            full_name='Người bán',
+            role='SELLER',
+            status='ACTIVE',
+        )
+
+    def test_shop_login_forgot_link_opens_seller_recovery_form(self):
+        response = self.client.get(reverse('shop_login'))
+        self.assertContains(response, f'href="{reverse("shop_forgot")}"')
+        response = self.client.get(reverse('shop_forgot'))
+        self.assertTemplateUsed(response, 'shop/forgot_password.html')
+        self.assertContains(response, 'name="email"')
+
+    def test_forgot_password_validates_email_and_does_not_disclose_unknown_accounts(self):
+        invalid = self.client.post(reverse('shop_forgot'), {'email': 'not-an-email'})
+        self.assertTrue(invalid.context['form'].errors['email'])
+        self.assertFalse(PasswordResetToken.objects.exists())
+
+        unknown = self.client.post(reverse('shop_forgot'), {'email': 'missing@example.test'})
+        self.assertContains(unknown, 'Nếu email thuộc một tài khoản seller')
+        self.assertFalse(PasswordResetToken.objects.exists())
+        self.assertFalse(mail.outbox)
+
+    def test_forgot_password_sends_link_to_the_uniquely_matching_seller(self):
+        response = self.client.post(reverse('shop_forgot'), {'email': self.seller.email.upper()})
+        self.assertContains(response, 'Nếu email thuộc một tài khoản seller')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.seller.email])
+
+        token = PasswordResetToken.objects.get(user=self.seller)
+        self.assertFalse(token.used)
+        self.assertGreater(token.expires_at, timezone.now())
+        self.assertIn(reverse('shop_reset_password', args=[token.token]), mail.outbox[0].body)
+
+        self.client.post(reverse('shop_forgot'), {'email': self.seller.email})
+        token.refresh_from_db()
+        self.assertTrue(token.used)
+        self.assertEqual(PasswordResetToken.objects.filter(user=self.seller, used=False).count(), 1)
+
+    def test_duplicate_case_insensitive_email_or_non_seller_cannot_be_recovered(self):
+        User = get_user_model()
+        User.objects.create_user(
+            username='recovery-seller-duplicate',
+            email='RECOVERY-SELLER@example.test',
+            password=self.old_password,
+            full_name='Người bán khác',
+            role='SELLER',
+        )
+        User.objects.create_user(
+            username='recovery-buyer',
+            email='buyer-recovery@example.test',
+            password=self.old_password,
+            full_name='Người mua',
+            role='BUYER',
+        )
+        for email in [self.seller.email, 'buyer-recovery@example.test']:
+            with self.subTest(email=email):
+                response = self.client.post(reverse('shop_forgot'), {'email': email})
+                self.assertContains(response, 'Nếu email thuộc một tài khoản seller')
+        self.assertFalse(PasswordResetToken.objects.exists())
+        self.assertFalse(mail.outbox)
+
+    @patch('shops.email_services.send_mail', side_effect=SMTPException('mail server unavailable'))
+    def test_email_failure_is_visible_and_rolls_back_recovery_token(self, send_mail_mock):
+        response = self.client.post(reverse('shop_forgot'), {'email': self.seller.email})
+        self.assertContains(response, 'Chưa gửi được email.')
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.seller, used=False).exists())
+        send_mail_mock.assert_called_once()
+
+    def test_reset_validates_confirmation_hashes_password_invalidates_tokens_and_expires_session(self):
+        old_token = PasswordResetToken.objects.create(
+            user=self.seller,
+            token='older-seller-reset-token',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        token = PasswordResetToken.objects.create(
+            user=self.seller,
+            token='active-seller-reset-token',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        self.client.force_login(self.seller)
+
+        mismatch = self.client.post(reverse('shop_reset_password', args=[token.token]), {
+            'password1': self.new_password,
+            'password2': 'Different!82734',
+        })
+        self.assertContains(mismatch, 'Mật khẩu nhập lại không khớp.')
+        self.seller.refresh_from_db()
+        self.assertTrue(self.seller.check_password(self.old_password))
+        token.refresh_from_db()
+        self.assertFalse(token.used)
+
+        response = self.client.post(reverse('shop_reset_password', args=[token.token]), {
+            'password1': self.new_password,
+            'password2': self.new_password,
+        })
+        self.assertRedirects(response, reverse('shop_login'), fetch_redirect_response=False)
+        self.seller.refresh_from_db()
+        self.assertFalse(self.seller.check_password(self.old_password))
+        self.assertTrue(self.seller.check_password(self.new_password))
+        self.assertNotEqual(self.seller.password, self.new_password)
+        self.assertEqual(
+            PasswordResetToken.objects.filter(
+                pk__in=[old_token.pk, token.pk], used=True,
+            ).count(),
+            2,
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.seller.email])
+        self.assertIn('đã được thay đổi', mail.outbox[0].subject)
+
+        self.client.get(reverse('shop_dashboard'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        reused = self.client.get(reverse('shop_reset_password', args=[token.token]))
+        self.assertRedirects(reused, reverse('shop_login'), fetch_redirect_response=False)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class StaffShopApprovalTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -175,6 +309,7 @@ class StaffShopApprovalTests(TestCase):
         self.assertRedirects(response, reverse('staff_login') + '?next=' + reverse('staff_shop'))
 
     def test_approval_lets_the_seller_reach_the_shop_dashboard(self):
+        self.submit_legal_documents()
         self.client.force_login(self.admin)
         response = self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
         self.assertRedirects(response, reverse('staff_shop'))
@@ -191,11 +326,68 @@ class StaffShopApprovalTests(TestCase):
         self.assertEqual(self.client.get(reverse('shop_dashboard')).status_code, 200)
 
     def test_approving_twice_does_not_send_two_notifications(self):
+        self.submit_legal_documents()
         self.client.force_login(self.admin)
         self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
         self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
         self.assertEqual(
             Notification.objects.filter(user=self.seller, type='SHOP_APPROVED').count(), 1)
+
+    def submit_legal_documents(self):
+        self.shop.id_card = SimpleUploadedFile('id.pdf', b'%PDF-1.4\nidentity')
+        self.shop.business_license = SimpleUploadedFile('license.pdf', b'%PDF-1.4\nlicense')
+        self.shop.legal_submitted_at = timezone.now()
+        self.shop.save()
+
+    def test_shop_approval_requires_verified_email_and_complete_documents(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
+        self.assertRedirects(response, reverse('staff_shop'))
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'PENDING')
+
+        self.submit_legal_documents()
+        self.seller.phone_verified = False
+        self.seller.save(update_fields=['phone_verified'])
+        response = self.client.get(reverse('staff_shop'))
+        self.assertContains(response, f'action="{reverse("staff_shop_approve", args=[self.shop.pk])}"')
+        self.assertNotContains(response, 'disabled title="Cần xác thực email và nộp đủ hồ sơ pháp lý"')
+        self.client.post(reverse('staff_shop_approve', args=[self.shop.pk]))
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'ACTIVE')
+
+    def test_staff_document_download_is_protected_and_attachment_only(self):
+        self.submit_legal_documents()
+        url = reverse('staff_shop_document', args=[self.shop.pk, 'id-card'])
+        response = self.client.get(url)
+        self.assertRedirects(response, reverse('staff_login') + '?next=' + url)
+
+        self.client.force_login(self.admin)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Disposition'].startswith('attachment;'))
+        public_url = f'/media/{self.shop.id_card.name}'
+        self.assertEqual(self.client.get(public_url).status_code, 404)
+
+    def test_approval_requires_post(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(
+            self.client.get(reverse('staff_shop_approve', args=[self.shop.pk])).status_code,
+            405,
+        )
+
+    def test_django_admin_action_cannot_bypass_shop_verification(self):
+        self.admin.is_superuser = True
+        self.admin.save(update_fields=['is_superuser'])
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('admin:shops_shop_changelist'), {
+            'action': 'approve_shops',
+            '_selected_action': [self.shop.pk],
+            'index': '0',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'PENDING')
 
     def test_suspend_closes_the_dashboard_until_approved_again(self):
         self.shop.status = 'ACTIVE'
@@ -221,7 +413,12 @@ class StaffShopApprovalTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 405)
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@override_settings(
+    MEDIA_ROOT=tempfile.mkdtemp(),
+    SHOP_PUBLIC_BASE_URL='http://127.0.0.1:8000',
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    BUYER_OTP_EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+)
 class SellerOnboardingFlowTests(TestCase):
     password = 'StrongSeller!123'
 
@@ -236,47 +433,54 @@ class SellerOnboardingFlowTests(TestCase):
         return self.client.post(reverse('shop_register'), payload)
 
     def test_full_seller_onboarding_then_approval(self):
-        # Step 1: seller account.
+        # Account details stay in the session until the final legal submission.
         response = self.register()
         self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
-        seller = get_user_model().objects.get(username='newseller')
-        self.assertEqual(seller.role, 'SELLER')
-        self.assertFalse(seller.email_verified)
-
-        # Step 2a: email verification page and activation link.
-        token = EmailVerificationToken.objects.get(user=seller)
-        response = self.client.get(reverse('shop_verify_email'))
-        self.assertContains(response, 'Vui lòng kiểm tra email')
-        response = self.client.get(reverse('shop_verify_email_confirm', args=[token.token]))
-        self.assertRedirects(response, reverse('shop_verify_phone'), fetch_redirect_response=False)
-        seller.refresh_from_db()
-        self.assertTrue(seller.email_verified)
-
-        # Step 2b: phone OTP.
+        self.assertFalse(get_user_model().objects.filter(username='newseller').exists())
         response = self.client.get(reverse('shop_verify_phone'))
-        self.assertEqual(response.status_code, 200)
-        code = self.client.session['shop_phone_otp']['code']
-        response = self.client.post(reverse('shop_verify_phone'), {'phone': '0901234567', 'code': code})
+        self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
+
+        # Step 2: send a real email verification link and continue after confirmation.
+        response = self.client.get(reverse('shop_verify_email'))
+        self.assertContains(response, 'Gửi liên kết xác thực')
+        response = self.client.post(reverse('shop_verify_email'), {'email': 'newseller@example.test'})
+        self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
+        self.assertEqual(len(mail.outbox), 1)
+        email_link = re.search(r'http://127\.0\.0\.1:8000[^\s]+', mail.outbox[0].body).group(0)
+        self.assertIn('newseller@example.test', mail.outbox[0].to)
+        response = self.client.get(email_link.replace('http://127.0.0.1:8000', ''))
         self.assertRedirects(response, reverse('shop_onboarding_profile'), fetch_redirect_response=False)
-        seller.refresh_from_db()
-        self.assertTrue(seller.phone_verified)
+        self.assertFalse(get_user_model().objects.filter(username='newseller').exists())
 
         # Step 3: shop profile.
         response = self.client.post(reverse('shop_onboarding_profile'), {
             'shop_name': 'Shop mới', 'address': 'Hà Nội', 'phone': '0901234567', 'description': 'Mô tả ngắn',
         })
         self.assertRedirects(response, reverse('shop_onboarding_legal'), fetch_redirect_response=False)
-        shop = Shop.objects.get(owner=seller)
-        self.assertEqual(shop.status, 'PENDING')
+        self.assertFalse(get_user_model().objects.filter(username='newseller').exists())
+        self.assertFalse(Shop.objects.filter(shop_name='Shop mới').exists())
 
-        # Step 4: legal documents -> pending approval.
+        # Invalid legal data must not create either database record.
+        response = self.client.post(reverse('shop_onboarding_legal'), {})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(get_user_model().objects.filter(username='newseller').exists())
+        self.assertFalse(Shop.objects.filter(shop_name='Shop mới').exists())
+
+        # Valid final submission creates an email-verified account and the shop.
         response = self.client.post(reverse('shop_onboarding_legal'), {
-            'id_card': SimpleUploadedFile('cccd.jpg', b'cccd-bytes'),
-            'business_license': SimpleUploadedFile('gpkd.jpg', b'gpkd-bytes'),
+            'id_card': SimpleUploadedFile('cccd.pdf', b'%PDF-1.4\ncccd-bytes'),
+            'business_license': SimpleUploadedFile('gpkd.pdf', b'%PDF-1.4\ngpkd-bytes'),
         })
         self.assertRedirects(response, reverse('shop_onboarding_pending'), fetch_redirect_response=False)
+        seller = get_user_model().objects.get(username='newseller')
+        shop = Shop.objects.get(owner=seller)
+        self.assertEqual(seller.role, 'SELLER')
+        self.assertEqual(seller.status, 'ACTIVE')
+        self.assertFalse(seller.phone_verified)
+        self.assertTrue(seller.email_verified)
         shop.refresh_from_db()
         self.assertIsNotNone(shop.legal_submitted_at)
+        self.assertEqual(len(mail.outbox), 1)
 
         # Dashboard is blocked while the shop is not approved.
         self.assertRedirects(self.client.get(reverse('shop_dashboard')),
@@ -298,6 +502,89 @@ class SellerOnboardingFlowTests(TestCase):
         self.assertContains(response, 'Tên đăng nhập đã được sử dụng.')
         response = self.register(email='dup@example.test')
         self.assertContains(response, 'Email đã được đăng ký.')
+
+    def test_unverified_seller_cannot_sign_in_and_can_resend_email(self):
+        seller = get_user_model().objects.create_user(
+            username='awaiting-email', email='awaiting@example.test',
+            password=self.password, full_name='Awaiting email', role='SELLER',
+            status='ACTIVE',
+        )
+        response = self.client.post(reverse('shop_login'), {
+            'username': seller.username,
+            'password': self.password,
+        })
+        self.assertContains(response, 'Email chưa được xác thực.')
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        EmailVerificationSend.objects.filter(email=seller.email).update(
+            created_at=timezone.now() - timedelta(minutes=2),
+        )
+        response = self.client.post(reverse('shop_verify_email'), {'email': seller.email})
+        self.assertRedirects(response, reverse('shop_verify_email'))
+        self.assertEqual(len(mail.outbox), 1)
+        tokens = list(EmailVerificationToken.objects.filter(user=seller).order_by('pk'))
+        self.assertEqual(len(tokens), 1)
+        self.assertIsNone(tokens[0].invalidated_at)
+
+    def test_incomplete_registration_does_not_create_seller_in_database(self):
+        self.register(username='incomplete', email='incomplete@example.test')
+        self.assertFalse(get_user_model().objects.filter(username='incomplete').exists())
+        response = self.client.post(reverse('shop_verify_email'), {'email': 'incomplete@example.test'})
+        self.assertRedirects(response, reverse('shop_verify_email'))
+        self.assertFalse(get_user_model().objects.filter(email='incomplete@example.test').exists())
+
+    def test_email_resend_is_available(self):
+        seller = get_user_model().objects.create_user(
+            username='rate-limited', email='rate@example.test',
+            password=self.password, full_name='Rate limited', role='SELLER',
+            status='INACTIVE',
+        )
+        response = self.client.post(reverse('shop_verify_email'), {'email': seller.email})
+        response = self.client.get(reverse('shop_verify_email'))
+        self.assertContains(response, 'Gửi liên kết xác thực')
+        self.assertEqual(len(mail.outbox), 1)
+
+        EmailVerificationSend.objects.filter(email=seller.email).update(
+            created_at=timezone.now() - timedelta(minutes=2),
+        )
+        for attempt in range(4):
+            self.client.post(reverse('shop_verify_email'), {'email': seller.email})
+            EmailVerificationSend.objects.filter(email=seller.email).update(
+                created_at=timezone.now() - timedelta(minutes=2),
+            )
+        self.client.post(reverse('shop_verify_email'), {'email': seller.email})
+        response = self.client.get(reverse('shop_verify_email'))
+        self.assertContains(response, 'Gửi liên kết xác thực')
+        self.assertEqual(len(mail.outbox), 6)
+
+    def test_expired_and_invalid_activation_links_return_to_resend_form(self):
+        seller = get_user_model().objects.create_user(
+            username='expired-link', email='expired@example.test',
+            password=self.password, full_name='Expired link', role='SELLER',
+            status='INACTIVE',
+        )
+        self.client.post(reverse('shop_verify_email'), {'email': seller.email})
+        token = EmailVerificationToken.objects.get(user=seller)
+        token.expires_at = timezone.now() - timedelta(seconds=1)
+        token.save(update_fields=['expires_at'])
+        response = self.client.get(reverse('shop_verify_email_confirm', args=[token.token]))
+        self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse('shop_verify_email')), 'đã hết hạn')
+        response = self.client.get(reverse('shop_verify_email_confirm', args=['invalid-token']))
+        self.assertRedirects(response, reverse('shop_verify_email'), fetch_redirect_response=False)
+
+    def test_legal_documents_reject_mismatched_file_content(self):
+        from .forms import ShopLegalForm
+
+        form = ShopLegalForm(
+            data={},
+            files={
+                'id_card': SimpleUploadedFile('identity.jpg', b'not-an-image'),
+                'business_license': SimpleUploadedFile('license.pdf', b'%PDF-1.4\nvalid'),
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('Nội dung tệp không khớp', str(form.errors['id_card']))
 
     def test_shop_name_must_be_unique(self):
         other = get_user_model().objects.create_user(
