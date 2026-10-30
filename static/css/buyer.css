@@ -92,7 +92,7 @@
 .password-wrap input{width:100%;padding-right:44px;box-sizing:border-box}
 .password-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:18px;line-height:1;padding:6px}
 .social-login{display:flex;gap:10px;margin:12px 0}
-.social-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid var(--color-border);background:#fff;cursor:pointer;border-radius:8px;font-weight:600;font-size:.9rem}
+.social-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid var(--color-border);background:#fff;cursor:pointer;border-radius:8px;font-weight:600;font-size:.9rem;text-decoration:none;color:inherit}
 .social-btn:hover{background:#f5f5f5}
 .social-btn svg{width:18px;height:18px;flex:0 0 auto}
 .account-links{display:flex;flex-wrap:wrap;gap:12px}

@@ -1,7 +1,8 @@
 from time import time
 from datetime import timedelta
+import hmac
 from smtplib import SMTPException
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
@@ -21,7 +22,7 @@ from django.utils.crypto import get_random_string
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from users.models import Address, BuyerEmailOTP, PasswordResetToken, User
+from users.models import Address, BuyerEmailOTP, PasswordResetToken, SocialAccount, User
 from .address_services import save_address, set_default_address
 from users.forms import (
     BuyerRegisterForm,
@@ -36,11 +37,18 @@ from users.forms import (
     StaffSetPasswordForm,
 )
 from .otp_services import BuyerOTPDeliveryError, issue_buyer_email_otp, verify_buyer_email_otp
+from .facebook_oauth import (
+    FacebookOAuthError,
+    facebook_authorization_url,
+    get_facebook_identity,
+)
 
 
 # Each portal has its own role, so one session never reaches another area.
 BUYER_ROLES = {'BUYER', 'CUSTOMER'}
 SELLER_ROLES = {'SELLER'}
+FACEBOOK_STATE_SESSION_KEY = 'facebook_oauth_state'
+FACEBOOK_STATE_MAX_AGE = 600
 
 
 def _is_live_account(user):
@@ -189,6 +197,197 @@ def auth_login(request, register=False):
         'page_title': 'Đăng ký tài khoản' if mode == 'register' else 'Đăng nhập',
         'mode': mode, 'next': destination,
     })
+
+
+def _facebook_error_redirect(request, destination, message, *, canceled=False):
+    if canceled:
+        messages.info(request, message)
+    else:
+        messages.error(request, message)
+    return redirect('{}?{}'.format(
+        reverse('auth_login'),
+        urlencode({'next': destination}),
+    ))
+
+
+def _facebook_redirect_uri(request, configured_uri=None):
+    callback_path = reverse('auth_facebook_callback')
+    redirect_uri = configured_uri or settings.FACEBOOK_REDIRECT_URI
+    if not redirect_uri:
+        redirect_uri = request.build_absolute_uri(callback_path)
+    parsed_uri = urlsplit(redirect_uri)
+    if (parsed_uri.scheme != 'https' or not parsed_uri.netloc
+            or parsed_uri.path != callback_path
+            or parsed_uri.query or parsed_uri.fragment
+            or parsed_uri.username or parsed_uri.password):
+        raise FacebookOAuthError(
+            'Facebook yêu cầu callback HTTPS. Hãy cấu hình FACEBOOK_REDIRECT_URI '
+            'bằng URL HTTPS của tunnel và đăng ký URL đó trong Meta for Developers.'
+        )
+    return redirect_uri
+
+
+@require_GET
+def facebook_login(request):
+    destination = safe_auth_next(request)
+    state = get_random_string(48)
+    try:
+        callback_url = _facebook_redirect_uri(request)
+        authorization_url = facebook_authorization_url(
+            state=state,
+            redirect_uri=callback_url,
+        )
+    except FacebookOAuthError as error:
+        return _facebook_error_redirect(request, destination, str(error))
+    request.session[FACEBOOK_STATE_SESSION_KEY] = {
+        'state': state,
+        'created_at': time(),
+        'next': destination,
+        'redirect_uri': callback_url,
+    }
+    return redirect(authorization_url)
+
+
+def _facebook_user(identity):
+    email_field = forms.EmailField()
+    try:
+        email = email_field.clean(identity.get('email', '')).strip().lower()
+    except ValidationError as error:
+        raise FacebookOAuthError(
+            'Facebook không cung cấp email hợp lệ. Hãy cho phép chia sẻ email rồi thử lại.'
+        ) from error
+
+    provider_user_id = identity.get('id')
+    if not isinstance(provider_user_id, str) or not provider_user_id:
+        raise FacebookOAuthError('Không xác định được tài khoản Facebook.')
+    if len(provider_user_id) > 255:
+        raise FacebookOAuthError('Tài khoản Facebook không hợp lệ.')
+    provider_name = identity.get('name')
+    full_name = (
+        provider_name.strip()[:100]
+        if isinstance(provider_name, str) else ''
+    ) or 'Người dùng Facebook'
+
+    try:
+        with transaction.atomic():
+            linked_account = (
+                SocialAccount.objects.select_for_update()
+                .select_related('user')
+                .filter(provider='FACEBOOK', provider_user_id=provider_user_id)
+                .first()
+            )
+            if linked_account is not None:
+                account = linked_account.user
+            else:
+                matching_accounts = list(
+                    User.objects.select_for_update()
+                    .filter(email__iexact=email)
+                    .order_by('pk')[:2]
+                )
+                if len(matching_accounts) > 1:
+                    raise FacebookOAuthError(
+                        'Email này khớp với nhiều tài khoản PCMatch. Vui lòng liên hệ hỗ trợ.'
+                    )
+                if matching_accounts:
+                    account = matching_accounts[0]
+                    if account.role not in BUYER_ROLES or account.is_staff or account.is_superuser:
+                        raise FacebookOAuthError(
+                            'Email này thuộc khu vực khác. Vui lòng đăng nhập đúng cổng tài khoản.'
+                        )
+                    if not account.email_verified or not is_active_buyer(account):
+                        raise FacebookOAuthError(
+                            'Tài khoản chưa hoạt động hoặc email chưa xác thực. Vui lòng đăng nhập bằng email.'
+                        )
+                else:
+                    username = f'facebook_{get_random_string(24)}'
+                    account = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=None,
+                        full_name=full_name,
+                        role='BUYER',
+                        status='ACTIVE',
+                        email_verified=True,
+                    )
+                SocialAccount.objects.create(
+                    user=account,
+                    provider='FACEBOOK',
+                    provider_user_id=provider_user_id,
+                )
+    except IntegrityError as error:
+        linked_account = (
+            SocialAccount.objects.select_related('user')
+            .filter(provider='FACEBOOK', provider_user_id=provider_user_id)
+            .first()
+        )
+        if linked_account is None:
+            raise FacebookOAuthError(
+                'Không thể liên kết tài khoản Facebook. Vui lòng thử lại.'
+            ) from error
+        account = linked_account.user
+
+    if not account.email_verified or not is_active_buyer(account):
+        raise FacebookOAuthError(
+            'Tài khoản PCMatch chưa hoạt động. Vui lòng đăng nhập bằng email hoặc liên hệ hỗ trợ.'
+        )
+    return account
+
+
+@require_GET
+def facebook_callback(request):
+    pending = request.session.pop(FACEBOOK_STATE_SESSION_KEY, None)
+    destination = pending.get('next') if isinstance(pending, dict) else reverse('buyer_cart')
+    if not isinstance(destination, str) or not destination.startswith('/buyer/'):
+        destination = reverse('buyer_cart')
+
+    received_state = request.GET.get('state', '')
+    expected_state = pending.get('state', '') if isinstance(pending, dict) else ''
+    created_at = pending.get('created_at', 0) if isinstance(pending, dict) else 0
+    state_age = time() - created_at if isinstance(created_at, (int, float)) else None
+    if (not expected_state or not received_state
+            or not hmac.compare_digest(str(expected_state), received_state)
+            or state_age is None
+            or not 0 <= state_age <= FACEBOOK_STATE_MAX_AGE):
+        return _facebook_error_redirect(
+            request, destination,
+            'Yêu cầu đăng nhập Facebook không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.',
+        )
+
+    provider_error = request.GET.get('error') or request.GET.get('error_reason')
+    if provider_error:
+        canceled = provider_error in {'access_denied', 'user_denied'}
+        return _facebook_error_redirect(
+            request,
+            destination,
+            'Bạn đã hủy đăng nhập Facebook.' if canceled
+            else 'Facebook không cấp quyền đăng nhập. Vui lòng thử lại.',
+            canceled=canceled,
+        )
+
+    code = request.GET.get('code')
+    if not code:
+        return _facebook_error_redirect(
+            request, destination,
+            'Facebook không trả về mã đăng nhập. Vui lòng thử lại.',
+        )
+
+    try:
+        callback_url = _facebook_redirect_uri(
+            request,
+            configured_uri=pending.get('redirect_uri') if isinstance(pending, dict) else None,
+        )
+        identity = get_facebook_identity(code=code, redirect_uri=callback_url)
+        account = _facebook_user(identity)
+    except FacebookOAuthError as error:
+        return _facebook_error_redirect(request, destination, str(error))
+    except DatabaseError:
+        return _facebook_error_redirect(
+            request, destination,
+            'Chưa thể xác nhận tài khoản Facebook. Vui lòng thử lại sau.',
+        )
+
+    login(request, account)
+    return finish_auth_login(request, destination)
 
 
 @require_http_methods(['GET', 'POST'])

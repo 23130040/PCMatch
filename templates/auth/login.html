@@ -39,12 +39,9 @@
   {% if mode != 'register' %}
   <a href="{% url 'auth_verify_email' %}">Chưa xác thực email hoặc chưa nhận mã?</a>
   <div class="social-login">
-    <button
+    <a
       class="social-btn social-btn--facebook"
-      type="button"
-      disabled
-      data-backend-pending="facebook"
-      title="Đăng nhập Facebook chưa được kết nối với backend"
+      href="{% url 'auth_facebook_login' %}?next={{ next|urlencode }}"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -53,7 +50,7 @@
         />
       </svg>
       <span>Facebook</span>
-    </button>
+    </a>
     <button
       class="social-btn social-btn--google"
       type="button"

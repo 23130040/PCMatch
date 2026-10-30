@@ -23,6 +23,8 @@ urlpatterns = [
     path('auth/register/', partial(user_views.auth_login, register=True), name='auth_register'),
     path('auth/forgot/', user_views.buyer_forgot_password, name='buyer_forgot_password'),
     path('auth/reset/<str:token>/', user_views.buyer_reset_password, name='buyer_reset_password'),
+    path('auth/facebook/', user_views.facebook_login, name='auth_facebook_login'),
+    path('auth/facebook/callback/', user_views.facebook_callback, name='auth_facebook_callback'),
     path('auth/verify-email/', user_views.buyer_verify_email, name='auth_verify_email'),
     path('shop/register/', shop_views.shop_register, name='shop_register'),
     path('shop/verify/email/', shop_views.shop_verify_email, name='shop_verify_email'),

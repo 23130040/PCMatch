@@ -28,6 +28,7 @@ The previous environment is preserved in `.venv-backup-20261004`.
 - Sign out: `/auth/logout/` (buyer), `/shop/logout/` (seller), `/staff/logout/` (admin)
 - Shared sign-in (buyer): `/auth/login/`
 - Shared registration: `/auth/login/?mode=register`
+- Facebook sign-in starts at `/auth/facebook/` and returns to `/auth/facebook/callback/`
 - Database cart: `/buyer/cart/`
 - Checkout information: `/buyer/checkout/`
 - Shop sign-in: `/shop/login/`
@@ -68,9 +69,10 @@ to the account (printed to the console in development and shown on the page
 while `DEBUG` is on). Unknown accounts, wrong passwords and non-staff accounts
 get distinct messages. Only staff/`ADMIN` accounts are
 admitted and a successful sign-in redirects to `/staff/dashboard/`. `staff_required`
-sends unauthorised visitors to `/staff/login/`, not the buyer form. `shop/forgot/`
-still redirects to the shared auth page; admin password recovery lives at
-`/staff/forgot/` and `/staff/reset/<token>/`. Buyer screens continue to use
+sends unauthorised visitors to `/staff/login/`, not the buyer form. Seller
+password recovery lives at `/shop/forgot/` and `/shop/reset/<token>/`;
+admin password recovery lives at `/staff/forgot/` and `/staff/reset/<token>/`.
+Buyer screens continue to use
 `templates/auth/login.html`; `/auth/register/` redirects to the shared
 registration mode for old links. Registration creates an ordinary buyer account;
 it does not grant staff access or create a Shop.
@@ -93,6 +95,44 @@ $env:SHOP_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
 Do not commit the App Password or share it in chat. Both buyer OTP and seller
 activation email use Gmail SMTP. Seller activation links use `SHOP_PUBLIC_BASE_URL`;
 set it to the public HTTPS domain in deployed environments.
+
+### Facebook sign-in configuration
+
+Create a Meta app in Meta for Developers, add the Facebook Login product, and
+allow the exact OAuth redirect URI provided by your HTTPS tunnel, ending in
+`/auth/facebook/callback/` (for example,
+`https://example-tunnel.ngrok-free.app/auth/facebook/callback/`). Facebook does
+not accept the plain HTTP `127.0.0.1` callback for this OAuth flow. Use the
+matching HTTPS URI and domain in production. The login requests `email` and
+`public_profile`; accounts without an accessible email cannot sign in. In
+development mode, add test users or app roles in Meta before testing.
+
+For local development, copy `.env.example` to `.env` and fill in the Facebook
+app ID, secret, callback URI, and allowed host there. Django loads `.env`
+automatically when it starts. Keep `.env` private; it is ignored by Git and
+must never be committed or shared.
+
+Then start Django normally:
+
+```powershell
+.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+```
+
+The callback URI must exactly match a URI registered in Meta. A Cloudflare
+Quick Tunnel hostname can change when a new tunnel is created; saving that
+temporary hostname in `.env` does not make it permanent. To avoid updating Meta
+after a tunnel restart, use a fixed hostname (such as a Cloudflare Named Tunnel
+on a domain you control) and keep that same hostname in `.env` and Meta. Open
+the application through the HTTPS tunnel before clicking Facebook; starting
+at localhost and returning to a tunnel can lose the OAuth session/state.
+
+The secret is used only by the server during the code exchange; it is not
+rendered into the page or sent to the browser. Facebook identity links are
+stored in `users.SocialAccount`. A first-time Facebook sign-in links to one
+active, email-verified buyer account with the same email, or creates a buyer
+account when no matching email exists. Seller/admin accounts cannot sign in
+through the buyer portal. Canceling or denying Facebook permissions returns
+the user to the login page without creating or changing an account.
 
 ## Seller Onboarding
 

@@ -1,7 +1,9 @@
 import re
 from datetime import timedelta
+from io import BytesIO
 from smtplib import SMTPException
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
@@ -10,7 +12,8 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import BuyerEmailOTP, PasswordResetToken
+from .facebook_oauth import get_facebook_identity
+from .models import BuyerEmailOTP, PasswordResetToken, SocialAccount
 
 
 @override_settings(
@@ -223,6 +226,283 @@ class SharedAuthenticationTests(TestCase):
         strict = Client(enforce_csrf_checks=True)
         for name in ['auth_login', 'auth_register', 'auth_verify_email', 'auth_logout']:
             self.assertEqual(strict.post(reverse(name), {}).status_code, 403)
+
+
+@override_settings(
+    FACEBOOK_APP_ID='test-facebook-app-id',
+    FACEBOOK_APP_SECRET='test-facebook-app-secret',
+    FACEBOOK_GRAPH_VERSION='v22.0',
+    FACEBOOK_REDIRECT_URI='https://testserver/auth/facebook/callback/',
+)
+class FacebookLoginTests(TestCase):
+    def setUp(self):
+        self.buyer = get_user_model().objects.create_user(
+            username='facebook-existing-buyer',
+            email='facebook-buyer@example.test',
+            password='FacebookBuyer!82734',
+            full_name='Buyer Account',
+            role='BUYER',
+            status='ACTIVE',
+            email_verified=True,
+        )
+
+    def start_login(self, **query):
+        response = self.client.get(reverse('auth_facebook_login'), query)
+        self.assertEqual(response.status_code, 302)
+        parsed_url = urlparse(response.url)
+        self.assertEqual(parsed_url.netloc, 'www.facebook.com')
+        return parse_qs(parsed_url.query)
+
+    def callback(self, state, **query):
+        return self.client.get(
+            reverse('auth_facebook_callback'),
+            {'state': state, **query},
+        )
+
+    def test_login_button_starts_server_configured_oauth_without_exposing_secret(self):
+        response = self.client.get(reverse('auth_login'))
+        self.assertContains(response, f'href="{reverse("auth_facebook_login")}?next=')
+        self.assertNotContains(response, 'data-backend-pending="facebook"')
+        self.assertNotContains(response, 'test-facebook-app-secret')
+
+        parameters = self.start_login(next=reverse('buyer_orders'))
+        self.assertEqual(parameters['client_id'], ['test-facebook-app-id'])
+        self.assertEqual(parameters['scope'], ['email,public_profile'])
+        self.assertEqual(parameters['response_type'], ['code'])
+        self.assertEqual(parameters['redirect_uri'], [
+            'https://testserver/auth/facebook/callback/',
+        ])
+        self.assertTrue(parameters['state'][0])
+        self.assertNotIn('test-facebook-app-secret', repr(parameters))
+
+    @patch('users.views.get_facebook_identity')
+    def test_facebook_email_links_to_existing_buyer_and_logs_in(self, get_identity):
+        get_identity.return_value = {
+            'id': 'facebook-user-1001',
+            'name': 'Facebook Buyer',
+            'email': self.buyer.email,
+        }
+        parameters = self.start_login(next=reverse('buyer_orders'))
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_orders'), fetch_redirect_response=False)
+        get_identity.assert_called_once_with(
+            code='authorization-code',
+            redirect_uri='https://testserver/auth/facebook/callback/',
+        )
+        social_account = SocialAccount.objects.get(
+            provider='FACEBOOK',
+            provider_user_id='facebook-user-1001',
+        )
+        self.assertEqual(social_account.user, self.buyer)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_facebook_identity')
+    def test_existing_facebook_identity_is_loaded_from_database_on_next_sign_in(self, get_identity):
+        get_identity.side_effect = [
+            {
+                'id': 'facebook-user-persisted',
+                'name': 'Facebook Buyer',
+                'email': self.buyer.email,
+            },
+            {
+                'id': 'facebook-user-persisted',
+                'name': 'Facebook Buyer',
+                'email': 'changed-facebook-email@example.test',
+            },
+        ]
+        first_state = self.start_login()['state'][0]
+        self.callback(first_state, code='first-code')
+        self.client.logout()
+
+        second_state = self.start_login()['state'][0]
+        response = self.callback(second_state, code='second-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(SocialAccount.objects.count(), 1)
+        self.assertEqual(
+            SocialAccount.objects.get(provider_user_id='facebook-user-persisted').user,
+            self.buyer,
+        )
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_facebook_identity')
+    def test_new_facebook_email_creates_buyer_and_persists_provider_identity(self, get_identity):
+        get_identity.return_value = {
+            'id': 'facebook-user-1002',
+            'name': 'New Facebook Buyer',
+            'email': 'new-facebook-buyer@example.test',
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        account = get_user_model().objects.get(email='new-facebook-buyer@example.test')
+        self.assertEqual(account.role, 'BUYER')
+        self.assertEqual(account.status, 'ACTIVE')
+        self.assertTrue(account.email_verified)
+        self.assertFalse(account.has_usable_password())
+        self.assertEqual(
+            SocialAccount.objects.get(
+                provider='FACEBOOK',
+                provider_user_id='facebook-user-1002',
+            ).user,
+            account,
+        )
+        self.assertEqual(int(self.client.session['_auth_user_id']), account.pk)
+
+    @patch('users.views.get_facebook_identity')
+    def test_existing_non_buyer_email_is_not_logged_in_or_linked(self, get_identity):
+        seller = get_user_model().objects.create_user(
+            username='facebook-seller',
+            email='facebook-seller@example.test',
+            password='FacebookSeller!82734',
+            full_name='Seller',
+            role='SELLER',
+            status='ACTIVE',
+            email_verified=True,
+        )
+        get_identity.return_value = {
+            'id': 'facebook-seller-1003',
+            'name': 'Seller',
+            'email': seller.email,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_facebook_identity')
+    def test_email_permission_denial_does_not_create_an_account(self, get_identity):
+        get_identity.return_value = {
+            'id': 'facebook-user-no-email',
+            'name': 'No Email',
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_facebook_identity')
+    def test_ambiguous_case_insensitive_email_does_not_link_an_arbitrary_buyer(self, get_identity):
+        get_user_model().objects.create_user(
+            username='facebook-buyer-case-duplicate',
+            email='FACEBOOK-BUYER@example.test',
+            password='FacebookBuyer!82734',
+            full_name='Duplicate Buyer',
+            role='BUYER',
+            status='ACTIVE',
+            email_verified=True,
+        )
+        get_identity.return_value = {
+            'id': 'facebook-user-ambiguous-email',
+            'name': 'Facebook Buyer',
+            'email': self.buyer.email,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_facebook_identity')
+    def test_cancel_or_permission_denial_returns_to_login_without_provider_exchange(self, get_identity):
+        parameters = self.start_login()
+        response = self.callback(parameters['state'][0], error='access_denied')
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        get_identity.assert_not_called()
+        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_facebook_identity')
+    def test_invalid_or_replayed_state_is_rejected(self, get_identity):
+        parameters = self.start_login()
+        bad_response = self.callback('attacker-controlled-state', code='authorization-code')
+        self.assertEqual(bad_response.status_code, 302)
+        get_identity.assert_not_called()
+
+        replay_response = self.callback(parameters['state'][0], code='authorization-code')
+        self.assertEqual(replay_response.status_code, 302)
+        get_identity.assert_not_called()
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_facebook_identity')
+    def test_expired_oauth_state_is_rejected(self, get_identity):
+        parameters = self.start_login()
+        session = self.client.session
+        pending = session['facebook_oauth_state']
+        pending['created_at'] -= 601
+        session['facebook_oauth_state'] = pending
+        session.save()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertEqual(response.status_code, 302)
+        get_identity.assert_not_called()
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(FACEBOOK_APP_ID='', FACEBOOK_APP_SECRET='')
+    def test_missing_server_credentials_show_configuration_error(self):
+        response = self.client.get(reverse('auth_facebook_login'))
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+
+    @override_settings(FACEBOOK_REDIRECT_URI='')
+    def test_insecure_callback_is_rejected_before_redirecting_to_facebook(self):
+        response = self.client.get(reverse('auth_facebook_login'))
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn('facebook_oauth_state', self.client.session)
+
+    @patch(
+        'users.facebook_oauth.urlopen',
+        side_effect=[
+            BytesIO(b'{"access_token":"temporary-access-token"}'),
+            BytesIO(b'{"id":"facebook-user-2001","name":"OAuth User","email":"oauth@example.test"}'),
+        ],
+    )
+    def test_backend_exchanges_code_and_fetches_identity_with_bearer_token(self, urlopen_mock):
+        identity = get_facebook_identity(
+            code='authorization-code',
+            redirect_uri='https://testserver/auth/facebook/callback/',
+        )
+
+        self.assertEqual(identity['id'], 'facebook-user-2001')
+        self.assertEqual(urlopen_mock.call_count, 2)
+        token_request = urlopen_mock.call_args_list[0].args[0]
+        profile_request = urlopen_mock.call_args_list[1].args[0]
+        self.assertIn('test-facebook-app-secret', token_request.full_url)
+        self.assertEqual(profile_request.get_header('Authorization'), 'Bearer temporary-access-token')
+        self.assertNotIn('temporary-access-token', profile_request.full_url)
+        self.assertEqual(urlopen_mock.call_args_list[0].kwargs['timeout'], 10)
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
