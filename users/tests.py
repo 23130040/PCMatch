@@ -602,6 +602,120 @@ class GoogleLoginTests(TestCase):
         self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
 
     @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_pending_buyer_and_logs_in(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-pending-buyer',
+            'name': 'Pending Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+        self.assertTrue(
+            SocialAccount.objects.filter(
+                user=self.buyer,
+                provider='GOOGLE',
+                provider_user_id='google-user-pending-buyer',
+            ).exists()
+        )
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_pending_buyer_with_existing_link(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        SocialAccount.objects.create(
+            user=self.buyer,
+            provider='GOOGLE',
+            provider_user_id='google-user-linked-pending-buyer',
+        )
+        get_identity.return_value = {
+            'sub': 'google-user-linked-pending-buyer',
+            'name': 'Pending Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_verifies_active_buyer_and_logs_in(self, get_identity):
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-active-unverified-buyer',
+            'name': 'Active Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_inactive_buyer_with_verified_email(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.save(update_fields=['status'])
+        get_identity.return_value = {
+            'sub': 'google-user-inactive-verified-buyer',
+            'name': 'Inactive Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_google_sign_in_does_not_unlock_locked_buyer(self, get_identity):
+        self.buyer.status = 'LOCKED'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-locked-buyer',
+            'name': 'Locked Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        self.callback(parameters['state'][0], code='authorization-code')
+
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'LOCKED')
+        self.assertFalse(self.buyer.email_verified)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_google_identity')
     def test_new_google_email_creates_buyer_and_persists_provider_identity(self, get_identity):
         get_identity.return_value = {
             'sub': 'google-user-1002',

@@ -446,6 +446,32 @@ def google_login(request):
     return redirect(authorization_url)
 
 
+def _activate_google_buyer(account, email):
+    if account.role not in BUYER_ROLES or account.is_staff or account.is_superuser:
+        raise GoogleOAuthError(
+            'Email này thuộc khu vực khác. Vui lòng đăng nhập đúng cổng tài khoản.'
+        )
+    if account.status in {'ACTIVE', 'INACTIVE'}:
+        if account.status == 'INACTIVE' or not account.email_verified:
+            if account.email.strip().lower() != email:
+                raise GoogleOAuthError(
+                    'Email Google không khớp với địa chỉ của tài khoản PCMatch.'
+                )
+            update_fields = []
+            if not account.email_verified:
+                account.email_verified = True
+                update_fields.append('email_verified')
+            if account.status == 'INACTIVE':
+                account.status = 'ACTIVE'
+                update_fields.append('status')
+            if update_fields:
+                account.save(update_fields=update_fields)
+    if not account.email_verified or not is_active_buyer(account):
+        raise GoogleOAuthError(
+            'Tài khoản chưa hoạt động hoặc email chưa xác thực. Vui lòng đăng nhập bằng email.'
+        )
+
+
 def _google_user(identity):
     if identity.get('email_verified') is not True:
         raise GoogleOAuthError(
@@ -477,6 +503,7 @@ def _google_user(identity):
             )
             if linked_account is not None:
                 account = linked_account.user
+                _activate_google_buyer(account, email)
             else:
                 matching_accounts = list(
                     User.objects.select_for_update()
@@ -489,14 +516,7 @@ def _google_user(identity):
                     )
                 if matching_accounts:
                     account = matching_accounts[0]
-                    if account.role not in BUYER_ROLES or account.is_staff or account.is_superuser:
-                        raise GoogleOAuthError(
-                            'Email này thuộc khu vực khác. Vui lòng đăng nhập đúng cổng tài khoản.'
-                        )
-                    if not account.email_verified or not is_active_buyer(account):
-                        raise GoogleOAuthError(
-                            'Tài khoản chưa hoạt động hoặc email chưa xác thực. Vui lòng đăng nhập bằng email.'
-                        )
+                    _activate_google_buyer(account, email)
                 else:
                     account = User.objects.create_user(
                         username=f'google_{get_random_string(24)}',
@@ -522,6 +542,7 @@ def _google_user(identity):
                 'Không thể liên kết tài khoản Google. Vui lòng thử lại.'
             ) from error
         account = linked_account.user
+        _activate_google_buyer(account, email)
 
     if not account.email_verified or not is_active_buyer(account):
         raise GoogleOAuthError(
