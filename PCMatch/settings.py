@@ -51,6 +51,7 @@ DEBUG = True
 ALLOWED_HOSTS = list(dict.fromkeys([
     '127.0.0.1',
     'localhost',
+    '.trycloudflare.com',
     'drapery-pessimist-unmatched.ngrok-free.dev',
     *(
         host.strip()
@@ -59,9 +60,17 @@ ALLOWED_HOSTS = list(dict.fromkeys([
     ),
 ]))
 
+# cloudflared terminates HTTPS and forwards the original scheme to Django.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
-    'https://drapery-pessimist-unmatched.ngrok-free.dev',
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
+    'https://drapery-pessimist-unmatched.ngrok-free.dev',
+    *CSRF_TRUSTED_ORIGINS,
+]))
 
 # Application definition
 
@@ -199,6 +208,12 @@ FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '').strip()
 FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '').strip()
 FACEBOOK_GRAPH_VERSION = os.environ.get('FACEBOOK_GRAPH_VERSION', 'v22.0').strip()
 FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '').strip()
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
 
 AUTH_USER_MODEL = 'users.User'
 

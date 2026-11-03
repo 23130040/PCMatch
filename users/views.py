@@ -42,6 +42,11 @@ from .facebook_oauth import (
     facebook_authorization_url,
     get_facebook_identity,
 )
+from .google_oauth import (
+    GoogleOAuthError,
+    get_google_identity,
+    google_authorization_url,
+)
 
 
 # Each portal has its own role, so one session never reaches another area.
@@ -49,6 +54,8 @@ BUYER_ROLES = {'BUYER', 'CUSTOMER'}
 SELLER_ROLES = {'SELLER'}
 FACEBOOK_STATE_SESSION_KEY = 'facebook_oauth_state'
 FACEBOOK_STATE_MAX_AGE = 600
+GOOGLE_STATE_SESSION_KEY = 'google_oauth_state'
+GOOGLE_STATE_MAX_AGE = 600
 
 
 def _is_live_account(user):
@@ -384,6 +391,196 @@ def facebook_callback(request):
         return _facebook_error_redirect(
             request, destination,
             'Chưa thể xác nhận tài khoản Facebook. Vui lòng thử lại sau.',
+        )
+
+    login(request, account)
+    return finish_auth_login(request, destination)
+
+
+def _google_error_redirect(request, destination, message, *, canceled=False):
+    if canceled:
+        messages.info(request, message)
+    else:
+        messages.error(request, message)
+    return redirect('{}?{}'.format(
+        reverse('auth_login'),
+        urlencode({'next': destination}),
+    ))
+
+
+def _google_redirect_uri(request, configured_uri=None):
+    callback_path = reverse('auth_google_callback')
+    redirect_uri = configured_uri or settings.GOOGLE_REDIRECT_URI
+    if not redirect_uri:
+        redirect_uri = request.build_absolute_uri(callback_path)
+    parsed_uri = urlsplit(redirect_uri)
+    if (parsed_uri.scheme != 'https' or not parsed_uri.netloc
+            or parsed_uri.path != callback_path
+            or parsed_uri.query or parsed_uri.fragment
+            or parsed_uri.username or parsed_uri.password):
+        raise GoogleOAuthError(
+            'Google yêu cầu callback HTTPS. Hãy cấu hình GOOGLE_REDIRECT_URI '
+            'bằng URL HTTPS của tunnel và đăng ký URL đó trong Google Cloud Console.'
+        )
+    return redirect_uri
+
+
+@require_GET
+def google_login(request):
+    destination = safe_auth_next(request)
+    state = get_random_string(48)
+    try:
+        callback_url = _google_redirect_uri(request)
+        authorization_url = google_authorization_url(
+            state=state,
+            redirect_uri=callback_url,
+        )
+    except GoogleOAuthError as error:
+        return _google_error_redirect(request, destination, str(error))
+    request.session[GOOGLE_STATE_SESSION_KEY] = {
+        'state': state,
+        'created_at': time(),
+        'next': destination,
+        'redirect_uri': callback_url,
+    }
+    return redirect(authorization_url)
+
+
+def _google_user(identity):
+    if identity.get('email_verified') is not True:
+        raise GoogleOAuthError(
+            'Google chưa xác thực email này. Vui lòng xác thực email Google rồi thử lại.'
+        )
+    try:
+        email = forms.EmailField().clean(identity.get('email', '')).strip().lower()
+    except ValidationError as error:
+        raise GoogleOAuthError('Google không cung cấp email hợp lệ.') from error
+
+    provider_user_id = identity.get('sub')
+    if not isinstance(provider_user_id, str) or not provider_user_id:
+        raise GoogleOAuthError('Không xác định được tài khoản Google.')
+    if len(provider_user_id) > 255:
+        raise GoogleOAuthError('Tài khoản Google không hợp lệ.')
+    provider_name = identity.get('name')
+    full_name = (
+        provider_name.strip()[:100]
+        if isinstance(provider_name, str) else ''
+    ) or 'Người dùng Google'
+
+    try:
+        with transaction.atomic():
+            linked_account = (
+                SocialAccount.objects.select_for_update()
+                .select_related('user')
+                .filter(provider='GOOGLE', provider_user_id=provider_user_id)
+                .first()
+            )
+            if linked_account is not None:
+                account = linked_account.user
+            else:
+                matching_accounts = list(
+                    User.objects.select_for_update()
+                    .filter(email__iexact=email)
+                    .order_by('pk')[:2]
+                )
+                if len(matching_accounts) > 1:
+                    raise GoogleOAuthError(
+                        'Email này khớp với nhiều tài khoản PCMatch. Vui lòng liên hệ hỗ trợ.'
+                    )
+                if matching_accounts:
+                    account = matching_accounts[0]
+                    if account.role not in BUYER_ROLES or account.is_staff or account.is_superuser:
+                        raise GoogleOAuthError(
+                            'Email này thuộc khu vực khác. Vui lòng đăng nhập đúng cổng tài khoản.'
+                        )
+                    if not account.email_verified or not is_active_buyer(account):
+                        raise GoogleOAuthError(
+                            'Tài khoản chưa hoạt động hoặc email chưa xác thực. Vui lòng đăng nhập bằng email.'
+                        )
+                else:
+                    account = User.objects.create_user(
+                        username=f'google_{get_random_string(24)}',
+                        email=email,
+                        full_name=full_name,
+                        role='BUYER',
+                        status='ACTIVE',
+                        email_verified=True,
+                    )
+                SocialAccount.objects.create(
+                    user=account,
+                    provider='GOOGLE',
+                    provider_user_id=provider_user_id,
+                )
+    except IntegrityError as error:
+        linked_account = (
+            SocialAccount.objects.select_related('user')
+            .filter(provider='GOOGLE', provider_user_id=provider_user_id)
+            .first()
+        )
+        if linked_account is None:
+            raise GoogleOAuthError(
+                'Không thể liên kết tài khoản Google. Vui lòng thử lại.'
+            ) from error
+        account = linked_account.user
+
+    if not account.email_verified or not is_active_buyer(account):
+        raise GoogleOAuthError(
+            'Tài khoản PCMatch chưa hoạt động. Vui lòng đăng nhập bằng email hoặc liên hệ hỗ trợ.'
+        )
+    return account
+
+
+@require_GET
+def google_callback(request):
+    pending = request.session.pop(GOOGLE_STATE_SESSION_KEY, None)
+    destination = pending.get('next') if isinstance(pending, dict) else reverse('buyer_cart')
+    if not isinstance(destination, str) or not destination.startswith('/buyer/'):
+        destination = reverse('buyer_cart')
+
+    received_state = request.GET.get('state', '')
+    expected_state = pending.get('state', '') if isinstance(pending, dict) else ''
+    created_at = pending.get('created_at', 0) if isinstance(pending, dict) else 0
+    state_age = time() - created_at if isinstance(created_at, (int, float)) else None
+    if (not expected_state or not received_state
+            or not hmac.compare_digest(str(expected_state), received_state)
+            or state_age is None
+            or not 0 <= state_age <= GOOGLE_STATE_MAX_AGE):
+        return _google_error_redirect(
+            request, destination,
+            'Yêu cầu đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.',
+        )
+
+    provider_error = request.GET.get('error')
+    if provider_error:
+        canceled = provider_error == 'access_denied'
+        return _google_error_redirect(
+            request,
+            destination,
+            'Bạn đã hủy đăng nhập Google.' if canceled
+            else 'Google không cấp quyền đăng nhập. Vui lòng thử lại.',
+            canceled=canceled,
+        )
+
+    code = request.GET.get('code')
+    if not code:
+        return _google_error_redirect(
+            request, destination,
+            'Google không trả về mã đăng nhập. Vui lòng thử lại.',
+        )
+
+    try:
+        callback_url = _google_redirect_uri(
+            request,
+            configured_uri=pending.get('redirect_uri') if isinstance(pending, dict) else None,
+        )
+        identity = get_google_identity(code=code, redirect_uri=callback_url)
+        account = _google_user(identity)
+    except GoogleOAuthError as error:
+        return _google_error_redirect(request, destination, str(error))
+    except DatabaseError:
+        return _google_error_redirect(
+            request, destination,
+            'Chưa thể xác nhận tài khoản Google. Vui lòng thử lại sau.',
         )
 
     login(request, account)

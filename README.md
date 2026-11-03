@@ -98,33 +98,76 @@ set it to the public HTTPS domain in deployed environments.
 
 ### Facebook sign-in configuration
 
-Create a Meta app in Meta for Developers, add the Facebook Login product, and
-allow the exact OAuth redirect URI provided by your HTTPS tunnel, ending in
-`/auth/facebook/callback/` (for example,
-`https://example-tunnel.ngrok-free.app/auth/facebook/callback/`). Facebook does
-not accept the plain HTTP `127.0.0.1` callback for this OAuth flow. Use the
-matching HTTPS URI and domain in production. The login requests `email` and
-`public_profile`; accounts without an accessible email cannot sign in. In
-development mode, add test users or app roles in Meta before testing.
+1. Open [Meta for Developers](https://developers.facebook.com/) and create an
+   app. Choose the consumer app/use case that offers Facebook Login, then add
+   the **Facebook Login** product and choose **Web** as its platform.
+2. In Facebook Login's **Settings**, enable client OAuth login and web OAuth
+   login. Add the exact public HTTPS callback to **Valid OAuth Redirect URIs**,
+   including its trailing slash, for example
+   `https://example-tunnel.ngrok-free.app/auth/facebook/callback/`. Add the
+   hostname (without a path) to **App Domains** and configure the app's contact
+   email and privacy policy/data-deletion information in the app settings.
+3. Keep the app in **Development** mode while building. In **App roles**, add
+   each tester as a Developer/Tester (or create a test user); invitees must
+   accept the invitation. Only app-role accounts and test users can use the
+   login while the app is in Development mode. Use an account that grants the
+   requested `email` and `public_profile` permissions.
+4. For sign-in by ordinary users, switch the app to **Live** only after
+   completing Meta's dashboard requirements. Submit any permission or business
+   verification review Meta requires. Do not try to bypass Development-mode,
+   review, or account restrictions; the app must meet Meta's requirements.
 
-For local development, copy `.env.example` to `.env` and fill in the Facebook
-app ID, secret, callback URI, and allowed host there. Django loads `.env`
-automatically when it starts. Keep `.env` private; it is ignored by Git and
-must never be committed or shared.
+Facebook OAuth requires a public HTTPS callback; the callback cannot be
+`https://127.0.0.1:8000/...`. For local development this project uses
+Cloudflare Quick Tunnel to forward HTTPS traffic to Django on localhost. The
+Quick Tunnel hostname is temporary, so create the tunnel first and copy the
+hostname it prints into both Meta and `.env`.
 
-Then start Django normally:
+1. Copy `.env.example` to `.env`. Fill in `FACEBOOK_APP_ID` and
+   `FACEBOOK_APP_SECRET` from **App settings → Basic**. The app secret is
+   server-only; keep `.env` private and never commit or share it.
+2. In PowerShell terminal 1, start Django on loopback:
 
-```powershell
-.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
-```
+   ```powershell
+   .venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+   ```
 
-The callback URI must exactly match a URI registered in Meta. A Cloudflare
-Quick Tunnel hostname can change when a new tunnel is created; saving that
-temporary hostname in `.env` does not make it permanent. To avoid updating Meta
-after a tunnel restart, use a fixed hostname (such as a Cloudflare Named Tunnel
-on a domain you control) and keep that same hostname in `.env` and Meta. Open
-the application through the HTTPS tunnel before clicking Facebook; starting
-at localhost and returning to a tunnel can lose the OAuth session/state.
+3. In PowerShell terminal 2, start the HTTPS tunnel (install `cloudflared`
+   first if the command is not available):
+
+   ```powershell
+   cloudflared tunnel --url http://127.0.0.1:8000
+   ```
+
+   Wait for the `https://....trycloudflare.com` URL in the output. Keep both
+   terminals running. Do not use the HTTP URL or visit the app at localhost
+   during the Facebook login flow.
+4. Put the tunnel hostname (without `https://` or a path) in `.env`. For
+   example, if the tunnel prints `https://sample-name.trycloudflare.com`, set:
+
+   ```dotenv
+   FACEBOOK_REDIRECT_URI=https://sample-name.trycloudflare.com/auth/facebook/callback/
+   ALLOWED_HOSTS=127.0.0.1,localhost,sample-name.trycloudflare.com
+   CSRF_TRUSTED_ORIGINS=https://sample-name.trycloudflare.com
+   ```
+
+   If also enabling Google sign-in, set
+   `GOOGLE_REDIRECT_URI=https://sample-name.trycloudflare.com/auth/google/callback/`.
+   Restart Django after editing `.env` so it loads the new values.
+5. In Meta Facebook Login **Settings**, add the exact
+   `FACEBOOK_REDIRECT_URI` value to **Valid OAuth Redirect URIs**. Add
+   `sample-name.trycloudflare.com` (hostname only) to **App Domains**.
+6. Open `https://sample-name.trycloudflare.com/auth/login/` in the browser and
+   click Facebook. Use the same hostname from the start through callback so
+   the session cookie and OAuth `state` remain available.
+
+The callback must match Meta exactly, including HTTPS and its trailing slash.
+If the Quick Tunnel is restarted, Cloudflare normally assigns another
+hostname: update `.env`, Meta's redirect URI and App Domains, then restart
+Django. For a stable hostname, use a named Cloudflare Tunnel on a domain you
+control. Django trusts the forwarded HTTPS scheme and the tunnel origin for
+CSRF only as configured above; keep the local Django server bound to
+`127.0.0.1` and do not expose its development port directly.
 
 The secret is used only by the server during the code exchange; it is not
 rendered into the page or sent to the browser. Facebook identity links are
@@ -133,6 +176,22 @@ active, email-verified buyer account with the same email, or creates a buyer
 account when no matching email exists. Seller/admin accounts cannot sign in
 through the buyer portal. Canceling or denying Facebook permissions returns
 the user to the login page without creating or changing an account.
+
+### Google sign-in configuration
+
+Create a Google OAuth client of type **Web application** in Google Cloud
+Console. Add the exact HTTPS callback URL to **Authorized redirect URIs**:
+`https://YOUR-FIXED-HOST/auth/google/callback/`. If the OAuth consent screen is
+in testing mode, add the Google accounts used for testing as test users.
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in
+`.env`. The callback URI must exactly match the URI registered with Google.
+Google sign-in requests `openid`, `email`, and `profile`, and only accepts a
+Google identity with a verified email. A first-time sign-in links to one active,
+email-verified buyer account with the same email, or creates a buyer account
+when no matching email exists. Seller/admin accounts cannot sign in through
+the buyer portal. Google identity links are stored in
+`users.SocialAccount`; the client secret remains server-side.
 
 ## Seller Onboarding
 
