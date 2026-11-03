@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import UploadedFile
+from PIL import Image, UnidentifiedImageError
+
 from .models import Address
 
 User = get_user_model()
@@ -22,6 +25,79 @@ class BuyerAddressForm(forms.ModelForm):
     class Meta:
         model = Address
         fields = ['receiver_name', 'receiver_phone', 'province', 'district', 'ward', 'detail_address', 'is_default']
+
+
+class BuyerProfileForm(forms.ModelForm):
+    avatar = forms.ImageField(
+        label='Ảnh đại diện',
+        required=False,
+        error_messages={'invalid_image': 'Tệp tải lên không phải ảnh hợp lệ.'},
+    )
+    full_name = forms.CharField(
+        label='Họ và tên',
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={'autocomplete': 'name'}),
+    )
+    phone = forms.RegexField(
+        label='Số điện thoại liên hệ',
+        regex=r'\A0[0-9]{9}\Z',
+        max_length=10,
+        required=False,
+        error_messages={
+            'invalid': 'Nhập số điện thoại gồm 10 chữ số, bắt đầu bằng 0.',
+        },
+        widget=forms.TextInput(attrs={
+            'type': 'tel',
+            'autocomplete': 'tel-national',
+            'inputmode': 'tel',
+            'pattern': '0[0-9]{9}',
+            'placeholder': '0901234567',
+        }),
+    )
+
+    class Meta:
+        model = User
+        fields = ['full_name', 'phone', 'avatar']
+
+    def clean_full_name(self):
+        name = self.cleaned_data['full_name'].strip()
+        if not name:
+            raise forms.ValidationError('Họ tên không được để trống.')
+        return name
+
+    def clean_phone(self):
+        return (self.cleaned_data.get('phone') or '').strip()
+
+    def clean_avatar(self):
+        upload = self.cleaned_data.get('avatar')
+        if not isinstance(upload, UploadedFile):
+            return upload
+        if upload.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('Ảnh đại diện không được vượt quá 5 MB.')
+
+        suffix = upload.name.rsplit('.', 1)[-1].lower() if '.' in upload.name else ''
+        if suffix not in {'jpg', 'jpeg', 'png', 'webp'}:
+            raise forms.ValidationError('Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WebP.')
+        try:
+            image = Image.open(upload)
+            valid = (
+                image.format in {'JPEG', 'PNG', 'WEBP'}
+                and image.width * image.height <= 20_000_000
+            )
+            image.verify()
+        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+            valid = False
+        finally:
+            upload.seek(0)
+        if not valid:
+            raise forms.ValidationError('Tệp tải lên không phải ảnh hợp lệ.')
+        return upload
+
+
+class SellerAccountProfileForm(BuyerProfileForm):
+    class Meta(BuyerProfileForm.Meta):
+        fields = ['full_name', 'phone', 'avatar']
 
 
 class BuyerRegisterForm(forms.Form):

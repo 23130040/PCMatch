@@ -31,7 +31,7 @@
                 <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|vnd }} ₫</p>
                 <dl class="shop-policies">
                     <dt>Shop bán</dt>
-                    <dd>{{ p.shop.shop_name }}</dd>
+                    <dd>{% if p.shop.status == 'ACTIVE' %}<a href="{% url 'public_shop_profile' p.shop.slug %}">{{ p.shop.shop_name }}</a>{% else %}{{ p.shop.shop_name }}{% endif %}</dd>
                     <dt>Tồn kho</dt>
                     <dd>{{ p.stock_quantity }} sản phẩm</dd>
                     <dt>Đã bán</dt>

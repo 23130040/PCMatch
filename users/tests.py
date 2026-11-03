@@ -2,15 +2,19 @@ import re
 from datetime import timedelta
 from io import BytesIO
 from smtplib import SMTPException
+import tempfile
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import DatabaseError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from .facebook_oauth import get_facebook_identity
 from .google_oauth import get_google_identity
@@ -848,6 +852,186 @@ class GoogleLoginTests(TestCase):
         self.assertEqual(profile_request.get_header('Authorization'), 'Bearer temporary-access-token')
         self.assertNotIn('temporary-access-token', profile_request.full_url)
         self.assertEqual(urlopen_mock.call_args_list[0].kwargs['timeout'], 10)
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    EMAIL_HOST='smtp.example.test',
+    EMAIL_HOST_USER='buyer@example.test',
+    EMAIL_HOST_PASSWORD='test-app-password',
+    DEFAULT_FROM_EMAIL='buyer@example.test',
+)
+class BuyerAccountTests(TestCase):
+    old_password = 'BuyerOld!82734'
+    new_password = 'BuyerNew!82734'
+
+    def setUp(self):
+        self.buyer = get_user_model().objects.create_user(
+            username='account-buyer',
+            email='account-buyer@example.test',
+            password=self.old_password,
+            full_name='Buyer Account',
+            role='BUYER',
+            status='ACTIVE',
+            email_verified=True,
+            phone_verified=True,
+            phone='0912345678',
+        )
+        self.client.force_login(self.buyer)
+
+    def test_account_renders_working_forms_without_cancel_button(self):
+        response = self.client.get(reverse('buyer_account'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'action="{reverse("buyer_account")}"')
+        self.assertContains(response, 'name="phone"')
+        self.assertContains(response, 'type="submit">Lưu hồ sơ</button>')
+        self.assertNotContains(response, 'Hủy thay đổi')
+        self.assertContains(response, f'action="{reverse("buyer_password_change_request")}"')
+        self.assertNotContains(response, 'name="old"')
+
+    def test_profile_saves_with_empty_phone_and_updates_filled_phone(self):
+        empty_phone = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Buyer Updated',
+            'phone': '',
+        })
+        self.assertRedirects(empty_phone, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Updated')
+        self.assertEqual(self.buyer.phone, '')
+        self.assertFalse(self.buyer.phone_verified)
+
+        filled_phone = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Buyer Updated',
+            'phone': '0987654321',
+            'role': 'ADMIN',
+            'is_staff': '1',
+            'status': 'LOCKED',
+        })
+        self.assertRedirects(filled_phone, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.phone, '0987654321')
+        self.assertFalse(self.buyer.phone_verified)
+        self.assertEqual(self.buyer.role, 'BUYER')
+        self.assertFalse(self.buyer.is_staff)
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+
+    def test_profile_accepts_valid_avatar_and_rejects_non_image(self):
+        image_buffer = BytesIO()
+        Image.new('RGB', (8, 8), color='blue').save(image_buffer, format='PNG')
+        valid_image = SimpleUploadedFile('avatar.png', image_buffer.getvalue(), content_type='image/png')
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Buyer Account',
+                'phone': self.buyer.phone,
+                'avatar': valid_image,
+            })
+            self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+            self.buyer.refresh_from_db()
+            self.assertTrue(self.buyer.avatar.name.startswith('avatar/'))
+
+            invalid_image = SimpleUploadedFile('avatar.png', b'not an image', content_type='image/png')
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Name should not save',
+                'phone': self.buyer.phone,
+                'avatar': invalid_image,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Tệp tải lên không phải ảnh hợp lệ.')
+            self.buyer.refresh_from_db()
+            self.assertEqual(self.buyer.full_name, 'Buyer Account')
+
+    def test_profile_rejects_invalid_phone_without_saving(self):
+        response = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Changed Name',
+            'phone': '123',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'bắt đầu bằng 0')
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Account')
+        self.assertEqual(self.buyer.phone, '0912345678')
+
+    def test_profile_database_error_keeps_submitted_values_and_reports_failure(self):
+        with patch('users.views.User.save', side_effect=DatabaseError('database unavailable')):
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Submitted Name',
+                'phone': '0987654321',
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Không thể lưu hồ sơ lúc này')
+        self.assertEqual(response.context['profile_form']['full_name'].value(), 'Submitted Name')
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Account')
+        self.assertEqual(self.buyer.phone, '0912345678')
+
+    def test_password_change_request_sends_link_to_signed_in_buyers_email(self):
+        response = self.client.post(reverse('buyer_password_change_request'))
+
+        self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.buyer.email])
+        token = PasswordResetToken.objects.get(user=self.buyer, used=False)
+        self.assertGreater(token.expires_at, timezone.now())
+        self.assertIn(
+            reverse('buyer_account_password_reset', args=[token.token]),
+            mail.outbox[0].body,
+        )
+
+    @override_settings(EMAIL_HOST_PASSWORD='')
+    def test_password_change_without_smtp_credentials_explains_configuration(self):
+        response = self.client.post(
+            reverse('buyer_password_change_request'),
+            follow=True,
+        )
+
+        self.assertContains(response, 'điền cấu hình SMTP trong .env')
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer).exists())
+        self.assertFalse(mail.outbox)
+
+    @patch('users.views.send_mail', side_effect=SMTPException('mail server unavailable'))
+    def test_password_change_delivery_failure_revokes_the_token(self, send_mail_mock):
+        response = self.client.post(reverse('buyer_password_change_request'), follow=True)
+
+        self.assertContains(response, 'Không gửi được liên kết đổi mật khẩu.')
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer, used=False).exists())
+        send_mail_mock.assert_called_once()
+
+    def test_email_password_change_preserves_login_and_returns_to_account(self):
+        self.client.post(reverse('buyer_password_change_request'))
+        token = PasswordResetToken.objects.get(user=self.buyer, used=False)
+        reset_url = reverse('buyer_account_password_reset', args=[token.token])
+        reset_page = self.client.get(reset_url)
+        self.assertEqual(reset_page.status_code, 200)
+        self.assertNotContains(reset_page, 'name="email"')
+
+        mismatch = self.client.post(reset_url, {
+            'password1': self.new_password,
+            'password2': 'Different!82734',
+        })
+        self.assertContains(mismatch, 'Mật khẩu nhập lại không khớp.')
+        self.buyer.refresh_from_db()
+        self.assertTrue(self.buyer.check_password(self.old_password))
+        token.refresh_from_db()
+        self.assertFalse(token.used)
+        self.assertEqual(self.client.get(reverse('buyer_account')).status_code, 200)
+
+        response = self.client.post(reset_url, {
+            'password1': self.new_password,
+            'password2': self.new_password,
+        })
+
+        self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertTrue(self.buyer.check_password(self.new_password))
+        self.assertIn('_auth_user_id', self.client.session)
+        self.assertEqual(str(self.client.session['_auth_user_id']), str(self.buyer.pk))
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer, used=False).exists())
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn('đã được thay đổi', mail.outbox[-1].subject)
+        self.assertEqual(self.client.get(reverse('buyer_account')).status_code, 200)
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')

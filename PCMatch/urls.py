@@ -23,10 +23,20 @@ urlpatterns = [
     path('auth/register/', partial(user_views.auth_login, register=True), name='auth_register'),
     path('auth/forgot/', user_views.buyer_forgot_password, name='buyer_forgot_password'),
     path('auth/reset/<str:token>/', user_views.buyer_reset_password, name='buyer_reset_password'),
+    path(
+        'buyer/account/change-password/<str:token>/',
+        partial(user_views.buyer_reset_password, keep_session=True),
+        name='buyer_account_password_reset',
+    ),
     path('auth/facebook/', user_views.facebook_login, name='auth_facebook_login'),
     path('auth/facebook/callback/', user_views.facebook_callback, name='auth_facebook_callback'),
     path('auth/google/', user_views.google_login, name='auth_google_login'),
     path('auth/google/callback/', user_views.google_callback, name='auth_google_callback'),
+    path(
+        'buyer/account/change-password/',
+        user_views.buyer_password_change_request,
+        name='buyer_password_change_request',
+    ),
     path('auth/verify-email/', user_views.buyer_verify_email, name='auth_verify_email'),
     path('shop/register/', shop_views.shop_register, name='shop_register'),
     path('shop/verify/email/', shop_views.shop_verify_email, name='shop_verify_email'),
@@ -35,7 +45,13 @@ urlpatterns = [
     path('shop/onboarding/profile/', shop_views.shop_onboarding_profile, name='shop_onboarding_profile'),
     path('shop/onboarding/legal/', shop_views.shop_onboarding_legal, name='shop_onboarding_legal'),
     path('shop/onboarding/pending/', shop_views.shop_onboarding_pending, name='shop_onboarding_pending'),
+    path(
+        'shop/settings/profile/',
+        shop_views.shop_required(shop_views.shop_profile_settings),
+        name='shop_profile_settings',
+    ),
     path('shop/notifications/', shop_views.shop_notifications, name='shop_notifications'),
+    path('buyer/shops/<slug:slug>/', shop_views.public_shop_profile, name='public_shop_profile'),
     path('shop/forgot/', shop_views.shop_forgot_password, name='shop_forgot'),
     path('shop/reset/<str:token>/', shop_views.shop_reset_password, name='shop_reset_password'),
     path('staff/login/', user_views.staff_login, name='staff_login'),
@@ -70,6 +86,14 @@ urlpatterns = [
     path('staff/shop/<int:shop_id>/suspend/',
          staff_required(shop_views.staff_shop_suspend),
          name='staff_shop_suspend',
+    ),
+    path('staff/shop/<int:shop_id>/reject/',
+         staff_required(shop_views.staff_shop_reject),
+         name='staff_shop_reject',
+    ),
+    path('staff/shop/<int:shop_id>/identity/',
+         staff_required(shop_views.staff_shop_set_identity_verified),
+         name='staff_shop_set_identity_verified',
     ),
 
     path('staff/logout/',
@@ -138,6 +162,8 @@ for section, pages in PAGE_GROUPS.items():
             view = order_views.buyer_orders
         elif section == 'buyer' and page == 'addresses':
             view = user_views.buyer_addresses
+        elif section == 'buyer' and page == 'account':
+            view = user_views.buyer_account
         elif section == 'buyer' and page in {'order', 'payment'}:
             view = order_views.buyer_order
             

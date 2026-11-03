@@ -67,6 +67,12 @@
                 <p>Shop đã được duyệt, chủ shop đã vào được trang chính</p>
             </article>
             <article class="kpi-card kpi-card--rose">
+                <div class="kpi-card__content"><h2>Bị từ chối</h2>
+                    <div class="kpi-value"><strong>{{ shop_counts.REJECTED }}</strong><span>shop</span></div>
+                </div>
+                <p>Hồ sơ chưa đạt yêu cầu và có ghi chú quản trị</p>
+            </article>
+            <article class="kpi-card kpi-card--rose">
                 <div class="kpi-card__content"><h2>Tạm ngưng</h2>
                     <div class="kpi-value"><strong>{{ shop_counts.SUSPENDED }}</strong><span>shop</span></div>
                 </div>
@@ -120,7 +126,9 @@
                             <small>
                                 Hồ sơ:
                                 {% if shop.id_card %}<a href="{% url 'staff_shop_document' shop.pk 'id-card' %}">CCCD</a>{% endif %}
-                                {% if shop.id_card and shop.business_license %} · {% endif %}
+                                {% if shop.id_card_front %}<a href="{% url 'staff_shop_document' shop.pk 'id-card-front' %}">Mặt trước CCCD</a>{% endif %}
+                                {% if shop.id_card_back %}<a href="{% url 'staff_shop_document' shop.pk 'id-card-back' %}">Mặt sau CCCD</a>{% endif %}
+                                {% if shop.id_card or shop.id_card_front or shop.id_card_back %} · {% endif %}
                                 {% if shop.business_license %}<a href="{% url 'staff_shop_document' shop.pk 'business-license' %}">Giấy phép kinh doanh</a>{% endif %}
                             </small>
                             {% endif %}
@@ -140,9 +148,23 @@
                             <span class="status status--active">Đang hoạt động</span>
                             {% elif shop.status == 'PENDING' %}
                             <span class="status status--pending">Chờ duyệt tham gia</span>
+                            {% elif shop.status == 'REJECTED' %}
+                            <span class="status status--suspended">Bị từ chối</span>
                             {% else %}
                             <span class="status status--suspended">Tạm ngưng</span>
                             {% endif %}
+                            {% if shop.identity_verified %}<small>Đã xác minh danh tính</small>{% endif %}
+                            {% if shop.admin_note %}<small>{{ shop.admin_note|truncatechars:100 }}</small>{% endif %}
+                            <form method="post" action="{% url 'staff_shop_set_identity_verified' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <input type="hidden" name="verified" value="{% if shop.identity_verified %}false{% else %}true{% endif %}">
+                                <button class="button button--secondary" type="submit"
+                                    {% if not shop.identity_verified and not shop.id_card and not shop.id_card_front %}disabled title="Cần hồ sơ định danh trước khi xác minh"{% endif %}>
+                                    {% if shop.identity_verified %}Gỡ xác minh{% else %}Xác minh danh tính{% endif %}
+                                </button>
+                            </form>
                         </td>
                         <td class="center">
                             {% if shop.status != 'ACTIVE' %}
@@ -151,9 +173,16 @@
                                 <input type="hidden" name="search" value="{{ search }}">
                                 <input type="hidden" name="status" value="{{ status }}">
                                 <button class="button button--primary" type="submit"
-                                    {% if not shop.owner.email_verified or not shop.legal_submitted_at or not shop.id_card or not shop.business_license %}disabled title="Cần xác thực email và nộp đủ hồ sơ pháp lý"{% endif %}>
+                                    {% if not shop.is_ready_for_approval %}disabled title="Cần xác thực email và nộp đủ hồ sơ pháp lý"{% endif %}>
                                     <i class="fa-solid fa-check"></i> <span>Duyệt</span>
                                 </button>
+                            </form>
+                            <form method="post" action="{% url 'staff_shop_reject' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <input type="text" name="admin_note" maxlength="1000" placeholder="Lý do từ chối" aria-label="Lý do từ chối">
+                                <button class="button button--secondary" type="submit"><span>Từ chối</span></button>
                             </form>
                             {% else %}
                             <form method="post" action="{% url 'staff_shop_suspend' shop.pk %}" class="table-action-form">

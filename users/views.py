@@ -1,11 +1,12 @@
 from time import time
 from datetime import timedelta
 import hmac
+import logging
 from smtplib import SMTPException
 from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import user_passes_test
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
@@ -31,6 +32,7 @@ from users.forms import (
     BuyerAddressForm,
     BuyerForgotPasswordForm,
     BuyerSetPasswordForm,
+    BuyerProfileForm,
     LoginForm,
     StaffForgotPasswordForm,
     StaffLoginForm,
@@ -48,6 +50,7 @@ from .google_oauth import (
     google_authorization_url,
 )
 
+logger = logging.getLogger(__name__)
 
 # Each portal has its own role, so one session never reaches another area.
 BUYER_ROLES = {'BUYER', 'CUSTOMER'}
@@ -77,6 +80,102 @@ def is_active_seller(user):
 
 
 buyer_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('auth_login'))
+
+
+@require_http_methods(['GET', 'POST'])
+@buyer_required
+def buyer_account(request):
+    form = BuyerProfileForm(
+        request.POST if request.method == 'POST' else None,
+        request.FILES if request.method == 'POST' else None,
+        instance=User.objects.get(pk=request.user.pk),
+    )
+    if request.method == 'POST' and form.is_valid():
+        user = form.save(commit=False)
+        if 'phone' in form.changed_data:
+            user.phone_verified = False
+        try:
+            with transaction.atomic():
+                user.save()
+        except DatabaseError:
+            logger.exception('Could not update buyer profile for user %s.', request.user.pk)
+            form.add_error(None, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+            messages.error(request, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+        else:
+            messages.success(request, 'Thông tin hồ sơ đã được cập nhật.')
+            if 'phone' in form.changed_data:
+                messages.warning(request, 'Số điện thoại đã đổi và cần được xác minh lại.')
+            return redirect('buyer_account')
+    return render(request, 'buyer/account.html', {
+        'page_name': 'account',
+        'page_section': 'buyer',
+        'profile_form': form,
+    })
+
+
+@require_POST
+@buyer_required
+def buyer_password_change_request(request):
+    if not all((
+        settings.EMAIL_HOST,
+        settings.EMAIL_HOST_USER,
+        settings.EMAIL_HOST_PASSWORD,
+        settings.DEFAULT_FROM_EMAIL,
+    )):
+        messages.error(
+            request,
+            'Email chưa được cấu hình. Hãy điền cấu hình SMTP trong .env rồi khởi động lại server.',
+        )
+        return redirect('buyer_account')
+
+    token = get_random_string(48)
+    with transaction.atomic():
+        PasswordResetToken.objects.filter(
+            user=request.user,
+            used=False,
+        ).update(used=True)
+        reset_token = PasswordResetToken.objects.create(
+            user=request.user,
+            token=token,
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+    reset_url = request.build_absolute_uri(
+        reverse('buyer_account_password_reset', args=[reset_token.token])
+    )
+    try:
+        sent_count = send_mail(
+            'Liên kết đổi mật khẩu PCMatch',
+            'Bạn đã yêu cầu đổi mật khẩu tài khoản PCMatch. '
+            'Mở liên kết sau trong vòng 1 giờ để đặt mật khẩu mới:\n'
+            f'{reset_url}\n\n'
+            'Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email.',
+            None,
+            [request.user.email],
+            fail_silently=False,
+        )
+    except (OSError, SMTPException):
+        logger.exception('Could not send buyer password-change email for user %s.', request.user.pk)
+        reset_token.used = True
+        reset_token.save(update_fields=['used'])
+        messages.error(
+            request,
+            'Không gửi được liên kết đổi mật khẩu. Vui lòng kiểm tra cấu hình email và thử lại.',
+        )
+    else:
+        if sent_count != 1:
+            logger.error('SMTP did not accept the buyer password-change email for user %s.', request.user.pk)
+            reset_token.used = True
+            reset_token.save(update_fields=['used'])
+            messages.error(
+                request,
+                'Email chưa được gửi. Hãy kiểm tra cấu hình SMTP rồi thử lại.',
+            )
+            return redirect('buyer_account')
+        messages.success(
+            request,
+            f'Liên kết đổi mật khẩu đã được gửi tới {request.user.email}. Vui lòng kiểm tra hộp thư.',
+        )
+    return redirect('buyer_account')
 
 
 def _buyer_address(user, identifier):
@@ -769,7 +868,7 @@ def buyer_forgot_password(request):
 
 
 @require_http_methods(['GET', 'POST'])
-def buyer_reset_password(request, token):
+def buyer_reset_password(request, token, *, keep_session=False):
     record = (
         PasswordResetToken.objects.filter(
             token=token,
@@ -784,6 +883,8 @@ def buyer_reset_password(request, token):
     )
     if record is None:
         messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+        if is_active_buyer(request.user):
+            return redirect('buyer_account')
         return redirect('auth_login')
 
     form = BuyerSetPasswordForm(request.POST or None, user=record.user)
@@ -807,10 +908,26 @@ def buyer_reset_password(request, token):
             )
             if record is None:
                 messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+                if is_active_buyer(request.user):
+                    return redirect('buyer_account')
                 return redirect('auth_login')
             account.set_password(form.cleaned_data['password1'])
             account.save(update_fields=['password'])
             PasswordResetToken.objects.filter(user=account, used=False).update(used=True)
+
+        messages.success(request, 'Mật khẩu đã được thay đổi thành công.')
+        keep_buyer_session = keep_session or (
+            request.user.is_authenticated
+            and request.user.pk == account.pk
+            and is_active_buyer(request.user)
+        )
+        if keep_buyer_session and is_active_buyer(account):
+            if request.user.is_authenticated and request.user.pk == account.pk:
+                update_session_auth_hash(request, account)
+            else:
+                login(request, account)
+        elif keep_buyer_session:
+            keep_buyer_session = False
 
         try:
             send_mail(
@@ -827,8 +944,8 @@ def buyer_reset_password(request, token):
                 'Mật khẩu đã được thay đổi nhưng chưa gửi được email thông báo. '
                 'Vui lòng liên hệ bộ phận hỗ trợ nếu bạn không thực hiện thay đổi này.',
             )
-        else:
-            messages.success(request, 'Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.')
+        if keep_buyer_session and is_active_buyer(account):
+            return redirect('buyer_account')
         return redirect('auth_login')
 
     return render(request, 'auth/buyer_reset_password.html', {

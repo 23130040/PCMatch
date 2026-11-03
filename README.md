@@ -80,21 +80,26 @@ it does not grant staff access or create a Shop.
 Buyer registration requires a six-digit email OTP. The code expires after three
 minutes; users can request a replacement immediately, and five incorrect entries
 require entering the email again. The account can sign in after successful
-verification. OTP mail uses SMTP (it is not printed to the terminal), configured
-through environment variables. The default SMTP settings are already configured
-for `pcmatchcomputer@gmail.com`. For Gmail, use an App Password rather than the
-regular account password; enter it in the current PowerShell session without
-adding it to source control:
+verification. OTP and password-change mail use SMTP (credentials are never printed to the
+terminal), configured in the local `.env` file. The default SMTP settings are
+already configured for `pcmatchcomputer@gmail.com`. For Gmail, use an App
+Password rather than the regular account password. Put it in the untracked
+`.env` file, without spaces, and restart Django so it loads the updated setting:
 
-```powershell
-$env:EMAIL_HOST_PASSWORD = "PASTE_GMAIL_APP_PASSWORD_HERE"
-$env:SHOP_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
-.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+```dotenv
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=true
+EMAIL_HOST_USER=pcmatchcomputer@gmail.com
+EMAIL_HOST_PASSWORD=PASTE_GMAIL_APP_PASSWORD_HERE
+DEFAULT_FROM_EMAIL=pcmatchcomputer@gmail.com
 ```
 
-Do not commit the App Password or share it in chat. Both buyer OTP and seller
-activation email use Gmail SMTP. Seller activation links use `SHOP_PUBLIC_BASE_URL`;
-set it to the public HTTPS domain in deployed environments.
+Do not commit the App Password or share it in chat. A running server does not
+reload `.env`; stop it and start it again after changing mail settings. Both
+buyer OTP and seller activation email use Gmail SMTP. Seller activation links
+use `SHOP_PUBLIC_BASE_URL`; set it to the public HTTPS domain in deployed
+environments.
 
 ### Facebook sign-in configuration
 
