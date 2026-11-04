@@ -9,13 +9,35 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-from dotenv import load_dotenv
+
 from pathlib import Path
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+
+def load_local_env():
+    env_file = BASE_DIR / '.env'
+    if not env_file.is_file():
+        return
+
+    for line_number, line in enumerate(env_file.read_text(encoding='utf-8').splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        key, separator, value = line.partition('=')
+        key = key.strip()
+        value = value.strip()
+        if not separator or not key.isidentifier():
+            raise RuntimeError(f'Invalid entry in {env_file.name} on line {line_number}.')
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+load_local_env()
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -26,11 +48,16 @@ SECRET_KEY = 'django-insecure-n8f&%gmxzdzf&j&o6a$qsj(iqm*=+^yxks9+gl47(1xkn5q709
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
+ALLOWED_HOSTS = list(dict.fromkeys([
     '127.0.0.1',
     'localhost',
     'drapery-pessimist-unmatched.ngrok-free.dev',
-]
+    *(
+        host.strip()
+        for host in os.environ.get('ALLOWED_HOSTS', '').split(',')
+        if host.strip()
+    ),
+]))
 
 CSRF_TRUSTED_ORIGINS = [
     'https://drapery-pessimist-unmatched.ngrok-free.dev',
@@ -151,7 +178,27 @@ MEDIA_URL = '/media/'
 #         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
 #     },
 # }
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pcmatchcomputer@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pcmatchcomputer@gmail.com')
+BUYER_OTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+SHOP_PUBLIC_BASE_URL = os.environ.get(
+    'SHOP_PUBLIC_BASE_URL',
+    'http://127.0.0.1:8000',
+).rstrip('/')
+
+# Facebook OAuth credentials are server-side only; never expose the app secret to templates.
+FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '').strip()
+FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '').strip()
+FACEBOOK_GRAPH_VERSION = os.environ.get('FACEBOOK_GRAPH_VERSION', 'v22.0').strip()
+FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '').strip()
 
 AUTH_USER_MODEL = 'users.User'
 

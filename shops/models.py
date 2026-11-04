@@ -29,6 +29,14 @@ class Shop(models.Model):
     def __str__(self):
         return self.shop_name
 
+    def is_ready_for_approval(self):
+        return bool(
+            self.owner.email_verified
+            and self.legal_submitted_at
+            and self.id_card
+            and self.business_license
+        )
+
     def save(self, *args, **kwargs):
         previous_status = None
         if self.pk:

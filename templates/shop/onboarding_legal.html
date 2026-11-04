@@ -9,7 +9,7 @@
     {% include 'includes/shop/onboarding_steps.html' with current=4 %}
     {% if shop %}
     <div class="message message--info" role="status">
-        Shop <strong>{{ shop.shop_name }}</strong> đã được tạo. Vui lòng hoàn tất giấy tờ pháp lý.
+        Hồ sơ tài khoản và shop chỉ được tạo sau khi bạn gửi đầy đủ giấy tờ pháp lý.
     </div>
     {% endif %}
     <form method="post" action="{% url 'shop_onboarding_legal' %}" class="shop-auth__form" enctype="multipart/form-data">

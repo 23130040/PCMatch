@@ -13,9 +13,20 @@ class ShopAdmin(admin.ModelAdmin):
     @admin.action(description='Phê duyệt shop đã chọn')
     def approve_shops(self, request, queryset):
         # Saving each record individually lets Shop.save() detect the transition and notify the owner.
+        blocked = []
         for shop in queryset:
+            if not shop.is_ready_for_approval():
+                blocked.append(shop.shop_name)
+                continue
             shop.status = 'ACTIVE'
             shop.save()
+        if blocked:
+            self.message_user(
+                request,
+                'Không thể duyệt shop chưa xác thực email hoặc chưa nộp đủ giấy tờ: '
+                + ', '.join(blocked),
+                level='error',
+            )
 
     @admin.action(description='Tạm ngưng shop đã chọn')
     def suspend_shops(self, request, queryset):
