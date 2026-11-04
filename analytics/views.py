@@ -44,18 +44,19 @@ def _month_starts(start, end):
     return months
 
 
-def _filter_period(request):
+def _filter_period(request, params=None):
+    params = params or request.GET
     today = timezone.localdate()
     current_year = today.year
-    selected_year = _parse_int(request.GET.get('year'), 2000, current_year + 1) or current_year
-    selected_month = _parse_int(request.GET.get('month'), 1, 12)
-    selected_period_month = _parse_year_month(request.GET.get('period_month'), 2000, current_year + 1)
+    selected_year = _parse_int(params.get('year'), 2000, current_year + 1) or current_year
+    selected_month = _parse_int(params.get('month'), 1, 12)
+    selected_period_month = _parse_year_month(params.get('period_month'), 2000, current_year + 1)
     if selected_period_month:
         selected_year, selected_month = selected_period_month
-    has_year_selection = bool(request.GET.get('year'))
-    requested_start = parse_date(request.GET.get('from_date', ''))
-    requested_end = parse_date(request.GET.get('to_date', ''))
-    preset = request.GET.get('preset', '').lower()
+    has_year_selection = bool(params.get('year'))
+    requested_start = parse_date(params.get('from_date', ''))
+    requested_end = parse_date(params.get('to_date', ''))
+    preset = params.get('preset', '').lower()
 
     if requested_start and requested_end and requested_start > requested_end:
         requested_start, requested_end = requested_end, requested_start
@@ -65,15 +66,13 @@ def _filter_period(request):
         start_date, end_date = chart_start, chart_end
         label = f'Từ {chart_start:%d/%m/%Y} đến {chart_end:%d/%m/%Y}'
         preset = ''
-    elif preset == 'all':
+    elif preset in {'all', 'today'} or (not preset and not selected_month and not has_year_selection):
         first_order = Order.objects.order_by('created_at').values_list('created_at', flat=True).first()
         chart_start = timezone.localdate(first_order).replace(day=1) if first_order else date(current_year, 1, 1)
         chart_end = today
         start_date = end_date = None
+        preset = 'all'
         label = 'Tất cả thời gian'
-    elif preset == 'today':
-        chart_start = chart_end = start_date = end_date = today
-        label = f'Hôm nay · {today:%d/%m/%Y}'
     elif preset in {'7days', '30days'}:
         number_of_days = 7 if preset == '7days' else 30
         chart_start = start_date = today - timedelta(days=number_of_days - 1)
@@ -103,9 +102,12 @@ def _filter_period(request):
         start_date, end_date = chart_start, chart_end
         label = f'Năm {selected_year}'
     else:
-        chart_start = chart_end = start_date = end_date = today
-        preset = 'today'
-        label = f'Hôm nay · {today:%d/%m/%Y}'
+        first_order = Order.objects.order_by('created_at').values_list('created_at', flat=True).first()
+        chart_start = timezone.localdate(first_order).replace(day=1) if first_order else date(current_year, 1, 1)
+        chart_end = today
+        start_date = end_date = None
+        preset = 'all'
+        label = 'Tất cả thời gian'
 
     return {
         'start_date': start_date,

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static cart_prices %}
 <!DOCTYPE html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
 <head>
@@ -16,11 +16,11 @@
     <link rel="stylesheet" href="{% static 'css/pages.css' %}">
     <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
     <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shop-admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shop-admin.css' %}?v=20261104-shop-metrics">
     <link rel="stylesheet" href="{% static 'css/shop-effects.css' %}">
     <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
 {% include 'includes/frontend_config.html' %}</head>
-<body class="shop-page">
+<body class="admin-dashboard shop-page">
 {% include 'admin/header.html' %}
 
 <div class="shell">
@@ -31,7 +31,7 @@
         <div class="message message--info" role="status">{{ message }}</div>
         {% endfor %}
 
-        <section class="page-heading">
+        <section class="page-heading admin-page-head">
             <div>
                 <div class="breadcrumbs"><a href="{% url 'staff_dashboard' %}">Admin</a><span>/</span><span>Quản lý shop</span>
                 </div>
@@ -45,40 +45,31 @@
                     <span><strong>{{ shop_counts.PENDING }}</strong> hồ sơ shop mới đang chờ duyệt tham gia sàn</span>
                 </div>
             </div>
+            <div class="dashboard-period" data-dashboard-period>
+                <button class="dashboard-period__trigger" type="button" aria-expanded="false" aria-controls="shop-period-menu"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i><span>{{ period_label }}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                <div class="dashboard-period__menu" id="shop-period-menu" hidden>
+                    <form class="dashboard-period__presets" method="get" aria-label="Khoảng thời gian nhanh"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ status }}"><button type="submit" name="preset" value="all"{% if active_preset == 'all' %} class="is-active"{% endif %}>Tất cả</button><button type="submit" name="preset" value="7days"{% if active_preset == '7days' %} class="is-active"{% endif %}>7 ngày qua</button><button type="submit" name="preset" value="30days"{% if active_preset == '30days' %} class="is-active"{% endif %}>30 ngày qua</button><button type="submit" name="preset" value="month"{% if active_preset == 'month' %} class="is-active"{% endif %}>Tháng này</button><button type="submit" name="preset" value="quarter"{% if active_preset == 'quarter' %} class="is-active"{% endif %}>Quý này</button><button type="submit" name="preset" value="year"{% if active_preset == 'year' %} class="is-active"{% endif %}>Năm nay</button></form>
+                    <div class="dashboard-period__tabs" role="tablist"><button{% if active_picker_tab == 'month' %} class="is-active"{% endif %} type="button" data-period-tab="month">Tháng</button><button{% if active_picker_tab == 'year' %} class="is-active"{% endif %} type="button" data-period-tab="year">Năm</button></div>
+                    <form class="dashboard-period__form" method="get" data-period-form="month"{% if active_picker_tab != 'month' %} hidden{% endif %}><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ status }}"><label><span class="sr-only">Chọn tháng</span><input type="month" name="period_month" value="{{ month_input_value }}"></label><button class="btn btn--primary" type="submit">Áp dụng</button></form>
+                    <form class="dashboard-period__form" method="get" data-period-form="year"{% if active_picker_tab != 'year' %} hidden{% endif %}><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ status }}"><label><span class="sr-only">Chọn năm</span><input type="number" name="year" min="2000" max="{{ current_year|add:1 }}" value="{{ selected_year }}"></label><button class="btn btn--primary" type="submit">Áp dụng</button></form>
+                    <form class="dashboard-period__custom" method="get"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ status }}"><strong>Khoảng tùy chỉnh</strong><div><label><span class="sr-only">Từ ngày</span><input type="date" name="from_date" value="{{ from_date }}" required></label><span>–</span><label><span class="sr-only">Đến ngày</span><input type="date" name="to_date" value="{{ to_date }}" required></label></div><button class="btn btn--primary" type="submit">Áp dụng khoảng</button></form>
+                </div>
+            </div>
         </section>
 
-        <section class="kpi-grid" aria-label="Số liệu quản lý shop">
-            <article class="kpi-card kpi-card--blue">
-                <div class="kpi-card__content"><h2>Shop trên sàn</h2>
-                    <div class="kpi-value"><strong>{{ shop_total }}</strong><span>shop</span></div>
-                </div>
-                <p>Tổng số shop đã đăng ký trên sàn</p>
-            </article>
-            <article class="kpi-card kpi-card--amber">
-                <div class="kpi-card__content"><h2>Chờ duyệt tham gia</h2>
-                    <div class="kpi-value"><strong>{{ shop_counts.PENDING }}</strong><span>yêu cầu</span></div>
-                </div>
-                <p>Hồ sơ shop gửi yêu cầu tham gia cần admin xác nhận</p>
-            </article>
-            <article class="kpi-card kpi-card--green">
-                <div class="kpi-card__content"><h2>Đang hoạt động</h2>
-                    <div class="kpi-value"><strong>{{ shop_counts.ACTIVE }}</strong><span>shop</span></div>
-                </div>
-                <p>Shop đã được duyệt, chủ shop đã vào được trang chính</p>
-            </article>
-            <article class="kpi-card kpi-card--rose">
-                <div class="kpi-card__content"><h2>Tạm ngưng</h2>
-                    <div class="kpi-value"><strong>{{ shop_counts.SUSPENDED }}</strong><span>shop</span></div>
-                </div>
-                <p>Shop bị tạm ngưng, chủ shop không truy cập được trang chính</p>
-            </article>
+        <section class="dashboard-metrics admin-metrics shop-metrics" aria-label="Thống kê shop">
+            <article class="panel metric-panel admin-metric admin-metric--blue"><span class="metric-label">Shop trên sàn</span><strong class="metric-value">{{ shop_total }} <small>shop</small></strong><p>Tổng số shop trong {{ period_label|lower }}</p></article>
+            <article class="panel metric-panel admin-metric admin-metric--amber"><span class="metric-label">Chờ duyệt tham gia</span><strong class="metric-value">{{ shop_counts.PENDING }} <small>yêu cầu</small></strong><p>Hồ sơ shop cần admin xác nhận</p></article>
+            <article class="panel metric-panel admin-metric admin-metric--plain"><span class="metric-label">Phí sàn cần đối soát</span><strong class="metric-value">{{ platform_fee_total|compact_vnd }} <small>₫</small></strong><p>Phí từ {{ fee_shop_count }} shop có đơn đã giao</p></article>
+            <article class="panel metric-panel admin-metric admin-metric--blue"><span class="metric-label">Đang hoạt động</span><strong class="metric-value">{{ shop_counts.ACTIVE }} <small>shop</small></strong><p>Shop đã được phê duyệt trên sàn</p></article>
         </section>
 
         <section class="shop-table-card">
-            <div class="table-toolbar">
-                <div class="table-filters">
-                    <form method="get" action="{% url 'staff_shop' %}" class="table-search">
-                        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+            <div class="table-toolbar order-toolbar">
+                <div class="table-filters order-toolbar__top">
+                    <form method="get" action="{% url 'staff_shop' %}" class="table-search order-toolbar__search">
+                        <input type="hidden" name="status" value="{{ status }}">
+                        <input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" stroke-linecap="round"/>
                         </svg>
@@ -86,46 +77,41 @@
                                placeholder="Tìm theo tên shop, chủ shop, email hoặc số điện thoại...">
                     </form>
                 </div>
-                <div class="result-count"><strong>{{ shop_page.paginator.count }}</strong> shop khớp bộ lọc</div>
+                <div class="result-count"><strong>{{ filtered_shop_count }}</strong> shop khớp bộ lọc</div>
             </div>
 
-            <nav class="filter-tabs" aria-label="Lọc trạng thái shop">
+            <nav class="filter-tabs order-tabs" aria-label="Lọc trạng thái shop">
                 <a class="{% if not status %}is-active{% endif %}" aria-current="{% if not status %}page{% endif %}"
-                   href="{% url 'staff_shop' %}{% if search %}?search={{ search|urlencode }}{% endif %}">Tất cả <span>{{ shop_total }}</span></a>
+                   href="{% url 'staff_shop' %}?search={{ search|urlencode }}&amp;preset={{ period_preset }}&amp;period_month={{ period_month_query }}&amp;year={{ period_year_query }}&amp;from_date={{ from_date }}&amp;to_date={{ to_date }}" class="order-tab">Tất cả <span>{{ shop_total }}</span></a>
                 {% for code, label, count in shop_statuses %}
                 <a class="{% if status == code %}is-active{% endif %}" aria-current="{% if status == code %}page{% endif %}"
-                   href="{% url 'staff_shop' %}?status={{ code }}{% if search %}&amp;search={{ search|urlencode }}{% endif %}">{{ label }} <span>{{ count }}</span></a>
+                   href="{% url 'staff_shop' %}?status={{ code }}&amp;search={{ search|urlencode }}&amp;preset={{ period_preset }}&amp;period_month={{ period_month_query }}&amp;year={{ period_year_query }}&amp;from_date={{ from_date }}&amp;to_date={{ to_date }}" class="order-tab">{{ label }} <span>{{ count }}</span></a>
                 {% endfor %}
             </nav>
 
+            <form id="bulk-shop-form" method="post" action="{% url 'staff_shop_bulk' %}">{% csrf_token %}
+                <input type="hidden" name="action" id="bulk-shop-action"><input type="hidden" name="select_all" id="bulk-shop-select-all" value="0"><input type="hidden" name="status" value="{{ status }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}"><input type="hidden" name="return_query" value="{{ filter_query }}">
+                <div class="order-bulk-actions" id="shop-bulk-actions" hidden aria-live="polite"><strong><span id="selected-shop-count">0</span> shop đã chọn</strong><div class="order-bulk-actions__buttons"><button type="button" class="btn btn--primary" data-shop-action="APPROVE"><i class="fa-solid fa-circle-check"></i> Duyệt tham gia sàn</button><button type="button" class="btn btn--secondary" data-shop-action="SUSPEND"><i class="fa-solid fa-circle-pause"></i> Tạm ngưng shop</button><button type="button" class="btn btn--secondary" data-shop-action="REMIND_FEE"><i class="fa-regular fa-bell"></i> Gửi nhắc phí sàn</button></div><button type="button" class="order-bulk-actions__clear" id="clear-shop-selection"><i class="fa-solid fa-xmark"></i> Bỏ chọn</button></div>
             <div class="table-scroll">
                 <table class="shop-table">
                     <thead>
                     <tr>
+                        <th><input id="shop-select-all" type="checkbox" aria-label="Chọn tất cả shop đang lọc"></th>
                         <th>Shop</th>
                         <th>Chủ shop</th>
-                        <th>Liên hệ</th>
-                        <th>Ngày đăng ký</th>
-                        <th class="center">Phí sàn</th>
-                        <th class="center">Trạng thái</th>
-                        <th class="center">Thao tác</th>
+                        <th>Ngành hàng</th><th>Sản phẩm</th><th>Doanh thu</th><th>Phí sàn</th><th>Trạng thái</th><th>Thao tác</th>
                     </tr>
                     </thead>
                     <tbody>
                     {% for shop in shop_page %}
                     <tr>
-                        <td><strong class="shop-name">{{ shop.shop_name }}</strong><small>SH-{{ shop.pk }}</small></td>
-                        <td><strong>{{ shop.owner.full_name|default:shop.owner.username }}</strong><small>{{ shop.owner.email }}</small></td>
-                        <td>{{ shop.phone }}<small>{{ shop.address|truncatechars:40 }}</small></td>
-                        <td>{{ shop.created_at|date:"d/m/Y H:i" }}
-                            {% if shop.legal_submitted_at %}
-                            <small>Hồ sơ pháp lý: đã nộp</small>
-                            {% else %}
-                            <small>Chưa nộp hồ sơ pháp lý</small>
-                            {% endif %}
+                        <td><input class="shop-check" type="checkbox" name="shop_ids" value="{{ shop.pk }}" aria-label="Chọn shop {{ shop.shop_name }}"></td>
+                        <td>
+                            <strong class="shop-name">{{ shop.shop_name }}</strong><small>SH-{{ shop.pk }}</small>
                         </td>
-                        <td class="center">{{ shop.platform_fee_percent }}%</td>
-                        <td class="center">
+                        <td><strong>{{ shop.owner.full_name|default:shop.owner.username }}</strong><small>{{ shop.owner.phone|default:shop.phone }}</small></td>
+                        <td>{{ shop.category_name }}</td><td><strong>{{ shop.product_count }}</strong></td><td class="revenue"><strong>{{ shop.delivered_revenue|compact_vnd }} ₫</strong></td><td><span class="badge badge--paid">Phí sàn {{ shop.platform_fee_percent }}%</span></td>
+                        <td>
                             {% if shop.status == 'ACTIVE' %}
                             <span class="status status--active">Đang hoạt động</span>
                             {% elif shop.status == 'PENDING' %}
@@ -134,36 +120,19 @@
                             <span class="status status--suspended">Tạm ngưng</span>
                             {% endif %}
                         </td>
-                        <td class="center">
-                            {% if shop.status != 'ACTIVE' %}
-                            <form method="post" action="{% url 'staff_shop_approve' shop.pk %}" class="table-action-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="search" value="{{ search }}">
-                                <input type="hidden" name="status" value="{{ status }}">
-                                <button class="button button--primary" type="submit">
-                                    <i class="fa-solid fa-check"></i> <span>Duyệt</span>
-                                </button>
-                            </form>
-                            {% else %}
-                            <form method="post" action="{% url 'staff_shop_suspend' shop.pk %}" class="table-action-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="search" value="{{ search }}">
-                                <input type="hidden" name="status" value="{{ status }}">
-                                <button class="button button--secondary" type="submit">
-                                    <i class="fa-solid fa-ban"></i> <span>Tạm ngưng</span>
-                                </button>
-                            </form>
-                            {% endif %}
+                        <td>
+                            <button type="button" class="order-detail-button" data-shop-detail data-id="{{ shop.pk }}" data-name="{{ shop.shop_name }}" data-code="SH-{{ shop.pk }}" data-created="Tham gia {{ shop.created_at|date:'d/m/Y' }}" data-revenue="{{ shop.delivered_revenue|compact_vnd }} ₫" data-status="{% if shop.status == 'ACTIVE' %}Đang hoạt động{% elif shop.status == 'PENDING' %}Chờ duyệt tham gia{% else %}Tạm ngưng{% endif %}" data-owner="{{ shop.owner.full_name|default:shop.owner.username }}" data-phone="{{ shop.owner.phone|default:shop.phone }}" data-email="{{ shop.owner.email }}" data-category="{{ shop.category_name }}" data-address="{{ shop.address }}" data-products="{{ shop.product_count }}" data-fee="{{ shop.platform_fee_percent }}%"><i class="fa-regular fa-eye"></i> Chi tiết</button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7">Chưa có shop nào khớp bộ lọc.</td>
+                        <td colspan="9">Chưa có shop nào khớp bộ lọc.</td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
+            </form>
 
             <footer class="table-pagination">
                 <p>Hiển thị <strong>{{ shop_page.start_index|default:0 }} – {{ shop_page.end_index|default:0 }}</strong> trên <strong>{{ shop_page.paginator.count }}</strong> bản ghi</p>
@@ -195,7 +164,52 @@
     </main>
 </div>
 
+<aside class="order-detail-drawer" id="shop-detail-drawer" aria-labelledby="shop-detail-title" aria-hidden="true" hidden>
+    <div class="order-detail-drawer__backdrop" data-close-shop-detail></div>
+    <section class="order-detail-drawer__panel" role="dialog" aria-modal="true">
+        <header class="order-detail-drawer__header"><div><h2 id="shop-detail-title"></h2><p id="shop-detail-created"></p></div><button type="button" class="order-detail-drawer__close" data-close-shop-detail aria-label="Đóng chi tiết shop"><i class="fa-solid fa-xmark"></i></button></header>
+        <div class="order-detail-drawer__content">
+            <section class="order-detail-total"><div><span>Doanh thu lũy kế</span><strong id="shop-detail-revenue"></strong></div><span class="status status--active" id="shop-detail-status"></span></section>
+            <h3>Thông tin shop</h3>
+            <dl class="order-detail-list"><div><dt>Chủ shop</dt><dd id="shop-detail-owner"></dd></div><div><dt>Điện thoại</dt><dd id="shop-detail-phone"></dd></div><div><dt>Email</dt><dd id="shop-detail-email"></dd></div><div><dt>Ngành hàng</dt><dd id="shop-detail-category"></dd></div><div><dt>Địa chỉ</dt><dd id="shop-detail-address"></dd></div></dl>
+            <h3>Phí sàn &amp; hoạt động</h3>
+            <dl class="order-detail-list"><div><dt>Tổng sản phẩm</dt><dd id="shop-detail-products"></dd></div><div><dt>Tỷ lệ phí sàn</dt><dd id="shop-detail-fee"></dd></div></dl>
+        </div>
+        <footer class="order-detail-drawer__footer"><button type="button" class="btn btn--primary" data-detail-shop-action="APPROVE"><i class="fa-solid fa-circle-check"></i> Duyệt tham gia sàn</button><button type="button" class="btn btn--secondary" data-detail-shop-action="SUSPEND"><i class="fa-solid fa-circle-pause"></i> Tạm ngưng shop</button><button type="button" class="btn btn--secondary" data-detail-shop-action="REMIND_FEE"><i class="fa-regular fa-bell"></i> Gửi nhắc phí sàn</button></footer>
+    </section>
+</aside>
+<form id="detail-shop-action-form" method="post" action="{% url 'staff_shop_bulk' %}" hidden>{% csrf_token %}<input type="hidden" name="action"><input type="hidden" name="shop_ids"><input type="hidden" name="status" value="{{ status }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}"><input type="hidden" name="return_query" value="{{ filter_query }}"></form>
+
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script>
+document.querySelectorAll('[data-dashboard-period]').forEach((picker) => {
+    const trigger = picker.querySelector('.dashboard-period__trigger'), menu = picker.querySelector('.dashboard-period__menu'), tabs = [...picker.querySelectorAll('[data-period-tab]')], forms = [...picker.querySelectorAll('[data-period-form]')];
+    const close = () => { picker.classList.remove('is-open'); trigger.setAttribute('aria-expanded', 'false'); menu.hidden = true; };
+    trigger.addEventListener('click', () => { if (menu.hidden) { picker.classList.add('is-open'); trigger.setAttribute('aria-expanded', 'true'); menu.hidden = false; } else close(); });
+    tabs.forEach((tab) => tab.addEventListener('click', () => { tabs.forEach((item) => item.classList.toggle('is-active', item === tab)); forms.forEach((form) => { form.hidden = form.dataset.periodForm !== tab.dataset.periodTab; }); }));
+    document.addEventListener('click', (event) => { if (!picker.contains(event.target)) close(); });
+});
+(() => {
+    const form = document.querySelector('#bulk-shop-form'), master = document.querySelector('#shop-select-all'), rows = [...document.querySelectorAll('.shop-check')], bar = document.querySelector('#shop-bulk-actions'), counter = document.querySelector('#selected-shop-count'), total = Number('{{ filtered_shop_count }}');
+    const params = new URLSearchParams(location.search); params.delete('page'); const key = `pcmatch-shop-selection:${location.pathname}?${params}`;
+    let state; try { state = JSON.parse(sessionStorage.getItem(key)); } catch (_) { state = null; }
+    state = state && typeof state === 'object' ? state : { all: false, ids: [], excluded: [] }; state.ids = Array.isArray(state.ids) ? state.ids.map(String) : []; state.excluded = Array.isArray(state.excluded) ? state.excluded.map(String) : [];
+    const count = () => state.all ? total - state.excluded.length : state.ids.length;
+    const sync = () => { rows.forEach((box) => { box.checked = state.all ? !state.excluded.includes(box.value) : state.ids.includes(box.value); }); const selected = count(); bar.hidden = selected === 0; counter.textContent = selected; master.checked = state.all && selected === total; master.indeterminate = !state.all && selected > 0; form.querySelector('#bulk-shop-select-all').value = state.all ? '1' : '0'; sessionStorage.setItem(key, JSON.stringify(state)); };
+    master.addEventListener('change', () => { state = { all: master.checked, ids: [], excluded: [] }; sync(); });
+    rows.forEach((box) => box.addEventListener('change', () => { const field = state.all ? 'excluded' : 'ids'; state[field] = state[field].filter((id) => id !== box.value); if ((state.all && !box.checked) || (!state.all && box.checked)) state[field].push(box.value); sync(); }));
+    document.querySelector('#clear-shop-selection').addEventListener('click', () => { state = { all: false, ids: [], excluded: [] }; sync(); });
+    document.querySelectorAll('[data-shop-action]').forEach((button) => button.addEventListener('click', () => { form.querySelector('#bulk-shop-action').value = button.dataset.shopAction; form.querySelectorAll('[data-generated-selection]').forEach((input) => input.remove()); const field = state.all ? 'excluded_shop_ids' : 'shop_ids'; (state.all ? state.excluded : state.ids).forEach((value) => { const input = document.createElement('input'); input.type = 'hidden'; input.name = field; input.value = value; input.dataset.generatedSelection = 'true'; form.appendChild(input); }); form.submit(); }));
+    sync();
+})();
+(() => {
+    const drawer = document.querySelector('#shop-detail-drawer'), form = document.querySelector('#detail-shop-action-form'); let selectedId = null; const fields = ['name', 'created', 'revenue', 'status', 'owner', 'phone', 'email', 'category', 'address', 'products', 'fee'];
+    const close = () => { drawer.hidden = true; drawer.setAttribute('aria-hidden', 'true'); document.body.classList.remove('has-order-drawer'); };
+    document.querySelectorAll('[data-shop-detail]').forEach((button) => button.addEventListener('click', () => { selectedId = button.dataset.id; fields.forEach((field) => { const element = document.querySelector(`#shop-detail-${field}`); if (element) element.textContent = button.dataset[field] || ''; }); drawer.hidden = false; drawer.setAttribute('aria-hidden', 'false'); document.body.classList.add('has-order-drawer'); }));
+    drawer.querySelectorAll('[data-close-shop-detail]').forEach((button) => button.addEventListener('click', close)); document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !drawer.hidden) close(); });
+    drawer.querySelectorAll('[data-detail-shop-action]').forEach((button) => button.addEventListener('click', () => { if (!selectedId) return; form.querySelector('[name="action"]').value = button.dataset.detailShopAction; form.querySelector('[name="shop_ids"]').value = selectedId; form.submit(); }));
+})();
+</script>
 {% include 'includes/admin_interface_controls.html' %}
 <script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>
