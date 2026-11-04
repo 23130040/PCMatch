@@ -114,7 +114,17 @@
                     <tbody>
                     {% for shop in shop_page %}
                     <tr>
-                        <td><strong class="shop-name">{{ shop.shop_name }}</strong><small>SH-{{ shop.pk }}</small></td>
+                        <td>
+                            <strong class="shop-name">{{ shop.shop_name }}</strong><small>SH-{{ shop.pk }}</small>
+                            {% if shop.legal_submitted_at %}
+                            <small>
+                                Hồ sơ:
+                                {% if shop.id_card %}<a href="{% url 'staff_shop_document' shop.pk 'id-card' %}">CCCD</a>{% endif %}
+                                {% if shop.id_card and shop.business_license %} · {% endif %}
+                                {% if shop.business_license %}<a href="{% url 'staff_shop_document' shop.pk 'business-license' %}">Giấy phép kinh doanh</a>{% endif %}
+                            </small>
+                            {% endif %}
+                        </td>
                         <td><strong>{{ shop.owner.full_name|default:shop.owner.username }}</strong><small>{{ shop.owner.email }}</small></td>
                         <td>{{ shop.phone }}<small>{{ shop.address|truncatechars:40 }}</small></td>
                         <td>{{ shop.created_at|date:"d/m/Y H:i" }}
@@ -140,7 +150,8 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="search" value="{{ search }}">
                                 <input type="hidden" name="status" value="{{ status }}">
-                                <button class="button button--primary" type="submit">
+                                <button class="button button--primary" type="submit"
+                                    {% if not shop.owner.email_verified or not shop.legal_submitted_at or not shop.id_card or not shop.business_license %}disabled title="Cần xác thực email và nộp đủ hồ sơ pháp lý"{% endif %}>
                                     <i class="fa-solid fa-check"></i> <span>Duyệt</span>
                                 </button>
                             </form>

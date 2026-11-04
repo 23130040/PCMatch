@@ -3,24 +3,25 @@
     Xác thực email
 {% endblock %}
 {% block subheading %}
-    Bước 2 · Xác thực thông tin tài khoản
+    Bước 2 · Xác thực email để tiếp tục đăng ký
 {% endblock %}
 {% block content %}
     {% include 'includes/shop/onboarding_steps.html' with current=2 %}
     <div class="message message--info" role="status">
-        Vui lòng kiểm tra email để kích hoạt tài khoản. Liên kết xác thực đã được gửi tới {{ request.user.email }}.
+        Nhập email đã đăng ký. Chúng tôi sẽ gửi liên kết xác thực có hiệu lực trong 24 giờ.
     </div>
-    {% if activation_url %}
-    <div class="message message--info" role="status">
-        Chế độ phát triển:
-        <a href="{{ activation_url }}">
-            Bấm vào đây để kích hoạt tài khoản
-        </a>
-    </div>
-    {% endif %}
-    <form method="get" action="{% url 'shop_verify_email' %}">
-        <button class="btn btn--secondary shop-auth__submit" type="submit">
-            Tôi đã xác thực xong
-        </button>
+    <form method="post" action="{% url 'shop_verify_email' %}" class="shop-auth__form">
+        {% csrf_token %}
+        {% for field in form %}
+        <label class="field" for="{{ field.id_for_label }}">
+            <span>{{ field.label }}</span>
+            {{ field }}
+        </label>
+        {% if field.errors %}
+        <div class="field-error" role="alert">{{ field.errors }}</div>
+        {% endif %}
+        {% endfor %}
+        <button class="btn btn--primary shop-auth__submit" type="submit">Gửi liên kết xác thực</button>
     </form>
+    <a href="{% url 'shop_register' %}">Quay lại đăng ký</a>
 {% endblock %}

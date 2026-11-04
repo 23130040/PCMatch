@@ -37,13 +37,11 @@
     </button>
   </form>
   {% if mode != 'register' %}
+  <a href="{% url 'auth_verify_email' %}">Chưa xác thực email hoặc chưa nhận mã?</a>
   <div class="social-login">
-    <button
+    <a
       class="social-btn social-btn--facebook"
-      type="button"
-      disabled
-      data-backend-pending="facebook"
-      title="Đăng nhập Facebook chưa được kết nối với backend"
+      href="{% url 'auth_facebook_login' %}?next={{ next|urlencode }}"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -52,7 +50,7 @@
         />
       </svg>
       <span>Facebook</span>
-    </button>
+    </a>
     <button
       class="social-btn social-btn--google"
       type="button"
@@ -81,15 +79,9 @@
       <span>Google</span>
     </button>
   </div>
-  <button
-    class="linklike"
-    type="button"
-    disabled
-    data-backend-pending="password-recovery"
-    title="Khôi phục mật khẩu chưa được kết nối với backend"
-  >
+  <a class="linklike" href="{% url 'buyer_forgot_password' %}">
     Quên mật khẩu?
-  </button>
+  </a>
   {% endif %} {% if mode == 'register' %}
   <a href="{% url 'auth_login' %}?next={{ next|urlencode }}"
     >Đã có tài khoản? Đăng nhập</a

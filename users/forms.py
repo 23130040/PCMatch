@@ -74,11 +74,42 @@ class BuyerRegisterForm(forms.Form):
             full_name=self.cleaned_data['full_name'].strip(),
             phone=(self.cleaned_data.get('phone') or '').strip(),
             role='BUYER',
-            status='ACTIVE',
+            status='INACTIVE',
         )
         user.set_password(self.cleaned_data['password1'])
         user.save()
         return user
+
+
+class BuyerEmailOTPForm(forms.Form):
+    code = forms.RegexField(
+        label='Mã OTP',
+        regex=r'\A[0-9]{6}\Z',
+        max_length=6,
+        error_messages={'invalid': 'Mã OTP phải gồm đúng 6 chữ số.'},
+        widget=forms.TextInput(attrs={
+            'autocomplete': 'one-time-code',
+            'inputmode': 'numeric',
+            'maxlength': '6',
+        }),
+    )
+
+
+class BuyerOTPEmailForm(forms.Form):
+    email = forms.EmailField(
+        label='Email đăng ký',
+        widget=forms.EmailInput(attrs={'autocomplete': 'email'}),
+    )
+
+
+class BuyerForgotPasswordForm(forms.Form):
+    email = forms.EmailField(
+        label='Email đăng ký',
+        widget=forms.EmailInput(attrs={'autocomplete': 'email', 'autofocus': True}),
+    )
+
+    def clean_email(self):
+        return self.cleaned_data['email'].strip().lower()
 
 
 class LoginForm(forms.Form):
@@ -127,6 +158,10 @@ class StaffSetPasswordForm(forms.Form):
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
     )
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     def clean(self):
         cleaned = super().clean()
         p1, p2 = cleaned.get('password1'), cleaned.get('password2')
@@ -134,7 +169,11 @@ class StaffSetPasswordForm(forms.Form):
             self.add_error('password2', 'Mật khẩu nhập lại không khớp.')
         if p1:
             try:
-                password_validation.validate_password(p1)
+                password_validation.validate_password(p1, user=self.user)
             except forms.ValidationError as error:
                 self.add_error('password1', error)
         return cleaned
+
+
+class BuyerSetPasswordForm(StaffSetPasswordForm):
+    pass

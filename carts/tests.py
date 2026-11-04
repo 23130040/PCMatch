@@ -1,8 +1,10 @@
 from decimal import Decimal
 from time import time
+import re
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.core import mail
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from products.models import Category, Product
@@ -12,6 +14,13 @@ from orders.models import Order
 from .models import Cart, CartItem
 
 
+@override_settings(
+    BUYER_OTP_EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    EMAIL_HOST='smtp.example.test',
+    EMAIL_HOST_USER='otp@pcmatch.test',
+    EMAIL_HOST_PASSWORD='test-password',
+    DEFAULT_FROM_EMAIL='otp@pcmatch.test',
+)
 class DatabaseCartTests(TestCase):
     password = 'CartPass!82734'
 
@@ -68,9 +77,23 @@ class DatabaseCartTests(TestCase):
             'mode': 'register', 'full_name': 'Người mua mới', 'email': 'new@example.com',
             'password1': self.password, 'password2': self.password,
         })
-        self.assertRedirects(response, reverse('buyer_cart'))
+        self.assertRedirects(response, reverse('auth_verify_email'))
         new_user = get_user_model().objects.get(email='new@example.com')
+        code = re.search(r'\b([0-9]{6})\b', mail.outbox[0].body).group(1)
+        response = self.client.post(reverse('auth_verify_email'), {'code': code})
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        response = self.client.post(reverse('auth_login'), {
+            'email': 'new@example.com', 'password': self.password,
+        })
+        self.assertRedirects(response, reverse('buyer_cart'))
         self.assertTrue(new_user.check_password(self.password))
+        new_user.refresh_from_db()
+        self.assertTrue(new_user.email_verified)
+        self.assertEqual(new_user.status, 'ACTIVE')
         self.assertEqual(CartItem.objects.get(cart__user=new_user).product, self.product)
 
     def test_repeated_add_merges_one_row_and_one_cart(self):
