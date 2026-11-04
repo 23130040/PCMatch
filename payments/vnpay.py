@@ -23,10 +23,11 @@ def verify(query):
         return False
     if any(len(query.getlist(key)) != 1 for key in query if key.startswith('vnp_')):
         return False
-    params = {key: value for key, value in query.items() if key.startswith('vnp_') and key not in {'vnp_SecureHash', 'vnp_SecureHashType'}}
+    params = {key: value for key, value in query.items() if
+              key.startswith('vnp_') and key not in {'vnp_SecureHash', 'vnp_SecureHashType'}}
     return (
-        params.get('vnp_TmnCode') == settings.VNPAY_TMN_CODE
-        and hmac.compare_digest(signature(params), query.get('vnp_SecureHash', '').lower())
+            params.get('vnp_TmnCode') == settings.VNPAY_TMN_CODE
+            and hmac.compare_digest(signature(params), query.get('vnp_SecureHash', '').lower())
     )
 
 

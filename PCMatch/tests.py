@@ -170,7 +170,6 @@ class FrontendPagesTests(TestCase):
             'includes/buyer_base.html',
             'includes/product_card.html',
             'includes/buyer_icon.html', 'includes/buyer_header.html', 'includes/buyer_account_links.html',
-            'includes/buyer_chat_content.html', 'includes/buyer_chat_widget.html',
             'includes/admin_interface_controls.html',
             'includes/admin_product_drawers.html',
             'includes/admin_support_drawers.html',

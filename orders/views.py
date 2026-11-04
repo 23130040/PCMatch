@@ -6,49 +6,70 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError
 from django.urls import reverse
-
+from shops.models import Shop
 from orders.models import Order
 
 from users.views import buyer_required, staff_required
 from payments.vnpay import configured, payment_url
 from .services import confirm_order, create_order
 
-def order_list(request):
+def orderList(request):
+    search = request.GET.get('search', '').strip()
+    locStatus = request.GET.get('status', '').strip()
+    idOfShop = request.GET.get('shop', '').strip()
+    page = request.GET.get('page', 1)
+
     allOrder = Order.objects.all().order_by('-created_at')
 
-    locStatus = request.GET.get('status', '').strip()
-    if locStatus != '':
+   
+    if locStatus != '' and locStatus != 'ALL':
         allOrder = allOrder.filter(order_status=locStatus)
 
-    search = request.GET.get('search', '').strip()
+   
     if search != '':
         allOrder = allOrder.filter(order_code__icontains=search)
 
+    
+    if idOfShop != '':
+        try:
+            allOrder = allOrder.filter(items__shop_id=idOfShop).distinct()
+        except Exception:
+            allOrder = allOrder.filter(order_items__shop_id=idOfShop).distinct()
+
     dividePage = Paginator(allOrder, 10)
-    numPage = request.GET.get('page')
-    showOrder = dividePage.get_page(numPage)
+    showOrder = dividePage.get_page(page)
 
     box = {
         'showOrder': showOrder,
         'locStatus': locStatus,
         'search': search,
+        'idOfShop': idOfShop,
+        'shops': Shop.objects.all(),
     }
     return render(request, 'admin/order.html', box)
 
 
 @require_POST
 @staff_required
-def changeStatus(request, order_id):
-    get_object_or_404(Order, pk=order_id)
-    try:
-        if request.POST.get('status') != 'COMFIRMED':
-            raise ValidationError('Admin chỉ xác nhận đơn; shop sẽ xử lý và giao hàng.')
-        order = confirm_order(order_id, request.user)
-    except ValidationError as error:
-        messages.error(request, error.messages[0])
-    else:
-        messages.success(request, f'Đã xác nhận đơn {order.order_code}. Shop có thể bắt đầu xử lý.')
-    return redirect('load_ListOrder')
+def changeStatus(request, orderid):
+    if request.method == 'POST':
+        order = Order.objects.get(pk=orderid)
+        newStatus = request.POST.get('order_status')
+        valid = ['PENDING', 'COMFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED']
+        
+        if newStatus in valid:
+            if newStatus == 'DELIVERED' and order.order_status != 'DELIVERED':
+                items = getattr(order, 'items', getattr(order, 'order_items', None))
+                if items:
+                    for item in items.all():
+                        item.product.sold_quantity += item.quantity
+                        item.product.save()
+            
+            order.order_status = newStatus
+            order.save()
+            messages.success(request, f'Đã cập nhật đơn hàng thành {newStatus}.')
+            
+    return redirect('loadOrder')
 
 @require_POST
 @buyer_required
@@ -97,3 +118,29 @@ def buyer_order(request):
         order_code=request.GET.get('id', ''), user=request.user,
     )
     return render(request, 'buyer/order.html', {'page_name': 'order', 'page_section': 'buyer', 'order': order})
+
+@require_POST
+@staff_required
+def changeManyStatus(request):
+    if request.method == 'POST':
+        orderIds = request.POST.getlist('order_ids')
+        actionStatus = request.POST.get('action_status')
+
+        if orderIds and actionStatus:
+            for orderId in orderIds:
+                order = Order.objects.get(pk=orderId)
+
+                if actionStatus == 'DELIVERED' and order.order_status != 'DELIVERED':
+                    items = getattr(order, 'items', getattr(order, 'order_items', None))
+                    if items:
+                        for item in items.all():
+                            item.product.sold_quantity += item.quantity
+                            item.product.save()
+
+                order.order_status = actionStatus
+                order.save()
+
+            messages.success(request, f"Đã cập nhật {len(orderIds)} đơn hàng.")
+
+    return redirect('loadOrder')
+

@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
@@ -22,31 +23,61 @@ def cart_detail(request):
     })
 
 
+
 @require_POST
 def cart_add(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
     form = CartQuantityForm(request.POST)
+
     if not form.is_valid():
-        messages.error(request, 'Vui lòng nhập số lượng nguyên lớn hơn 0.')
-        return redirect('buyer_product_detail', product_id=product_id)
-    quantity = form.cleaned_data['quantity']
-    try:
-        validate_quantity(product, quantity)
-    except ValidationError as error:
-        messages.error(request, error.messages[0])
-        return redirect('buyer_product_detail', product_id=product_id)
-    if not is_active_buyer(request.user):
-        request.session['pending_cart_add'] = {
-            'product_id': product_id, 'quantity': quantity, 'expires': time() + 900,
-        }
-        query = urlencode({'next': reverse('buyer_product_detail', args=[product_id])})
-        return redirect(reverse('auth_login') + '?' + query)
-    try:
-        add_product(request.user, product_id, quantity)
-        messages.success(request, 'Đã thêm sản phẩm vào giỏ hàng.')
-    except ValidationError as error:
-        messages.error(request, error.messages[0])
-    return redirect('buyer_cart')
+        message = 'Vui lòng nhập số lượng nguyên lớn hơn 0.'
+        error = True
+    else:
+        quantity = form.cleaned_data['quantity']
+
+        try:
+            validate_quantity(product, quantity)
+        except ValidationError as exc:
+            message = exc.messages[0]
+            error = True
+        else:
+            if not is_active_buyer(request.user):
+                request.session['pending_cart_add'] = {
+                    'product_id': product_id,
+                    'quantity': quantity,
+                    'expires': time() + 900,
+                }
+                query = urlencode({
+                    'next': reverse(
+                        'buyer_product_detail',
+                        args=[product_id]
+                    )
+                })
+                return redirect(reverse('auth_login') + '?' + query)
+
+            try:
+                add_product(request.user, product_id, quantity)
+                message = 'Đã thêm sản phẩm vào giỏ hàng thành công!'
+                error = False
+            except ValidationError as exc:
+                message = exc.messages[0]
+                error = True
+
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse(
+            {'message': message},
+            status=400 if error else 200,
+        )
+
+    if error:
+        messages.error(request, message)
+    else:
+        messages.success(request, message)
+
+    return redirect(
+        'buyer_product_detail',
+        product_id=product_id
+    )
 
 
 @require_POST

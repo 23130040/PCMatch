@@ -1,150 +1,196 @@
 {% extends 'includes/buyer_base.html' %}
 {% load cart_prices %}
+{% load cart_prices static %}
 {% block body_class %}catalog-page{% endblock %}
 {% block html_attributes %} data-catalog-source="database"{% endblock %}
 {% block title %}{{ selected_product.product_name }} — PCMatch{% endblock %}
 {% block content %}
-{% with p=selected_product %}
-            <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
-                <a href="{% url 'buyer_home' %}">Trang chủ</a><span aria-hidden="true">/</span>
-                <a href="{% url 'buyer_search' %}">Tất cả sản phẩm</a><span aria-hidden="true">/</span>
-                <span aria-current="page">{{ p.product_name }}</span>
-            </nav>
-            <header class="page-head">
-                <div>
-                    <h1>{{ p.product_name }}</h1>
-                    <p>{{ p.category.category_name }}{% if p.brand %} · {{ p.brand.brand_name }}{% endif %} · Mã sản phẩm #{{ p.product_id }}</p>
+    {% with p=selected_product %}
+        <nav class="catalog-breadcrumb" aria-label="Đường dẫn">
+            <a href="{% url 'buyer_home' %}">Trang chủ</a><span aria-hidden="true">/</span>
+            <a href="{% url 'buyer_search' %}">Tất cả sản phẩm</a><span aria-hidden="true">/</span>
+            <span aria-current="page">{{ p.product_name }}</span>
+        </nav>
+        <header class="page-head">
+            <div>
+                <h1>{{ p.product_name }}</h1>
+                <p>{{ p.category.category_name }}{% if p.brand %} · {{ p.brand.brand_name }}{% endif %} · Mã sản phẩm
+                    #{{ p.product_id }}</p>
+            </div>
+            <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Về danh sách sản phẩm</a>
+        </header>
+        <section class="model-overview" aria-label="Thông tin sản phẩm" data-product-id="{{ p.product_id }}"
+                 data-product-category="{{ p.category_id }}" data-product-name="{{ p.product_name }}">
+            <figure class="product-figure">
+                <div class="product-detail-media">
+                    {% if p.thumbnail %}<img src="{{ p.thumbnail.url }}" alt="{{ p.product_name }}">
+                    {% else %}<p class="muted">Chưa có ảnh sản phẩm.</p>{% endif %}
                 </div>
-                <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Về danh sách sản phẩm</a>
-            </header>
-            <section class="model-overview" aria-label="Thông tin sản phẩm" data-product-id="{{ p.product_id }}" data-product-category="{{ p.category_id }}" data-product-name="{{ p.product_name }}">
-                <figure class="product-figure">
-                    <div class="product-detail-media">
-                        {% if p.thumbnail %}<img src="{{ p.thumbnail.url }}" alt="{{ p.product_name }}">
-                        {% else %}<p class="muted">Chưa có ảnh sản phẩm.</p>{% endif %}
-                    </div>
-                </figure>
-                <div class="stack">
-                    <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|vnd }} ₫</p>
-                    <dl class="shop-policies">
-                        <dt>Shop bán</dt><dd>{{ p.shop.shop_name }}</dd>
-                        <dt>Tồn kho</dt><dd>{{ p.stock_quantity }} sản phẩm</dd>
-                        <dt>Đã bán</dt><dd>{{ p.sold_quantity }} sản phẩm</dd>
-                        <dt>Tình trạng</dt>
-                        <dd>{% if p.status == 'INACTIVE' %}Tạm ngừng bán
-                            {% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng
-                            {% else %}Còn hàng{% endif %}</dd>
-                    </dl>
-                    <div class="cluster">
-                        <form method="post" action="{% url 'buyer_cart_add' p.product_id %}">
-                            {% csrf_token %}<input type="hidden" name="quantity" value="1">
-                            <button class="btn btn--primary" type="submit"
-                                    {% if p.status != 'ACTIVE' or p.stock_quantity <= 0 %}disabled{% endif %}>
-                                {% if p.status == 'INACTIVE' %}Tạm ngừng bán{% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng{% else %}Thêm vào giỏ hàng{% endif %}
-                            </button>
-                        </form>
-                        <a class="btn btn--secondary" href="{% url 'buyer_search' %}?shop={{ p.shop_id }}">Xem sản phẩm của shop</a>
-                        {% include 'includes/compare_button.html' with product=p %}
-                    </div>
-                </div>
-            </section>
-            <section class="panel panel--padded">
-                <h2>Mô tả sản phẩm</h2>
-                {% if p.description %}{{ p.description|linebreaks }}{% else %}<p>Chưa có mô tả.</p>{% endif %}
-            </section>
-            <section class="panel panel--padded">
-                <h2>Thông số kỹ thuật</h2>
-                <dl class="spec-grid">
-                    {% for specification in p.specifications.all %}
-                        <div><dt>{{ specification.specification_name }}</dt><dd>{{ specification.specification_value }}</dd></div>
-                    {% empty %}<div><dt>Thông số</dt><dd>Chưa cập nhật.</dd></div>{% endfor %}
+            </figure>
+            <div class="stack">
+                <p class="price" data-product-price="{{ p.price|floatformat:'2u' }}">{{ p.price|vnd }} ₫</p>
+                <dl class="shop-policies">
+                    <dt>Shop bán</dt>
+                    <dd>{{ p.shop.shop_name }}</dd>
+                    <dt>Tồn kho</dt>
+                    <dd>{{ p.stock_quantity }} sản phẩm</dd>
+                    <dt>Đã bán</dt>
+                    <dd>{{ p.sold_quantity }} sản phẩm</dd>
+                    <dt>Tình trạng</dt>
+                    <dd>{% if p.status == 'INACTIVE' %}Tạm ngừng bán
+                    {% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng
+                    {% else %}Còn hàng{% endif %}</dd>
                 </dl>
-            </section>
-
-            <section id="product-questions" class="panel panel--padded product-questions stack" aria-labelledby="product-questions-title">
-                <div>
-                    <h2 id="product-questions-title">Hỏi đáp sản phẩm ({{ questions_page.paginator.count }})</h2>
-                    <p class="muted">Đặt câu hỏi để {{ p.shop.shop_name }} tư vấn trước khi mua.</p>
-                </div>
-                {% if not questions_open %}
-                    <p class="message">Sản phẩm hoặc gian hàng hiện không nhận câu hỏi mới.</p>
-                {% elif can_ask_question %}
-                    <form method="post" action="{% url 'buyer_product_question_create' p.pk %}#product-questions" class="stack product-question-form">
-                        {% csrf_token %}
-                        {% for error in question_form.non_field_errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-                        <div class="field">
-                            <label for="{{ question_form.question.id_for_label }}">{{ question_form.question.label }}</label>
-                            {{ question_form.question }}
-                            <p id="product-question-help" class="muted">Tối đa 1.000 ký tự. Câu hỏi và câu trả lời sẽ hiển thị công khai.</p>
-                            {% for error in question_form.question.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-                        </div>
-                        <div><button class="btn btn--primary" type="submit">Gửi câu hỏi</button></div>
+                <div class="cluster">
+                    <form method="post" action="{% url 'buyer_cart_add' p.product_id %}" data-cart-add-form>
+                        {% csrf_token %}<input type="hidden" name="quantity" value="1">
+                        <button class="btn btn--primary" type="submit"
+                                {% if p.status != 'ACTIVE' or p.stock_quantity <= 0 %}disabled{% endif %}>
+                            {% if p.status == 'INACTIVE' %}Tạm ngừng
+                                bán{% elif p.status == 'OUT_OF_STOCK' or p.stock_quantity <= 0 %}Hết hàng{% else %}Thêm
+                                vào giỏ hàng{% endif %}
+                        </button>
                     </form>
-                {% elif not request.user.is_authenticated %}
-                    <p><a href="{{ question_login_url }}">Đăng nhập</a> để gửi câu hỏi cho shop.</p>
-                {% else %}
-                    <p class="muted">Vui lòng sử dụng tài khoản người mua để gửi câu hỏi.</p>
-                {% endif %}
-                <div class="product-question-list">
-                    {% for question in questions_page %}
+                    <a class="btn btn--secondary" href="{% url 'buyer_search' %}?shop={{ p.shop_id }}">Xem sản phẩm của
+                        shop</a>
+                    {% include 'includes/compare_button.html' with product=p %}
+                </div>
+                <div id="cart-add-feedback" class="message" role="status" hidden></div>
+        </section>
+        <section class="panel panel--padded">
+            <h2>Mô tả sản phẩm</h2>
+            {% if p.description %}{{ p.description|linebreaks }}{% else %}<p>Chưa có mô tả.</p>{% endif %}
+        </section>
+        <section class="panel panel--padded">
+            <h2>Thông số kỹ thuật</h2>
+            <dl class="spec-grid">
+                {% for specification in p.specifications.all %}
+                    <div>
+                        <dt>{{ specification.specification_name }}</dt>
+                        <dd>{{ specification.specification_value }}</dd>
+                    </div>
+                {% empty %}
+                    <div>
+                        <dt>Thông số</dt>
+                        <dd>Chưa cập nhật.</dd>
+                    </div>{% endfor %}
+            </dl>
+        </section>
+
+        <section id="product-questions" class="panel panel--padded product-questions stack"
+                 aria-labelledby="product-questions-title">
+            <div>
+                <h2 id="product-questions-title">Hỏi đáp sản phẩm ({{ questions_page.paginator.count }})</h2>
+                <p class="muted">Đặt câu hỏi để {{ p.shop.shop_name }} tư vấn trước khi mua.</p>
+            </div>
+            {% if not questions_open %}
+                <p class="message">Sản phẩm hoặc gian hàng hiện không nhận câu hỏi mới.</p>
+            {% elif can_ask_question %}
+                <form method="post" action="{% url 'buyer_product_question_create' p.pk %}#product-questions"
+                      class="stack product-question-form">
+                    {% csrf_token %}
+                    {% for error in question_form.non_field_errors %}
+                        <p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                    <div class="field">
+                        <label for="{{ question_form.question.id_for_label }}">{{ question_form.question.label }}</label>
+                        {{ question_form.question }}
+                        <p id="product-question-help" class="muted">Tối đa 1.000 ký tự. Câu hỏi và câu trả lời sẽ hiển
+                            thị công khai.</p>
+                        {% for error in question_form.question.errors %}
+                            <p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                    </div>
+                    <div>
+                        <button class="btn btn--primary" type="submit">Gửi câu hỏi</button>
+                    </div>
+                </form>
+            {% elif not request.user.is_authenticated %}
+                <p><a href="{{ question_login_url }}">Đăng nhập</a> để gửi câu hỏi cho shop.</p>
+            {% else %}
+                <p class="muted">Vui lòng sử dụng tài khoản người mua để gửi câu hỏi.</p>
+            {% endif %}
+            <div class="product-question-list">
+                {% for question in questions_page %}
                     <article class="product-question" id="product-question-{{ question.pk }}">
                         <div class="product-question-customer">
                             <header class="product-question-meta">
-                                <span class="product-question-avatar" aria-hidden="true">{% include 'includes/buyer_icon.html' with icon='user' %}</span>
+                                <span class="product-question-avatar"
+                                      aria-hidden="true">{% include 'includes/buyer_icon.html' with icon='user' %}</span>
                                 <div class="product-question-identity">
                                     <strong>{{ question.user.full_name|default:'Người mua' }}</strong>
                                 </div>
-                                <time class="muted" datetime="{{ question.created_at|date:'c' }}">{{ question.created_at|date:'d/m/Y H:i' }}</time>
+                                <time class="muted"
+                                      datetime="{{ question.created_at|date:'c' }}">{{ question.created_at|date:'d/m/Y H:i' }}</time>
                             </header>
                             <p class="product-question-text">{{ question.question }}</p>
                         </div>
                         <details class="product-question-responses" open>
                             <summary>
-                                <span class="product-responses-show">{% if question.thread_messages %}Xem {{ question.thread_messages|length }} phản hồi{% else %}Xem trao đổi{% endif %}</span>
+                                <span class="product-responses-show">{% if question.thread_messages %}Xem
+                                    {{ question.thread_messages|length }} phản hồi{% else %}Xem trao
+                                    đổi{% endif %}</span>
                                 <span class="product-responses-hide">Thu gọn phản hồi ({{ question.thread_messages|length }})</span>
                             </summary>
-                        {% for answer in question.thread_messages %}
-                        <div class="{% if answer.is_shop_reply %}product-question-answer{% else %}product-question-followup{% endif %}">
-                            <header class="product-question-meta">
-                                <span class="product-question-avatar" aria-hidden="true">{% if answer.is_shop_reply %}{% include 'includes/buyer_icon.html' with icon='chat' %}{% else %}{% include 'includes/buyer_icon.html' with icon='user' %}{% endif %}</span>
-                                <div class="product-question-identity">
-                                    <strong>{% if answer.is_shop_reply %}{{ p.shop.shop_name }}{% else %}{{ answer.user.full_name|default:'Người mua' }}{% endif %}</strong>
-                                    {% if not answer.is_shop_reply %}{% endif %}
+                            {% for answer in question.thread_messages %}
+                                <div class="{% if answer.is_shop_reply %}product-question-answer{% else %}product-question-followup{% endif %}">
+                                    <header class="product-question-meta">
+                                        <span class="product-question-avatar"
+                                              aria-hidden="true">{% if answer.is_shop_reply %}
+                                            {% include 'includes/buyer_icon.html' with icon='chat' %}{% else %}
+                                            {% include 'includes/buyer_icon.html' with icon='user' %}{% endif %}</span>
+                                        <div class="product-question-identity">
+                                            <strong>{% if answer.is_shop_reply %}{{ p.shop.shop_name }}{% else %}
+                                                {{ answer.user.full_name|default:'Người mua' }}{% endif %}</strong>
+                                            {% if not answer.is_shop_reply %}{% endif %}
+                                        </div>
+                                        <time class="muted"
+                                              datetime="{{ answer.created_at|date:'c' }}">{{ answer.created_at|date:'d/m/Y H:i' }}</time>
+                                    </header>
+                                    <p class="product-question-text">{{ answer.answer }}</p>
                                 </div>
-                                <time class="muted" datetime="{{ answer.created_at|date:'c' }}">{{ answer.created_at|date:'d/m/Y H:i' }}</time>
-                            </header>
-                            <p class="product-question-text">{{ answer.answer }}</p>
-                        </div>
-                        {% endfor %}
-                        {% if not question.status %}<p class="product-question-pending muted">Đang chờ shop trả lời.</p>{% endif %}
-                        {% if questions_open and can_ask_question %}
-                        <details class="product-question-reply" {% if question.reply_form.is_bound %}open{% endif %}>
-                            <summary>Phản hồi</summary>
-                            <form method="post" action="{% url 'buyer_product_question_followup' p.pk question.pk %}#product-question-{{ question.pk }}" class="stack product-question-form">
-                                {% csrf_token %}
-                                {% for error in question.reply_form.non_field_errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-                                <div class="field">
-                                    <label for="{{ question.reply_form.reply.id_for_label }}">Nội dung</label>
-                                    {{ question.reply_form.reply }}
-                                    {% for error in question.reply_form.reply.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-                                </div>
-                                <div><button class="btn btn--primary" type="submit">Gửi phản hồi</button></div>
-                            </form>
-                        </details>
-                        {% elif questions_open and not request.user.is_authenticated %}
-                        <p class="product-question-pending"><a href="{{ question_login_url }}">Đăng nhập để phản hồi</a></p>
-                        {% endif %}
+                            {% endfor %}
+                            {% if not question.status %}
+                                <p class="product-question-pending muted">Đang chờ shop trả lời.</p>{% endif %}
+                            {% if questions_open and can_ask_question %}
+                                <details class="product-question-reply"
+                                         {% if question.reply_form.is_bound %}open{% endif %}>
+                                    <summary>Phản hồi</summary>
+                                    <form method="post"
+                                          action="{% url 'buyer_product_question_followup' p.pk question.pk %}#product-question-{{ question.pk }}"
+                                          class="stack product-question-form">
+                                        {% csrf_token %}
+                                        {% for error in question.reply_form.non_field_errors %}
+                                            <p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                                        <div class="field">
+                                            <label for="{{ question.reply_form.reply.id_for_label }}">Nội dung</label>
+                                            {{ question.reply_form.reply }}
+                                            {% for error in question.reply_form.reply.errors %}
+                                                <p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                                        </div>
+                                        <div>
+                                            <button class="btn btn--primary" type="submit">Gửi phản hồi</button>
+                                        </div>
+                                    </form>
+                                </details>
+                            {% elif questions_open and not request.user.is_authenticated %}
+                                <p class="product-question-pending"><a href="{{ question_login_url }}">Đăng nhập để phản
+                                    hồi</a></p>
+                            {% endif %}
                         </details>
                     </article>
-                    {% empty %}<p class="muted">Chưa có câu hỏi nào. Hãy là người đầu tiên hỏi shop về sản phẩm này.</p>{% endfor %}
-                </div>
-                {% if questions_page.paginator.num_pages > 1 %}
+                {% empty %}<p class="muted">Chưa có câu hỏi nào. Hãy là người đầu tiên hỏi shop về sản phẩm
+                    này.</p>{% endfor %}
+            </div>
+            {% if questions_page.paginator.num_pages > 1 %}
                 <nav class="cluster" aria-label="Phân trang hỏi đáp">
-                    {% if questions_page.has_previous %}<a href="?questions_page={{ questions_page.previous_page_number }}#product-questions">Trang trước</a>{% endif %}
+                    {% if questions_page.has_previous %}
+                        <a href="?questions_page={{ questions_page.previous_page_number }}#product-questions">Trang
+                            trước</a>{% endif %}
                     <span>Trang {{ questions_page.number }} / {{ questions_page.paginator.num_pages }}</span>
-                    {% if questions_page.has_next %}<a href="?questions_page={{ questions_page.next_page_number }}#product-questions">Trang sau</a>{% endif %}
+                    {% if questions_page.has_next %}
+                        <a href="?questions_page={{ questions_page.next_page_number }}#product-questions">Trang
+                            sau</a>{% endif %}
                 </nav>
-                {% endif %}
-            </section>
-{% endwith %}
+            {% endif %}
+        </section>
+    {% endwith %}
 {% endblock %}

@@ -2,7 +2,7 @@ BUYER_PAGES = (
     'home', 'search', 'model', 'shop', 'compare', 'cart', 'checkout',
     'payment', 'orders', 'order', 'builder', 'builds', 'consultation',
     'requests', 'proposals', 'account', 'addresses', 'notifications',
-    'cases', 'help', 'chat',
+    'cases', 'help',
 )
 
 SHOP_PAGES = (
