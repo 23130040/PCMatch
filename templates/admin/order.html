@@ -1,4 +1,4 @@
-{% load static %}
+{% load static cart_prices %}
 <!doctype html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
 <head>
@@ -28,34 +28,65 @@
                 <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý đơn hàng</span></nav>
                 <h1>Quản lý đơn hàng</h1>
                 <p>Theo dõi toàn bộ đơn đặt hàng trên sàn, xác nhận đơn và chuyển thông tin về shop để xử lý.</p>
-                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật: 20/09/2026 · 09:45</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lúc {{ updated_at|date:'d/m/Y H:i' }} · Đang xem: {{ period_label }}</p>
             </div>
-            <div class="cluster admin-page-actions">
-                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
-                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
-                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            <div class="dashboard-period" data-dashboard-period>
+                <button class="dashboard-period__trigger" type="button" aria-expanded="false" aria-controls="order-period-menu">
+                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i><span>{{ period_label }}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="dashboard-period__menu" id="order-period-menu" hidden>
+                    <form class="dashboard-period__presets" method="get" aria-label="Khoảng thời gian nhanh">
+                        <input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                        <button type="submit" name="preset" value="all"{% if active_preset == 'all' %} class="is-active"{% endif %}>Tất cả</button>
+                        <button type="submit" name="preset" value="7days"{% if active_preset == '7days' %} class="is-active"{% endif %}>7 ngày qua</button>
+                        <button type="submit" name="preset" value="30days"{% if active_preset == '30days' %} class="is-active"{% endif %}>30 ngày qua</button>
+                        <button type="submit" name="preset" value="month"{% if active_preset == 'month' %} class="is-active"{% endif %}>Tháng này</button>
+                        <button type="submit" name="preset" value="quarter"{% if active_preset == 'quarter' %} class="is-active"{% endif %}>Quý này</button>
+                        <button type="submit" name="preset" value="year"{% if active_preset == 'year' %} class="is-active"{% endif %}>Năm nay</button>
+                    </form>
+                    <div class="dashboard-period__tabs" role="tablist" aria-label="Kiểu lọc thời gian">
+                        <button{% if active_picker_tab == 'month' %} class="is-active"{% endif %} type="button" role="tab" aria-selected="{% if active_picker_tab == 'month' %}true{% else %}false{% endif %}" data-period-tab="month">Tháng</button>
+                        <button{% if active_picker_tab == 'year' %} class="is-active"{% endif %} type="button" role="tab" aria-selected="{% if active_picker_tab == 'year' %}true{% else %}false{% endif %}" data-period-tab="year">Năm</button>
+                    </div>
+                    <form class="dashboard-period__form" method="get" data-period-form="month"{% if active_picker_tab != 'month' %} hidden{% endif %}>
+                        <input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                        <label><span class="sr-only">Chọn tháng</span><input type="month" name="period_month" value="{{ month_input_value }}"></label>
+                        <button class="btn btn--primary" type="submit">Áp dụng</button>
+                    </form>
+                    <form class="dashboard-period__form" method="get" data-period-form="year"{% if active_picker_tab != 'year' %} hidden{% endif %}>
+                        <input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                        <label><span class="sr-only">Chọn năm</span><input type="number" name="year" min="2000" max="{{ current_year|add:1 }}" value="{{ selected_year }}"></label>
+                        <button class="btn btn--primary" type="submit">Áp dụng</button>
+                    </form>
+                    <form class="dashboard-period__custom" method="get">
+                        <input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                        <strong>Khoảng tùy chỉnh</strong>
+                        <div><label><span class="sr-only">Từ ngày</span><input type="date" name="from_date" value="{{ from_date }}" required></label><span aria-hidden="true">–</span><label><span class="sr-only">Đến ngày</span><input type="date" name="to_date" value="{{ to_date }}" required></label></div>
+                        <button class="btn btn--primary" type="submit">Áp dụng khoảng</button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <section class="dashboard-metrics order-metrics admin-metrics" aria-label="Tổng quan đơn hàng">
             <article class="panel metric-panel admin-metric admin-metric--blue">
-                <span class="metric-label">Tổng đơn hôm nay</span>
-                <strong class="metric-value">428 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +6,4%</em></strong>
-                <p>Toàn bộ đơn linh kiện phát sinh trong ngày trên sàn</p>
+                <span class="metric-label">Tổng đơn</span>
+                <strong class="metric-value">{{ total_orders }} <small>đơn</small></strong>
+                <p>Đơn hàng trong {{ period_label|lower }}</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--amber">
                 <span class="metric-label">Chờ xác nhận</span>
-                <strong class="metric-value">36 <small>đơn</small> <em style="color:#a45c08"><i class="fa-solid fa-arrow-down"></i> -2,1%</em></strong>
+                <strong class="metric-value">{{ pending_orders }} <small>đơn</small></strong>
                 <p>Admin cần xác nhận rồi chuyển về shop xử lý</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--plain">
                 <span class="metric-label">Đang giao</span>
-                <strong class="metric-value">154 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +3,8%</em></strong>
+                <strong class="metric-value">{{ shipping_orders }} <small>đơn</small></strong>
                 <p>Đã bàn giao cho đơn vị vận chuyển</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--blue">
                 <span class="metric-label">Hủy / Trả hàng</span>
-                <strong class="metric-value">22 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +1,2%</em></strong>
+                <strong class="metric-value">{{ cancelled_orders }} <small>đơn</small></strong>
                 <p>Cần theo dõi để tránh phát sinh khiếu nại</p>
             </article>
         </section>
@@ -64,58 +95,49 @@
             <!-- Form Lọc Tìm kiếm & Chọn Shop -->
             <form method="GET" action="{% url 'loadOrder' %}" class="order-toolbar">
                 <input type="hidden" name="status" value="{{ locStatus }}">
+                <input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}">
                 <div class="order-toolbar__top">
                     <label class="order-toolbar__search">
                         <span class="sr-only">Tìm đơn hàng</span>
                         <input id="orderSearch" type="search" name="search" value="{{ search }}"
                                placeholder="Tìm theo mã đơn hàng...">
                     </label>
-                    <label class="order-toolbar__select">
-                        <span class="sr-only">Lọc theo shop</span>
-                        <select id="shopFilter" name="shop" onchange="this.form.submit()">
-                            <option value="">Tất cả shop</option>
-                            {% for s in shops %}
-                                <option value="{{ s.pk }}" {% if idOfShop == s.pk|stringformat:"i" %}selected{% endif %}>
-                                    {{ s.name|default:s.shop_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    
                 </div>
             </form>
-
-            
             
             <div class="order-tabs" role="tablist" aria-label="Lọc đơn hàng theo trạng thái">
-                <a href="{% url 'loadOrder' %}?status=ALL&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'ALL' or locStatus == '' %}is-active{% endif %}" style="text-decoration: none;">Tất cả</a>
-                <a href="{% url 'loadOrder' %}?status=PENDING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'PENDING' %}is-active{% endif %}" style="text-decoration: none;">Chờ xác nhận</a>
-                <a href="{% url 'loadOrder' %}?status=COMFIRMED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'COMFIRMED' %}is-active{% endif %}" style="text-decoration: none;">Đã xác nhận</a>
-                <a href="{% url 'loadOrder' %}?status=SHIPPING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'SHIPPING' %}is-active{% endif %}" style="text-decoration: none;">Đang giao</a>
-                <a href="{% url 'loadOrder' %}?status=DELIVERED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'DELIVERED' %}is-active{% endif %}" style="text-decoration: none;">Đã giao</a>
-                <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
-                <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
+                <a href="{% url 'loadOrder' %}?status=ALL&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'ALL' or locStatus == '' %}is-active{% endif %}" style="text-decoration: none;">Tất cả</a>
+                <a href="{% url 'loadOrder' %}?status=PENDING&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'PENDING' %}is-active{% endif %}" style="text-decoration: none;">Chờ xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=COMFIRMED&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'COMFIRMED' %}is-active{% endif %}" style="text-decoration: none;">Đã xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=SHIPPING&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'SHIPPING' %}is-active{% endif %}" style="text-decoration: none;">Đang giao</a>
+                <a href="{% url 'loadOrder' %}?status=DELIVERED&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'DELIVERED' %}is-active{% endif %}" style="text-decoration: none;">Đã giao</a>
+                <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
+                <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
              </div>
 
             
-            <form method="POST" action="{% url 'updateOrderStatus' %}">
+            <form id="bulk-order-form" method="POST" action="{% url 'updateOrderStatus' %}">
                 {% csrf_token %}
-                <div class="cluster" style="margin: 12px; gap: 8px;">
-                    <select name="action_status" class="btn btn--secondary" required style="padding: 6px 12px;">
-                        <option value=""></option>
-                        <option value="COMFIRMED">Đã xác nhận</option>
-                        <option value="SHIPPING">Đang giao</option>
-                        <option value="DELIVERED">Đã giao</option>
-                        <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                    <button type="submit" class="btn btn--primary">Áp dụng</button>
+                <input type="hidden" name="action_status" id="bulk-action-status">
+                <input type="hidden" name="select_all" id="bulk-select-all" value="0">
+                <input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                <input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}"><input type="hidden" name="return_query" value="{{ filter_query }}">
+                <div class="order-bulk-actions" id="order-bulk-actions" hidden aria-live="polite">
+                    <strong><span id="selected-order-count">0</span> đơn hàng đã chọn</strong>
+                    <div class="order-bulk-actions__buttons">
+                        <button type="button" class="btn btn--primary" data-bulk-action="COMFIRMED"><i class="fa-solid fa-circle-check"></i> Xác nhận đơn</button>
+                        <button type="button" class="btn btn--secondary" data-bulk-action="SHIPPING"><i class="fa-solid fa-truck"></i> Bàn giao vận chuyển</button>
+                        <button type="button" class="btn btn--secondary" data-bulk-action="DELIVERED"><i class="fa-solid fa-check-double"></i> Đánh dấu đã giao</button>
+                        <button type="button" class="btn order-bulk-actions__cancel" data-bulk-action="CANCELLED"><i class="fa-solid fa-circle-xmark"></i> Hủy đơn</button>
+                    </div>
+                    <button type="button" class="order-bulk-actions__clear" id="clear-order-selection"><i class="fa-solid fa-xmark"></i> Bỏ chọn</button>
                 </div>
 
                 <div class="admin-table-wrap">
                     <table class="order-table">
                         <thead>
                         <tr>
-                            <th></th>
+                            <th><input id="order-select-all" type="checkbox" aria-label="Chọn tất cả đơn hàng đang lọc"></th>
                             <th>MÃ ĐƠN</th>
                             <th>NGƯỜI MUA</th>
                             <th>SHOP</th>
@@ -130,7 +152,7 @@
                         {% for order in showOrder %}
                         <tr data-status="{{ order.order_status|lower }}">
                             <td>
-                                <input class="order-checkbox row-check" type="checkbox" name="order_ids" value="{{ order.order_id }}">
+                                <input class="order-checkbox row-check" type="checkbox" name="order_ids" value="{{ order.order_id }}" aria-label="Chọn đơn {{ order.order_code }}">
                             </td>
                             
                             <td class="order-code">
@@ -154,7 +176,7 @@
                                 {% endif %}
                             </td>
 
-                            <td class="order-price">{{ order.total_amount }} ₫</td>
+                            <td class="order-price"><strong>{{ order.total_amount|vnd }} ₫</strong></td>
 
                             <td class="order-address">
                                 <small>{{ order.address }}</small>
@@ -168,7 +190,7 @@
                                 {% elif order.order_status == 'SHIPPING' %}
                                     <span class="status order-status order-status--shipping">Đang giao</span>
                                 {% elif order.order_status == 'DELIVERED' %}
-                                    <span class="status order-status order-status--delivered">Hoàn thành</span>
+                                    <span class="status order-status order-status--delivered">Đã giao</span>
                                 {% elif order.order_status == 'CANCELLED' %}
                                     <span class="status order-status order-status--cancelled">Đã hủy</span>
                                 {% elif order.order_status == 'RETURNED' %}
@@ -179,18 +201,17 @@
                             </td>
 
                             <td>
-                                <!-- Dropdown cập nhật trạng thái từng đơn -->
-                                <form method="POST" action="{% url 'updateStatus' order.order_id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <select name="order_status" onchange="this.form.submit()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                        <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Chờ xác nhận</option>
-                                        <option value="COMFIRMED" {% if order.order_status == 'COMFIRMED' %}selected{% endif %}>Đã xác nhận</option>
-                                        <option value="PROCESSING" {% if order.order_status == 'PROCESSING' %}selected{% endif %}>Đang xử lý</option>
-                                        <option value="SHIPPING" {% if order.order_status == 'SHIPPING' %}selected{% endif %}>Đang giao</option>
-                                        <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Đã giao</option>
-                                        <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Đã hủy</option>
-                                    </select>
-                                </form>
+                                <button type="button" class="order-detail-button" data-order-detail
+                                    data-id="{{ order.order_id }}" data-code="{{ order.order_code|default:order.order_id }}"
+                                    data-created="{{ order.created_at|date:'d/m/Y · H:i' }}" data-total="{{ order.total_amount|vnd }} ₫"
+                                    data-status="{{ order.get_order_status_display }}" data-buyer="{{ order.user.full_name|default:order.user.username }}"
+                                    data-phone="{{ order.address.receiver_phone|default:order.user.phone|default:'Chưa có SĐT' }}"
+                                    data-address="{{ order.address.detail_address }}, {{ order.address.ward }}, {{ order.address.district }}, {{ order.address.province }}"
+                                    data-shop="{{ order.order_items.first.shop.shop_name|default:'Hệ thống' }}"
+                                    data-product="{{ order.order_items.first.product.product_name|default:'Đơn hàng' }}"
+                                    data-quantity="{{ order.order_items.first.quantity|default:0 }}" data-payment="{{ order.get_payment_method_display }}">
+                                    <i class="fa-regular fa-eye"></i> Chi tiết
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -204,19 +225,19 @@
                 <span>Trang <strong>{{ showOrder.number }}</strong> / <strong>{{ showOrder.paginator.num_pages }}</strong></span>
                 <div class="order-pagination__buttons">
                     {% if showOrder.has_previous %}
-                        <a href="{% url 'loadOrder' %}?page={{ showOrder.previous_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">‹</a>
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.previous_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">‹</a>
                     {% endif %}
 
                     {% for i in showOrder.paginator.page_range %}
                         {% if showOrder.number == i %}
                             <button class="order-page-btn is-active" type="button">{{ i }}</button>
                         {% else %}
-                            <a href="{% url 'loadOrder' %}?page={{ i }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">{{ i }}</a>
+                            <a href="{% url 'loadOrder' %}?page={{ i }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">{{ i }}</a>
                         {% endif %}
                     {% endfor %}
 
                     {% if showOrder.has_next %}
-                        <a href="{% url 'loadOrder' %}?page={{ showOrder.next_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">›</a>
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.next_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">›</a>
                     {% endif %}
                 </div>
             </div>
@@ -224,7 +245,143 @@
     </main>
 </div>
 
+<aside class="order-detail-drawer" id="order-detail-drawer" aria-labelledby="order-detail-title" aria-hidden="true" hidden>
+    <div class="order-detail-drawer__backdrop" data-close-order-detail></div>
+    <section class="order-detail-drawer__panel" role="dialog" aria-modal="true">
+        <header class="order-detail-drawer__header">
+            <div><h2 id="order-detail-title"></h2><p id="detail-created"></p></div>
+            <button type="button" class="order-detail-drawer__close" data-close-order-detail aria-label="Đóng chi tiết đơn hàng"><i class="fa-solid fa-xmark"></i></button>
+        </header>
+        <div class="order-detail-drawer__content">
+            <section class="order-detail-total"><div><span>Giá trị đơn hàng</span><strong id="detail-total"></strong></div><span class="status order-status order-status--pending" id="detail-status"></span></section>
+            <h3>Người mua</h3>
+            <dl class="order-detail-list"><div><dt>Họ tên</dt><dd id="detail-buyer"></dd></div><div><dt>Điện thoại</dt><dd id="detail-phone"></dd></div><div><dt>Địa chỉ</dt><dd id="detail-address"></dd></div></dl>
+            <h3>Shop &amp; sản phẩm</h3>
+            <dl class="order-detail-list"><div><dt>Shop</dt><dd id="detail-shop"></dd></div><div><dt>Sản phẩm</dt><dd id="detail-product"></dd></div><div><dt>Số lượng</dt><dd id="detail-quantity"></dd></div><div><dt>Thanh toán</dt><dd id="detail-payment"></dd></div></dl>
+        </div>
+        <footer class="order-detail-drawer__footer">
+            <button type="button" class="btn btn--primary" data-detail-action="COMFIRMED"><i class="fa-solid fa-circle-check"></i> Xác nhận đơn</button>
+            <button type="button" class="btn btn--secondary" data-detail-action="PROCESSING"><i class="fa-solid fa-share"></i> Chuyển về shop xử lý</button>
+            <button type="button" class="btn order-bulk-actions__cancel" data-detail-action="CANCELLED"><i class="fa-solid fa-circle-xmark"></i> Hủy đơn hàng</button>
+        </footer>
+    </section>
+</aside>
+
+<form id="detail-order-action-form" method="POST" action="{% url 'updateOrderStatus' %}" hidden>
+    {% csrf_token %}<input type="hidden" name="action_status"><input type="hidden" name="order_ids"><input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}"><input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}"><input type="hidden" name="return_query" value="{{ filter_query }}">
+</form>
+
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
+<script>
+document.querySelectorAll('[data-dashboard-period]').forEach((picker) => {
+    const trigger = picker.querySelector('.dashboard-period__trigger');
+    const menu = picker.querySelector('.dashboard-period__menu');
+    const tabs = Array.from(picker.querySelectorAll('[data-period-tab]'));
+    const forms = Array.from(picker.querySelectorAll('[data-period-form]'));
+    const close = () => {
+        picker.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+        menu.hidden = true;
+    };
+    trigger.addEventListener('click', () => {
+        if (menu.hidden) {
+            picker.classList.add('is-open');
+            trigger.setAttribute('aria-expanded', 'true');
+            menu.hidden = false;
+        } else close();
+    });
+    tabs.forEach((tab) => tab.addEventListener('click', () => {
+        const target = tab.dataset.periodTab;
+        tabs.forEach((item) => {
+            const active = item === tab;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-selected', String(active));
+        });
+        forms.forEach((form) => { form.hidden = form.dataset.periodForm !== target; });
+    }));
+    document.addEventListener('click', (event) => { if (!picker.contains(event.target)) close(); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+});
+
+(() => {
+    const bulkForm = document.querySelector('#bulk-order-form');
+    if (!bulkForm) return;
+    const master = document.querySelector('#order-select-all');
+    const rows = Array.from(document.querySelectorAll('.row-check'));
+    const bar = document.querySelector('#order-bulk-actions');
+    const counter = document.querySelector('#selected-order-count');
+    const total = Number('{{ filtered_order_count }}');
+    const selectionParams = new URLSearchParams(location.search);
+    selectionParams.delete('page');
+    const storageKey = `pcmatch-order-selection:${location.pathname}?${selectionParams.toString()}`;
+    let selection;
+    try { selection = JSON.parse(sessionStorage.getItem(storageKey)); } catch (_) { selection = null; }
+    selection = selection && typeof selection === 'object' ? selection : { all: false, ids: [], excluded: [] };
+    selection.ids = Array.isArray(selection.ids) ? selection.ids.map(String) : [];
+    selection.excluded = Array.isArray(selection.excluded) ? selection.excluded.map(String) : [];
+    const save = () => sessionStorage.setItem(storageKey, JSON.stringify(selection));
+    const count = () => selection.all ? total - selection.excluded.length : selection.ids.length;
+    const sync = () => {
+        rows.forEach((box) => { box.checked = selection.all ? !selection.excluded.includes(box.value) : selection.ids.includes(box.value); });
+        const selected = count();
+        bar.hidden = selected === 0;
+        counter.textContent = selected;
+        master.checked = selection.all && selected === total;
+        master.indeterminate = !selection.all && selected > 0;
+        bulkForm.querySelector('#bulk-select-all').value = selection.all ? '1' : '0';
+        save();
+    };
+    master.addEventListener('change', () => { selection = { all: master.checked, ids: [], excluded: [] }; sync(); });
+    rows.forEach((box) => box.addEventListener('change', () => {
+        if (selection.all) {
+            selection.excluded = selection.excluded.filter((id) => id !== box.value);
+            if (!box.checked) selection.excluded.push(box.value);
+        } else {
+            selection.ids = selection.ids.filter((id) => id !== box.value);
+            if (box.checked) selection.ids.push(box.value);
+        }
+        sync();
+    }));
+    document.querySelector('#clear-order-selection').addEventListener('click', () => { selection = { all: false, ids: [], excluded: [] }; sync(); });
+    document.querySelectorAll('[data-bulk-action]').forEach((button) => button.addEventListener('click', () => {
+        bulkForm.querySelector('#bulk-action-status').value = button.dataset.bulkAction;
+        bulkForm.querySelectorAll('[data-generated-selection]').forEach((input) => input.remove());
+        const values = selection.all ? selection.excluded : selection.ids;
+        const field = selection.all ? 'excluded_order_ids' : 'order_ids';
+        values.forEach((value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden'; input.name = field; input.value = value; input.dataset.generatedSelection = 'true';
+            bulkForm.appendChild(input);
+        });
+        bulkForm.submit();
+    }));
+    sync();
+})();
+
+(() => {
+    const drawer = document.querySelector('#order-detail-drawer');
+    const detailForm = document.querySelector('#detail-order-action-form');
+    let selectedId = null;
+    const fields = ['code', 'created', 'total', 'status', 'buyer', 'phone', 'address', 'shop', 'product', 'quantity', 'payment'];
+    const close = () => { drawer.hidden = true; drawer.setAttribute('aria-hidden', 'true'); document.body.classList.remove('has-order-drawer'); };
+    document.querySelectorAll('[data-order-detail]').forEach((button) => button.addEventListener('click', () => {
+        selectedId = button.dataset.id;
+        fields.forEach((field) => {
+            const element = document.querySelector(`#detail-${field}`);
+            if (element) element.textContent = button.dataset[field] || '';
+        });
+        drawer.hidden = false; drawer.setAttribute('aria-hidden', 'false'); document.body.classList.add('has-order-drawer');
+    }));
+    drawer.querySelectorAll('[data-close-order-detail]').forEach((button) => button.addEventListener('click', close));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !drawer.hidden) close(); });
+    drawer.querySelectorAll('[data-detail-action]').forEach((button) => button.addEventListener('click', () => {
+        if (!selectedId) return;
+        detailForm.querySelector('[name="action_status"]').value = button.dataset.detailAction;
+        detailForm.querySelector('[name="order_ids"]').value = selectedId;
+        detailForm.submit();
+    }));
+})();
+</script>
 {% include 'includes/admin_interface_controls.html' %}
 <script src="{% static 'js/admin-interface.js' %}" defer></script>
 </body>

@@ -73,6 +73,10 @@ urlpatterns = [
          staff_required(shop_views.staff_shop_suspend),
          name='staff_shop_suspend',
     ),
+    path('staff/shops/bulk/',
+         staff_required(shop_views.staff_shop_bulk),
+         name='staff_shop_bulk',
+    ),
 
     path('staff/logout/',
          user_views.staff_logout,

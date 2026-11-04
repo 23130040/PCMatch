@@ -8,35 +8,25 @@ from django.db import DatabaseError
 from django.urls import reverse
 from shops.models import Shop
 from orders.models import Order
+from analytics.views import _filter_period, _filtered_orders
+from django.utils import timezone
+from urllib.parse import urlencode
 
 from users.views import buyer_required, staff_required
 from payments.vnpay import configured, payment_url
 from .services import confirm_order, create_order, retry_vnpay_payment
 
 def orderList(request):
+    period = _filter_period(request)
+    period_orders = _filtered_orders(period)
     search = request.GET.get('search', '').strip()
     locStatus = request.GET.get('status', '').strip()
     idOfShop = request.GET.get('shop', '').strip()
     page = request.GET.get('page', 1)
 
-    allOrder = Order.objects.all().order_by('-created_at')
+    allOrder = _staff_filtered_orders(period_orders, locStatus, search, idOfShop)
 
-   
-    if locStatus != '' and locStatus != 'ALL':
-        allOrder = allOrder.filter(order_status=locStatus)
-
-   
-    if search != '':
-        allOrder = allOrder.filter(order_code__icontains=search)
-
-    
-    if idOfShop != '':
-        try:
-            allOrder = allOrder.filter(items__shop_id=idOfShop).distinct()
-        except Exception:
-            allOrder = allOrder.filter(order_items__shop_id=idOfShop).distinct()
-
-    dividePage = Paginator(allOrder, 10)
+    dividePage = Paginator(allOrder.select_related('user', 'address').prefetch_related('order_items__shop', 'order_items__product'), 10)
     showOrder = dividePage.get_page(page)
 
     box = {
@@ -45,8 +35,39 @@ def orderList(request):
         'search': search,
         'idOfShop': idOfShop,
         'shops': Shop.objects.all(),
+        'period_label': period['label'],
+        'selected_year': period['selected_year'],
+        'selected_month': period['selected_month'],
+        'month_input_value': period['month_input_value'],
+        'active_preset': period['active_preset'],
+        'active_picker_tab': period['active_picker_tab'],
+        'current_year': timezone.localdate().year,
+        'from_date': period['requested_start'].isoformat() if period['requested_start'] else '',
+        'to_date': period['requested_end'].isoformat() if period['requested_end'] else '',
+        'period_query': urlencode({key: request.GET[key] for key in ('preset', 'period_month', 'year', 'from_date', 'to_date') if request.GET.get(key)}),
+        'period_preset': request.GET.get('preset', ''),
+        'period_month_query': request.GET.get('period_month', ''),
+        'period_year_query': request.GET.get('year', ''),
+        'filter_query': urlencode({key: value for key, value in request.GET.items() if key != 'page'}),
+        'filtered_order_count': allOrder.count(),
+        'updated_at': timezone.localtime(),
+        'total_orders': period_orders.count(),
+        'pending_orders': period_orders.filter(order_status='PENDING').count(),
+        'shipping_orders': period_orders.filter(order_status__in=('COMFIRMED', 'PROCESSING', 'SHIPPING')).count(),
+        'cancelled_orders': period_orders.filter(order_status__in=('CANCELLED', 'RETURNED')).count(),
     }
     return render(request, 'admin/order.html', box)
+
+
+def _staff_filtered_orders(period_orders, status, search, shop_id):
+    orders = period_orders
+    if status and status != 'ALL':
+        orders = orders.filter(order_status=status)
+    if search:
+        orders = orders.filter(order_code__icontains=search)
+    if shop_id:
+        orders = orders.filter(order_items__shop_id=shop_id).distinct()
+    return orders
 
 
 @require_POST
@@ -147,25 +168,33 @@ def buyer_order(request):
 @require_POST
 @staff_required
 def changeManyStatus(request):
-    if request.method == 'POST':
-        orderIds = request.POST.getlist('order_ids')
-        actionStatus = request.POST.get('action_status')
+    actionStatus = request.POST.get('action_status')
+    valid = {'COMFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'}
+    return_query = request.POST.get('return_query', '')
+    if actionStatus in valid:
+        if request.POST.get('select_all') == '1':
+            period = _filter_period(request, request.POST)
+            orders = _staff_filtered_orders(
+                _filtered_orders(period),
+                request.POST.get('status', ''), request.POST.get('search', '').strip(), request.POST.get('shop', '').strip(),
+            )
+            excluded = request.POST.getlist('excluded_order_ids')
+            if excluded:
+                orders = orders.exclude(pk__in=excluded)
+        else:
+            orders = Order.objects.filter(pk__in=request.POST.getlist('order_ids'))
 
-        if orderIds and actionStatus:
-            for orderId in orderIds:
-                order = Order.objects.get(pk=orderId)
+        orders = list(orders.prefetch_related('order_items__product'))
+        for order in orders:
+            if actionStatus == 'DELIVERED' and order.order_status != 'DELIVERED':
+                for item in order.order_items.all():
+                    item.product.sold_quantity += item.quantity
+                    item.product.save()
+            order.order_status = actionStatus
+            order.save(update_fields=['order_status', 'updated_at'])
+        if orders:
+            messages.success(request, f"Đã cập nhật {len(orders)} đơn hàng.")
 
-                if actionStatus == 'DELIVERED' and order.order_status != 'DELIVERED':
-                    items = getattr(order, 'items', getattr(order, 'order_items', None))
-                    if items:
-                        for item in items.all():
-                            item.product.sold_quantity += item.quantity
-                            item.product.save()
-
-                order.order_status = actionStatus
-                order.save()
-
-            messages.success(request, f"Đã cập nhật {len(orderIds)} đơn hàng.")
-
-    return redirect('loadOrder')
+    destination = reverse('loadOrder')
+    return redirect(f'{destination}?{return_query}' if return_query else destination)
 

@@ -12,7 +12,7 @@ from django.http import FileResponse, Http404
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import DatabaseError, transaction
-from django.db.models import Max, Prefetch, Q
+from django.db.models import Count, Max, Min, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
 from django.urls import reverse, reverse_lazy
@@ -22,6 +22,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from orders.models import Order, OrderItem, OrderStatusHistory, Return
+from analytics.views import _filter_period
 from orders.services import fulfill_order, shop_status
 from products.models import Brand, Category, Product, ProductQuestion
 from products.forms import ProductAnswerForm
@@ -905,14 +906,15 @@ STAFF_SHOP_STATUSES = (
 STAFF_SHOP_LABELS = dict(STAFF_SHOP_STATUSES)
 
 
-@require_GET
-def staff_shop_list(request):
-    every = Shop.objects.select_related('owner')
-    search = request.GET.get('search', '').strip()
-    status = request.GET.get('status', '').strip()
-    if status not in STAFF_SHOP_LABELS:
-        status = ''
-    shops = every.filter(status=status) if status else every
+def _filter_staff_shops(request, params):
+    period = _filter_period(request, params)
+    shops = Shop.objects.select_related('owner')
+    if period['start_date']:
+        shops = shops.filter(created_at__date__gte=period['start_date'])
+    if period['end_date']:
+        shops = shops.filter(created_at__date__lte=period['end_date'])
+    search = params.get('search', '').strip()
+    status = params.get('status', '').strip()
     if search:
         shops = shops.filter(
             Q(shop_name__icontains=search)
@@ -920,19 +922,81 @@ def staff_shop_list(request):
             | Q(owner__email__icontains=search)
             | Q(phone__icontains=search)
         )
+    if status in STAFF_SHOP_LABELS:
+        shops = shops.filter(status=status)
+    return shops
+
+
+@require_GET
+def staff_shop_list(request):
+    every = Shop.objects.select_related('owner')
+    period = _filter_period(request)
+    if period['start_date']:
+        every = every.filter(created_at__date__gte=period['start_date'])
+    if period['end_date']:
+        every = every.filter(created_at__date__lte=period['end_date'])
+    search = request.GET.get('search', '').strip()
+    status = request.GET.get('status', '').strip()
+    if status not in STAFF_SHOP_LABELS:
+        status = ''
+    if search:
+        every = every.filter(
+            Q(shop_name__icontains=search)
+            | Q(owner__full_name__icontains=search)
+            | Q(owner__email__icontains=search)
+            | Q(phone__icontains=search)
+        )
+    shops = every.filter(status=status) if status else every
     filter_query = request.GET.copy()
     filter_query.pop('page', None)
     counts = {code: every.filter(status=code).count() for code in STAFF_SHOP_LABELS}
+    fee_items = OrderItem.objects.filter(shop__in=every, order__order_status='DELIVERED').select_related('shop')
+    if period['start_date']:
+        fee_items = fee_items.filter(order__created_at__date__gte=period['start_date'])
+    if period['end_date']:
+        fee_items = fee_items.filter(order__created_at__date__lte=period['end_date'])
+    fee_items = list(fee_items)
+    platform_fee_total = sum(
+        (item.subtotal * item.shop.platform_fee_percent / Decimal('100') for item in fee_items),
+        Decimal('0'),
+    )
+    shop_page = Paginator(shops.order_by('-created_at', '-pk'), 10).get_page(request.GET.get('page'))
+    shop_ids = [shop.pk for shop in shop_page]
+    product_summaries = {
+        row['shop_id']: row
+        for row in Product.objects.filter(shop_id__in=shop_ids).values('shop_id').annotate(
+            count=Count('pk'), category_name=Min('category__category_name'),
+        )
+    }
+    revenue_totals = dict(OrderItem.objects.filter(shop_id__in=shop_ids, order__order_status='DELIVERED').values('shop_id').annotate(total=Sum('subtotal')).values_list('shop_id', 'total'))
+    for shop in shop_page:
+        shop.product_count = product_summaries.get(shop.pk, {}).get('count', 0)
+        shop.category_name = product_summaries.get(shop.pk, {}).get('category_name') or 'Chưa phân loại'
+        shop.delivered_revenue = revenue_totals.get(shop.pk) or Decimal('0')
     return render(request, 'admin/shop.html', {
         'page_name': 'shop',
         'page_section': 'staff',
-        'shop_page': Paginator(shops.order_by('-created_at', '-pk'), 10).get_page(request.GET.get('page')),
+        'shop_page': shop_page,
         'search': search,
         'status': status,
         'filter_query': filter_query.urlencode(),
         'shop_total': every.count(),
         'shop_counts': counts,
         'shop_statuses': [(code, label, counts[code]) for code, label in STAFF_SHOP_STATUSES],
+        'fee_shop_count': len({item.shop_id for item in fee_items}),
+        'platform_fee_total': platform_fee_total,
+        'period_label': period['label'],
+        'selected_year': period['selected_year'],
+        'month_input_value': period['month_input_value'],
+        'active_preset': period['active_preset'],
+        'active_picker_tab': period['active_picker_tab'],
+        'current_year': timezone.localdate().year,
+        'from_date': period['requested_start'].isoformat() if period['requested_start'] else '',
+        'to_date': period['requested_end'].isoformat() if period['requested_end'] else '',
+        'period_preset': request.GET.get('preset', ''),
+        'period_month_query': request.GET.get('period_month', ''),
+        'period_year_query': request.GET.get('year', ''),
+        'filtered_shop_count': shops.count(),
     })
 
 
@@ -1019,3 +1083,55 @@ def staff_shop_suspend(request, shop_id):
         )
         messages.success(request, f'Đã tạm ngưng shop "{shop.shop_name}".')
     return redirect(_staff_shop_return(request, shop))
+
+
+@require_POST
+def staff_shop_bulk(request):
+    action = request.POST.get('action')
+    return_query = request.POST.get('return_query', '')
+    if request.POST.get('select_all') == '1':
+        shops = _filter_staff_shops(request, request.POST).exclude(pk__in=request.POST.getlist('excluded_shop_ids'))
+    else:
+        shops = Shop.objects.select_related('owner').filter(pk__in=request.POST.getlist('shop_ids'))
+
+    shops = list(shops)
+    changed = 0
+    if action == 'APPROVE':
+        for shop in shops:
+            if shop.status != 'ACTIVE' and shop.is_ready_for_approval():
+                shop.status = 'ACTIVE'
+                shop.save()
+                changed += 1
+        if changed:
+            messages.success(request, f'Đã duyệt {changed} shop đủ điều kiện.')
+        elif shops:
+            messages.error(request, 'Các shop được chọn chưa đủ điều kiện duyệt hoặc đã hoạt động.')
+    elif action == 'SUSPEND':
+        from notifications.models import Notification
+        for shop in shops:
+            if shop.status != 'SUSPENDED':
+                shop.status = 'SUSPENDED'
+                shop.save()
+                Notification.objects.create(
+                    user=shop.owner,
+                    title='Shop đã bị tạm ngưng',
+                    message=f'Shop "{shop.shop_name}" đã bị tạm ngưng. Vui lòng liên hệ quản trị viên.',
+                    type='SHOP_SUSPENDED',
+                )
+                changed += 1
+        if changed:
+            messages.success(request, f'Đã tạm ngưng {changed} shop.')
+    elif action == 'REMIND_FEE':
+        from notifications.models import Notification
+        for shop in shops:
+            Notification.objects.create(
+                user=shop.owner,
+                title='Nhắc phí sàn',
+                message=f'Vui lòng kiểm tra và đối soát phí sàn của shop "{shop.shop_name}".',
+                type='SHOP_FEE_REMINDER',
+            )
+        if shops:
+            messages.success(request, f'Đã gửi nhắc phí sàn cho {len(shops)} shop.')
+
+    destination = reverse('staff_shop')
+    return redirect(f'{destination}?{return_query}' if return_query else destination)
