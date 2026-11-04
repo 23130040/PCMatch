@@ -48,14 +48,10 @@ SECRET_KEY = 'django-insecure-n8f&%gmxzdzf&j&o6a$qsj(iqm*=+^yxks9+gl47(1xkn5q709
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    'drapery-pessimist-unmatched.ngrok-free.dev',
-]
 ALLOWED_HOSTS = list(dict.fromkeys([
     '127.0.0.1',
     'localhost',
+    'drapery-pessimist-unmatched.ngrok-free.dev',
     *(
         host.strip()
         for host in os.environ.get('ALLOWED_HOSTS', '').split(',')
