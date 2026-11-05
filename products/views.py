@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
@@ -7,15 +8,18 @@ from django.template.loader import render_to_string
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 from urllib.parse import urlencode
-from django.db.models import Count, Prefetch, Q
-from django.db import DatabaseError
-from .forms import AdminProductFilterForm, CatalogFilterForm, ProductFollowupForm, ProductQuestionForm
-from .models import Category, Product, ProductQuestion
+from django.db.models import Avg, Count, Prefetch, Q
+from django.db import DatabaseError, IntegrityError, transaction
+from orders.models import OrderItem
+from .forms import AdminProductFilterForm, CatalogFilterForm, ProductFollowupForm, ProductQuestionForm, ProductReviewForm
+from .models import Category, Product, ProductImage, ProductQuestion, ProductReview
 from .services import append_question_message, conversation_messages
 from django.core.exceptions import ValidationError
 from users.views import is_active_buyer
 from shops.models import Shop
 from .comparison import SESSION_KEY, comparison_products, parse_product_ids, session_products
+
+logger = logging.getLogger(__name__)
 
 
 def buyer_home(request):
@@ -272,12 +276,21 @@ def buyer_shop(request):
 
 def _detail_product(product_id):
     return get_object_or_404(
-        Product.objects.select_related('category', 'brand', 'shop').prefetch_related('specifications'),
+        Product.objects.select_related('category', 'brand', 'shop').prefetch_related(
+            'specifications',
+            Prefetch(
+                'images',
+                queryset=ProductImage.objects.order_by('-is_primary', 'pk'),
+            ),
+        ),
         product_id=product_id,
     )
 
 
-def _render_product_detail(request, product, question_form=None, status=200, reply_form=None, reply_question=None):
+def _render_product_detail(
+    request, product, question_form=None, review_form=None, status=200,
+    reply_form=None, reply_question=None,
+):
     questions = product.questions.select_related('user').prefetch_related(
         Prefetch('answers', queryset=conversation_messages(), to_attr='thread_messages'),
     ).order_by('-created_at', '-pk')
@@ -285,6 +298,16 @@ def _render_product_detail(request, product, question_form=None, status=200, rep
     questions_page = Paginator(questions, 10).get_page(page_number)
     for question in questions_page:
         question.reply_form = reply_form if reply_question and question.pk == reply_question.pk else ProductFollowupForm(auto_id=f'id_reply_{question.pk}_%s')
+    reviews = product.reviews.select_related('user').order_by('-created_at', '-pk')
+    reviews_page = Paginator(reviews, 10).get_page(request.GET.get('reviews_page'))
+    is_buyer = is_active_buyer(request.user)
+    has_reviewed = is_buyer and reviews.filter(user=request.user).exists()
+    has_delivered_purchase = is_buyer and OrderItem.objects.filter(
+        product=product,
+        order__user=request.user,
+        item_status='DELIVERED',
+    ).exists()
+    can_review = has_delivered_purchase and not has_reviewed
     context = {
         'page_name': 'model',
         'page_section': 'buyer',
@@ -294,6 +317,21 @@ def _render_product_detail(request, product, question_form=None, status=200, rep
         'question_form': question_form if question_form is not None else ProductQuestionForm(),
         'can_ask_question': is_active_buyer(request.user),
         'questions_open': product.status != 'INACTIVE' and product.shop.status == 'ACTIVE',
+        'can_purchase': (
+            product.status == 'ACTIVE'
+            and product.stock_quantity > 0
+            and product.shop.status == 'ACTIVE'
+        ),
+        'reviews_page': reviews_page,
+        'review_summary': reviews.aggregate(average=Avg('rating'), count=Count('pk')),
+        'is_buyer': is_buyer,
+        'has_reviewed': has_reviewed,
+        'has_delivered_purchase': has_delivered_purchase,
+        'can_review': can_review,
+        'review_form': review_form if review_form is not None else ProductReviewForm() if can_review else None,
+        'review_login_url': reverse('auth_login') + '?' + urlencode({
+            'next': reverse('buyer_product_detail', args=[product.pk]) + '#product-reviews',
+        }),
         'question_login_url': reverse('auth_login') + '?' + urlencode({
             'next': reverse('buyer_product_detail', args=[product.pk]) + '#product-questions',
         }),
@@ -354,4 +392,52 @@ def product_question_followup(request, product_id, question_id):
         form.add_error(None, 'Chưa gửi được phản hồi. Vui lòng thử lại.')
         return _render_product_detail(request, product, status=503, reply_form=form, reply_question=question)
     messages.success(request, 'Đã gửi nội dung hỏi thêm. Shop sẽ tiếp tục trả lời trong cuộc trao đổi này.')
+    return redirect(target)
+
+
+@require_POST
+def product_review_create(request, product_id):
+    product = _detail_product(product_id)
+    target = reverse('buyer_product_detail', args=[product.pk]) + '#product-reviews'
+    if not is_active_buyer(request.user):
+        messages.info(request, 'Chỉ người mua mới có thể đánh giá sản phẩm.')
+        if not request.user.is_authenticated:
+            return redirect(reverse('auth_login') + '?' + urlencode({'next': target}))
+        return redirect(target)
+
+    if not OrderItem.objects.filter(
+        product=product,
+        order__user=request.user,
+        item_status='DELIVERED',
+    ).exists():
+        messages.error(request, 'Chỉ người mua có đơn đã giao sản phẩm này mới được đánh giá.')
+        return redirect(target)
+    if ProductReview.objects.filter(product=product, user=request.user).exists():
+        messages.info(request, 'Bạn đã đánh giá sản phẩm này.')
+        return redirect(target)
+
+    form = ProductReviewForm(request.POST)
+    if not form.is_valid():
+        return _render_product_detail(request, product, review_form=form, status=400)
+
+    try:
+        with transaction.atomic():
+            ProductReview.objects.create(
+                product=product,
+                user=request.user,
+                **form.cleaned_data,
+            )
+    except IntegrityError:
+        messages.info(request, 'Bạn đã đánh giá sản phẩm này.')
+        return redirect(target)
+    except DatabaseError:
+        logger.exception(
+            'Could not save product review for product %s by user %s.',
+            product.pk,
+            request.user.pk,
+        )
+        form.add_error(None, 'Chưa lưu được đánh giá. Vui lòng thử lại.')
+        return _render_product_detail(request, product, review_form=form, status=503)
+
+    messages.success(request, 'Cảm ơn bạn đã đánh giá sản phẩm.')
     return redirect(target)

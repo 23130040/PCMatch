@@ -85,7 +85,7 @@ def cart_add(request, product_id):
 @transaction.atomic
 def cart_update(request, item_id):
     owned = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
-    product = Product.objects.select_for_update().get(pk=owned.product_id)
+    product = Product.objects.select_for_update().select_related('shop').get(pk=owned.product_id)
     item = get_object_or_404(CartItem.objects.select_for_update(), pk=item_id, cart__user=request.user)
     form = CartQuantityForm(request.POST)
     if not form.is_valid():

@@ -74,6 +74,7 @@ urlpatterns = [
     path('buyer/products/<int:product_id>/', product_views.product_detail, name='buyer_product_detail'),
     path('buyer/products/<int:product_id>/questions/', product_views.product_question_create, name='buyer_product_question_create'),
     path('buyer/products/<int:product_id>/questions/<int:question_id>/reply/', product_views.product_question_followup, name='buyer_product_question_followup'),
+    path('buyer/products/<int:product_id>/reviews/', product_views.product_review_create, name='buyer_product_review_create'),
     path('staff/logout/', user_views.auth_logout, name='staff_logout'),
     path('staff/shop/<int:shop_id>/approve/',
          staff_required(shop_views.staff_shop_approve),

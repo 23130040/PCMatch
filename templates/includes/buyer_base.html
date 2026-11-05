@@ -35,7 +35,7 @@
         <div class="cluster"><a href="{% url 'buyer_help' %}">Trợ giúp</a><a href="{% url 'shop_dashboard' %}">Kênh
             người bán</a></div>
     </footer>
-    <script src="{% static 'js/buyer-interface.js' %}" defer></script>
+    <script src="{% static 'js/buyer-interface.js' %}?v=20261105-quantity-digits" defer></script>
     <script src="{% static 'js/cart-add.js' %}" defer></script>
     {% if page_name == 'search' or page_name == 'model' %}
         <script src="{% static 'js/comparison.js' %}" defer></script>{% endif %}

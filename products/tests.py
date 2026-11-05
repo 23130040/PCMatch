@@ -3,9 +3,11 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils.html import escape
 
+from orders.models import Order, OrderItem
 from shops.models import Shop
+from users.models import Address
 
-from .models import Brand, Category, Product, ProductSpecification
+from .models import Brand, Category, Product, ProductImage, ProductReview, ProductSpecification
 
 
 class CatalogTestData(TestCase):
@@ -408,8 +410,59 @@ class BuyerProductDetailTests(CatalogTestData):
         self.assertContains(response, 'Mô tả chuột kiểm thử.')
         self.assertContains(response, 'data-product-price="379000.00"')
         self.assertContains(response, '/media/product_thumbnail/test-mouse.jpg')
+        self.assertContains(
+            response,
+            'name="quantity" value="1" inputmode="numeric" pattern="[0-9]*" min="1" max="5" required',
+        )
         self.assertContains(response, 'USB')
         self.assertNotContains(response, 'Ryzen 5')
+
+    def test_detail_renders_product_image_gallery_and_missing_image_fallback(self):
+        product = self.create_product(
+            product_name='Sản phẩm có gallery',
+            slug='product-with-gallery',
+            thumbnail='product_thumbnail/gallery-cover.jpg',
+        )
+        ProductImage.objects.create(
+            product=product,
+            image_url='product_images/gallery-one.jpg',
+            is_primary=True,
+        )
+        ProductImage.objects.create(
+            product=product,
+            image_url='product_images/gallery-two.jpg',
+        )
+
+        response = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '/media/product_thumbnail/gallery-cover.jpg')
+        self.assertContains(response, '/media/product_images/gallery-one.jpg')
+        self.assertContains(response, '/media/product_images/gallery-two.jpg')
+        self.assertEqual(len(response.context['selected_product'].images.all()), 2)
+
+        no_image_product = self.create_product(
+            product_name='Sản phẩm chưa có ảnh',
+            slug='product-without-image',
+        )
+        response = self.client.get(reverse('buyer_product_detail', args=[no_image_product.pk]))
+        self.assertContains(response, 'Chưa có ảnh sản phẩm.')
+
+    def test_detail_disables_purchase_when_shop_is_not_active(self):
+        product = self.create_product()
+        self.shop.status = 'SUSPENDED'
+        self.shop.save(update_fields=['status'])
+
+        response = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Shop hiện không nhận đơn hàng')
+        self.assertContains(response, 'name="quantity"')
+        self.assertContains(
+            response,
+            'name="quantity" value="1" inputmode="numeric" pattern="[0-9]*" min="1" max="5" required disabled',
+        )
+        self.assertContains(response, 'disabled>')
 
     def test_unknown_product_returns_404(self):
         response = self.client.get(reverse('buyer_product_detail', args=[999999999]))
@@ -418,3 +471,195 @@ class BuyerProductDetailTests(CatalogTestData):
     def test_legacy_demo_detail_redirects_to_real_catalog(self):
         response = self.client.get(reverse('buyer_model'), {'id': 'CPU-7600'})
         self.assertRedirects(response, reverse('buyer_search'))
+
+
+class BuyerProductReviewTests(CatalogTestData):
+    def create_delivered_purchase(self, user, product, order_code):
+        address = Address.objects.create(
+            user=user,
+            receiver_name='Người nhận',
+            receiver_phone='0901234567',
+            province='TP.HCM',
+            district='Quận 1',
+            ward='Bến Nghé',
+            detail_address='123 Đường kiểm thử',
+        )
+        order = Order.objects.create(
+            user=user,
+            address=address,
+            order_code=order_code,
+            subtotal=product.price,
+            total_amount=product.price,
+            payment_method='COD',
+            payment_status='PAID',
+            order_status='DELIVERED',
+        )
+        return OrderItem.objects.create(
+            order=order,
+            product=product,
+            shop=product.shop,
+            quantity=1,
+            unit_price=product.price,
+            subtotal=product.price,
+            item_status='DELIVERED',
+        )
+
+    def post_review(self, product, rating=5, review='Hoạt động đúng mô tả.'):
+        return self.client.post(
+            reverse('buyer_product_review_create', args=[product.pk]),
+            {'rating': rating, 'review': review},
+        )
+
+    def test_only_buyer_with_delivered_purchase_can_review_once(self):
+        User = get_user_model()
+        buyer = User.objects.create_user(
+            username='review-buyer',
+            email='review-buyer@example.test',
+            full_name='Người mua đánh giá',
+            role='BUYER',
+        )
+        product = self.create_product()
+        self.client.force_login(buyer)
+        denied = self.post_review(product)
+        self.assertRedirects(
+            denied,
+            f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(ProductReview.objects.exists())
+
+        self.create_delivered_purchase(buyer, product, 'REVIEW-DELIVERED-1')
+        response = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+        self.assertContains(response, 'name="rating"')
+        saved = self.post_review(
+            product,
+            rating=5,
+            review='Sản phẩm tốt & đúng mô tả. <script>alert(1)</script>',
+        )
+        self.assertRedirects(
+            saved,
+            f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+            fetch_redirect_response=False,
+        )
+        review = ProductReview.objects.get(product=product, user=buyer)
+        self.assertEqual(
+            (review.rating, review.review),
+            (5, 'Sản phẩm tốt & đúng mô tả. <script>alert(1)</script>'),
+        )
+
+        duplicate = self.post_review(product, rating=1, review='Đánh giá trùng.')
+        self.assertRedirects(
+            duplicate,
+            f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(ProductReview.objects.filter(product=product, user=buyer).count(), 1)
+
+        response = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+        self.assertEqual(response.context['review_summary']['count'], 1)
+        self.assertContains(response, '5.0 / 5')
+        self.assertContains(response, '1 lượt đánh giá')
+        self.assertContains(response, 'Đã mua và nhận hàng')
+        self.assertContains(response, 'Sản phẩm tốt &amp; đúng mô tả. &lt;script&gt;alert(1)&lt;/script&gt;')
+        self.assertNotContains(response, '<script>alert(1)</script>')
+        self.assertNotContains(response, 'name="rating"')
+
+    def test_delivered_product_in_partially_completed_order_can_be_reviewed(self):
+        User = get_user_model()
+        buyer = User.objects.create_user(
+            username='review-partial-buyer',
+            email='review-partial@example.test',
+            role='BUYER',
+        )
+        product = self.create_product()
+        item = self.create_delivered_purchase(buyer, product, 'REVIEW-PARTIAL-ORDER')
+        item.order.order_status = 'PROCESSING'
+        item.order.save(update_fields=['order_status'])
+        self.client.force_login(buyer)
+
+        response = self.post_review(product, rating=4, review='Sản phẩm đã giao.')
+
+        self.assertRedirects(
+            response,
+            f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(ProductReview.objects.filter(product=product, user=buyer).exists())
+
+    def test_seller_cannot_submit_product_review(self):
+        User = get_user_model()
+        seller = User.objects.create_user(
+            username='review-seller',
+            email='review-seller@example.test',
+            role='SELLER',
+        )
+        product = self.create_product()
+        self.client.force_login(seller)
+
+        response = self.post_review(product)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(ProductReview.objects.exists())
+
+    def test_review_form_validates_rating_and_text_and_requires_csrf(self):
+        User = get_user_model()
+        buyer = User.objects.create_user(
+            username='review-validation-buyer',
+            email='review-validation@example.test',
+            role='BUYER',
+        )
+        product = self.create_product()
+        self.create_delivered_purchase(buyer, product, 'REVIEW-DELIVERED-2')
+        self.client.force_login(buyer)
+
+        response = self.post_review(product, rating=6, review='Invalid rating')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('rating', response.context['review_form'].errors)
+        response = self.post_review(product, rating=4, review='   ')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('review', response.context['review_form'].errors)
+        self.assertFalse(ProductReview.objects.exists())
+
+        strict_client = Client(enforce_csrf_checks=True)
+        strict_client.force_login(buyer)
+        response = strict_client.post(
+            reverse('buyer_product_review_create', args=[product.pk]),
+            {'rating': 4, 'review': 'Sẽ bị CSRF chặn.'},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(ProductReview.objects.exists())
+
+    def test_review_aggregate_combines_ratings_and_guest_cannot_submit(self):
+        User = get_user_model()
+        product = self.create_product()
+        first = User.objects.create_user(
+            username='review-first',
+            email='review-first@example.test',
+            role='BUYER',
+        )
+        second = User.objects.create_user(
+            username='review-second',
+            email='review-second@example.test',
+            role='BUYER',
+        )
+        for index, buyer in enumerate((first, second), 1):
+            self.create_delivered_purchase(buyer, product, f'REVIEW-DELIVERED-{index + 2}')
+            self.client.force_login(buyer)
+            self.post_review(product, rating=5 if index == 1 else 3, review=f'Nhận xét {index}')
+
+        self.client.logout()
+        response = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+        self.assertContains(response, '4.0 / 5')
+        self.assertContains(response, '2 lượt đánh giá')
+        self.assertContains(response, 'Đăng nhập')
+        self.assertEqual(response.context['review_summary']['count'], 2)
+        self.assertEqual(float(response.context['review_summary']['average']), 4.0)
+
+        response = self.post_review(product)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse('auth_login') + '?next='))
+        self.assertEqual(ProductReview.objects.filter(product=product).count(), 2)

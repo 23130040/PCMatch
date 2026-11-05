@@ -2,7 +2,7 @@ from django import forms
 
 from shops.models import Shop
 
-from .models import Brand, Category, ProductSpecification
+from .models import Brand, Category, ProductReview, ProductSpecification
 
 
 class ProductQuestionForm(forms.Form):
@@ -42,6 +42,34 @@ class ProductFollowupForm(forms.Form):
             'placeholder': 'Hỏi thêm hoặc tham gia trao đổi về câu hỏi này...',
         }),
     )
+
+
+class ProductReviewForm(forms.ModelForm):
+    rating = forms.TypedChoiceField(
+        label='Đánh giá số sao',
+        choices=ProductReview.RATING_CHOICES,
+        coerce=int,
+        widget=forms.RadioSelect,
+    )
+    review = forms.CharField(
+        label='Nhận xét',
+        max_length=2000,
+        widget=forms.Textarea(attrs={
+            'rows': 4,
+            'maxlength': 2000,
+            'placeholder': 'Chia sẻ trải nghiệm thực tế của bạn về sản phẩm...',
+        }),
+    )
+
+    class Meta:
+        model = ProductReview
+        fields = ['rating', 'review']
+
+    def clean_review(self):
+        review = self.cleaned_data['review'].strip()
+        if not review:
+            raise forms.ValidationError('Vui lòng nhập nhận xét.')
+        return review
 
 
 class AdminProductFilterForm(forms.Form):
