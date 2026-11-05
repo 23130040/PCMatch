@@ -1,0 +1,73 @@
+{% load cart_prices %}
+<section class="order-detail">
+    <section class="order-detail__section" aria-labelledby="order-detail-summary-title">
+        <h3 id="order-detail-summary-title">Thông tin đơn hàng</h3>
+        <dl class="order-detail__grid">
+            <div><dt>Mã đơn</dt><dd>{{ order.order_code }}</dd></div>
+            <div><dt>Ngày đặt</dt><dd>{{ order.created_at|date:'d/m/Y H:i' }}</dd></div>
+            <div><dt>Trạng thái đơn</dt><dd>{{ order.get_order_status_display }}</dd></div>
+            <div><dt>Thanh toán</dt><dd>{{ order.get_payment_status_display }}</dd></div>
+            <div><dt>Phương thức</dt><dd>{{ order.get_payment_method_display }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="order-detail__section" aria-labelledby="order-detail-buyer-title">
+        <h3 id="order-detail-buyer-title">Người mua và giao hàng</h3>
+        <dl class="order-detail__grid">
+            <div><dt>Người mua</dt><dd>{{ order.user.full_name|default:order.user.username }}</dd></div>
+            <div><dt>Số điện thoại</dt><dd>{{ order.address.receiver_phone|default:'Chưa có SĐT' }}</dd></div>
+            <div class="order-detail__grid-wide"><dt>Địa chỉ</dt><dd>{{ order.address.detail_address }}, {{ order.address.ward }}, {{ order.address.district }}, {{ order.address.province }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="order-detail__section" aria-labelledby="order-detail-items-title">
+        <h3 id="order-detail-items-title">Sản phẩm ({{ order.order_items.all|length }})</h3>
+        <div class="order-detail__items">
+            {% for item in order.order_items.all %}
+            <article class="order-detail__item">
+                <div class="order-detail__item-heading">
+                    <strong>{{ item.product.product_name }}</strong>
+                    <span>{{ item.subtotal|vnd }} ₫</span>
+                </div>
+                <p>{{ item.shop.shop_name }} · {{ item.quantity }} × {{ item.unit_price|vnd }} ₫</p>
+            </article>
+            {% empty %}
+            <p class="order-detail__muted">Đơn hàng không có sản phẩm.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="order-detail__section" aria-labelledby="order-detail-total-title">
+        <h3 id="order-detail-total-title">Thanh toán</h3>
+        <dl class="order-detail__totals">
+            <div><dt>Tạm tính</dt><dd>{{ order.subtotal|vnd }} ₫</dd></div>
+            <div><dt>Phí giao hàng</dt><dd>{{ order.shipping_fee|vnd }} ₫</dd></div>
+            <div><dt>Phí nền tảng</dt><dd>{{ order.platform_fee|vnd }} ₫</dd></div>
+            <div class="order-detail__grand-total"><dt>Tổng tiền</dt><dd>{{ order.total_amount|vnd }} ₫</dd></div>
+        </dl>
+    </section>
+
+    <section class="order-detail__section" aria-labelledby="order-detail-history-title">
+        <h3 id="order-detail-history-title">Lịch sử trạng thái</h3>
+        <ol class="order-detail__history">
+            {% for event in history %}
+            <li>
+                <time datetime="{{ event.changed_at|date:'c' }}">{{ event.changed_at|date:'d/m/Y H:i' }}</time>
+                <strong>{% if event.old_status_label %}{{ event.old_status_label }} → {% endif %}{{ event.new_status_label }}</strong>
+                {% if event.note %}<p>{{ event.note }}</p>{% endif %}
+                <small>{{ event.changed_by.full_name|default:event.changed_by.username }}</small>
+            </li>
+            {% empty %}
+            <li class="order-detail__muted">Chưa có cập nhật trạng thái.</li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    {% if can_confirm_order %}
+    <form class="order-detail__actions" method="post" action="{% url 'update_order_status' order.order_id %}">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="COMFIRMED">
+        <button class="btn btn--primary" type="submit">Xác nhận đơn</button>
+    </form>
+    {% endif %}
+</section>

@@ -211,11 +211,14 @@
 .product-detail-cart-form{grid-template-columns:minmax(110px,140px) auto;align-items:end;gap:8px}
 .product-detail-cart-form .field{gap:4px}
 .product-detail-cart-form input{width:100%;min-height:48px}
-.product-review-summary{margin:8px 0 0}.product-review-summary strong{font-size:1.2rem;color:var(--color-ink)}
+.product-review-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 0}.product-review-summary strong{font-size:1.2rem;color:var(--color-ink)}
+.product-review-average-stars{position:relative;display:inline-block;color:#d5d9e2;letter-spacing:.08em;line-height:1}.product-review-average-stars__fill{position:absolute;inset:0 auto 0 0;overflow:hidden;color:#b77900;white-space:nowrap}
 .product-review-form{max-width:640px}.product-review-rating{margin:0;padding:0;border:0}.product-review-rating legend{margin-bottom:8px;font-weight:600}
 .product-review-rating ul{display:flex;flex-wrap:wrap;gap:12px;margin:0;padding:0;list-style:none}.product-review-rating li label{display:flex;align-items:center;gap:6px}
 .product-review-list{display:grid;gap:12px}.product-review{padding:16px;border:1px solid var(--color-border);border-radius:8px;background:#fff}
 .product-review header{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.product-review-stars{color:#b77900;letter-spacing:.08em}.product-review p{margin:10px 0}.product-review small{display:block}
+.product-review-avatar{width:40px;height:40px;flex:none;border-radius:50%;object-fit:cover}.product-review-avatar--empty{display:grid;place-items:center;background:var(--color-surface,#eef1f7);color:var(--color-ink)}.product-review-avatar--empty svg{width:20px;height:20px}
+.product-review-product{font-size:.9rem}.product-review-images{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.product-review-images img{width:112px;height:112px;object-fit:cover;border:1px solid var(--color-border);border-radius:8px}
 .image-fallback{padding:24px;display:grid;text-align:center;gap:12px;color:var(--color-cobalt-deep)}
 .image-fallback strong{font-size:2rem}
 .compare-tray:empty{display:none}

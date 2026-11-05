@@ -110,8 +110,14 @@ class FrontendPagesTests(TestCase):
 
     def test_staff_logout(self):
         logout_url = reverse('staff_logout')
-        self.assertEqual(self.client.post(logout_url).status_code, 302)
+        self.client.force_login(self.staff)
         self.assertRedirects(self.client.get(logout_url), reverse('staff_login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        self.client.force_login(self.staff)
+        self.assertRedirects(self.client.post(logout_url), reverse('staff_login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 

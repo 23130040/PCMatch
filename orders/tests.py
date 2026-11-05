@@ -156,6 +156,71 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.status_history.count(), 2)
         response = self.client.get(reverse('load_ListOrder'))
         self.assertContains(response, order.order_code)
+        self.assertContains(response, reverse('staff_order_detail', args=[order.pk]))
+
+    def test_staff_order_detail_shows_all_order_data_and_history(self):
+        order = self.create_cod()
+        OrderItem.objects.create(
+            order=order,
+            product=self.other_product,
+            shop=self.other_shop,
+            quantity=3,
+            unit_price=Decimal('300000'),
+            subtotal=Decimal('900000'),
+            item_status='PENDING',
+        )
+        order.subtotal = Decimal('1100000')
+        order.shipping_fee = Decimal('15000')
+        order.platform_fee = Decimal('22000')
+        order.total_amount = Decimal('1137000')
+        order.save(update_fields=['subtotal', 'shipping_fee', 'platform_fee', 'total_amount'])
+        url = reverse('staff_order_detail', args=[order.pk])
+
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.client.force_login(self.admin)
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        for expected in [
+            order.order_code,
+            'Người mua',
+            '0901234567',
+            '123 Lê Lợi',
+            'Chờ admin xác nhận',
+            'Chưa thanh toán',
+            'Cash on Delivery',
+            'CPU checkout',
+            'Shop A',
+            'CPU B',
+            'Shop B',
+            'Tạm tính',
+            'Phí giao hàng',
+            'Phí nền tảng',
+            'Tổng tiền',
+            'Người mua đặt hàng.',
+            'Xác nhận đơn',
+        ]:
+            with self.subTest(expected=expected):
+                self.assertContains(response, expected)
+        self.assertEqual(response.content.count(b'class="order-detail__item"'), 2)
+
+    def test_staff_order_detail_hides_confirmation_after_order_is_confirmed(self):
+        order = self.create_cod()
+        self.client.force_login(self.admin)
+        self.approve(order)
+
+        response = self.client.get(reverse('staff_order_detail', args=[order.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Admin đã xác nhận')
+        self.assertNotContains(response, 'Xác nhận đơn')
+
+    def test_staff_order_detail_rejects_missing_order(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('staff_order_detail', args=[999999]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_shop_cannot_approve_or_skip_processing(self):
         order = self.create_cod()

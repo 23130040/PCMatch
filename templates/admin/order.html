@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
-    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20261105-order-detail-button-size">
     <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
 {% include 'includes/frontend_config.html' %}</head>
@@ -177,20 +177,12 @@
                                     <span class="status order-status">{{ order.order_status }}</span>
                                 {% endif %}
                             </td>
-
                             <td>
-                                <!-- Dropdown cập nhật trạng thái từng đơn -->
-                                <form method="POST" action="{% url 'updateStatus' order.order_id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <select name="order_status" onchange="this.form.submit()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                        <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Chờ xác nhận</option>
-                                        <option value="COMFIRMED" {% if order.order_status == 'COMFIRMED' %}selected{% endif %}>Đã xác nhận</option>
-                                        <option value="PROCESSING" {% if order.order_status == 'PROCESSING' %}selected{% endif %}>Đang xử lý</option>
-                                        <option value="SHIPPING" {% if order.order_status == 'SHIPPING' %}selected{% endif %}>Đang giao</option>
-                                        <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Đã giao</option>
-                                        <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Đã hủy</option>
-                                    </select>
-                                </form>
+                                <button class="admin-detail-button btn btn--primary order-detail-btn" type="button"
+                                        data-order-detail-url="{% url 'staff_order_detail' order.order_id %}"
+                                        aria-label="Xem chi tiết đơn {{ order.order_code }}">
+                                    <i class="fa-regular fa-eye"></i><span>Chi tiết</span>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -224,8 +216,21 @@
     </main>
 </div>
 
+<dialog class="order-detail-drawer" id="order-detail-drawer" aria-labelledby="order-detail-title">
+    <header class="order-detail-drawer__header">
+        <div>
+            <p class="order-detail-drawer__eyebrow">Quản lý đơn hàng</p>
+            <h2 id="order-detail-title">Chi tiết đơn hàng</h2>
+        </div>
+        <button class="order-detail-drawer__close" type="button" aria-label="Đóng chi tiết đơn hàng" data-order-detail-close>&times;</button>
+    </header>
+    <div class="order-detail-drawer__content" id="order-detail-content" aria-live="polite">
+        <p class="order-detail-drawer__loading">Đang tải chi tiết đơn hàng…</p>
+    </div>
+</dialog>
+
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 {% include 'includes/admin_interface_controls.html' %}
-<script src="{% static 'js/admin-interface.js' %}" defer></script>
+<script src="{% static 'js/admin-interface.js' %}?v=20261105-order-detail-drawer" defer></script>
 </body>
 </html>

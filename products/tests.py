@@ -1,7 +1,12 @@
+from io import BytesIO
+from tempfile import TemporaryDirectory
+
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils.html import escape
+from PIL import Image
 
 from orders.models import Order, OrderItem
 from shops.models import Shop
@@ -504,11 +509,20 @@ class BuyerProductReviewTests(CatalogTestData):
             item_status='DELIVERED',
         )
 
-    def post_review(self, product, rating=5, review='Hoạt động đúng mô tả.'):
+    def post_review(self, product, rating=5, review='Hoạt động đúng mô tả.', images=()):
+        data = {'rating': rating, 'review': review}
+        if images:
+            data['images'] = list(images)
         return self.client.post(
             reverse('buyer_product_review_create', args=[product.pk]),
-            {'rating': rating, 'review': review},
+            data,
         )
+
+    @staticmethod
+    def make_review_image(name):
+        image_buffer = BytesIO()
+        Image.new('RGB', (2, 2), color='blue').save(image_buffer, format='PNG')
+        return SimpleUploadedFile(name, image_buffer.getvalue(), content_type='image/png')
 
     def test_only_buyer_with_delivered_purchase_can_review_once(self):
         User = get_user_model()
@@ -663,3 +677,71 @@ class BuyerProductReviewTests(CatalogTestData):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith(reverse('auth_login') + '?next='))
         self.assertEqual(ProductReview.objects.filter(product=product).count(), 2)
+
+    def test_review_supports_up_to_three_images_and_displays_review_details(self):
+        User = get_user_model()
+        buyer = User.objects.create_user(
+            username='review-images-buyer',
+            email='review-images@example.test',
+            full_name='Người mua có ảnh',
+            role='BUYER',
+        )
+        product = self.create_product(product_name='Sản phẩm có đánh giá ảnh')
+        self.create_delivered_purchase(buyer, product, 'REVIEW-IMAGES-1')
+        self.client.force_login(buyer)
+
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            avatar = self.make_review_image('reviewer.png')
+            buyer.avatar.save(avatar.name, avatar, save=True)
+
+            rejected = self.post_review(
+                product,
+                images=[self.make_review_image(f'too-many-{index}.png') for index in range(4)],
+            )
+            self.assertEqual(rejected.status_code, 400)
+            self.assertIn('images', rejected.context['review_form'].errors)
+            self.assertFalse(ProductReview.objects.exists())
+
+            response = self.post_review(
+                product,
+                rating=4,
+                review='Đánh giá kèm ảnh.',
+                images=[self.make_review_image(f'review-{index}.png') for index in range(3)],
+            )
+            self.assertRedirects(
+                response,
+                f"{reverse('buyer_product_detail', args=[product.pk])}#product-reviews",
+                fetch_redirect_response=False,
+            )
+            review = ProductReview.objects.get(product=product, user=buyer)
+            self.assertEqual(review.images.count(), 3)
+            self.assertTrue(all(image.image.name.startswith('product_review_images/') for image in review.images.all()))
+
+            detail = self.client.get(reverse('buyer_product_detail', args=[product.pk]))
+            self.assertEqual(float(detail.context['review_summary']['average']), 4.0)
+            self.assertEqual(float(detail.context['review_summary']['stars_percent']), 80.0)
+            self.assertContains(detail, 'Người mua có ảnh')
+            self.assertContains(detail, 'Sản phẩm có đánh giá ảnh')
+            self.assertContains(detail, 'Đánh giá kèm ảnh.')
+            self.assertContains(detail, 'Đã mua và nhận hàng')
+            self.assertContains(detail, 'reviewer.png')
+            self.assertEqual(detail.content.count(b'class="product-review-images"'), 1)
+
+    def test_review_rejects_non_image_upload(self):
+        buyer = get_user_model().objects.create_user(
+            username='review-invalid-image-buyer',
+            email='review-invalid-image@example.test',
+            role='BUYER',
+        )
+        product = self.create_product()
+        self.create_delivered_purchase(buyer, product, 'REVIEW-INVALID-IMAGE')
+        self.client.force_login(buyer)
+
+        response = self.post_review(
+            product,
+            images=[SimpleUploadedFile('not-an-image.png', b'not an image', content_type='image/png')],
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('images', response.context['review_form'].errors)
+        self.assertFalse(ProductReview.objects.exists())

@@ -12,7 +12,9 @@ from django.db.models import Avg, Count, Prefetch, Q
 from django.db import DatabaseError, IntegrityError, transaction
 from orders.models import OrderItem
 from .forms import AdminProductFilterForm, CatalogFilterForm, ProductFollowupForm, ProductQuestionForm, ProductReviewForm
-from .models import Category, Product, ProductImage, ProductQuestion, ProductReview
+from .models import (
+    Category, Product, ProductImage, ProductQuestion, ProductReview, ProductReviewImage,
+)
 from .services import append_question_message, conversation_messages
 from django.core.exceptions import ValidationError
 from users.views import is_active_buyer
@@ -298,8 +300,10 @@ def _render_product_detail(
     questions_page = Paginator(questions, 10).get_page(page_number)
     for question in questions_page:
         question.reply_form = reply_form if reply_question and question.pk == reply_question.pk else ProductFollowupForm(auto_id=f'id_reply_{question.pk}_%s')
-    reviews = product.reviews.select_related('user').order_by('-created_at', '-pk')
+    reviews = product.reviews.select_related('user', 'product').prefetch_related('images').order_by('-created_at', '-pk')
     reviews_page = Paginator(reviews, 10).get_page(request.GET.get('reviews_page'))
+    review_summary = reviews.aggregate(average=Avg('rating'), count=Count('pk'))
+    review_summary['stars_percent'] = (review_summary['average'] or 0) * 20
     is_buyer = is_active_buyer(request.user)
     has_reviewed = is_buyer and reviews.filter(user=request.user).exists()
     has_delivered_purchase = is_buyer and OrderItem.objects.filter(
@@ -323,7 +327,7 @@ def _render_product_detail(
             and product.shop.status == 'ACTIVE'
         ),
         'reviews_page': reviews_page,
-        'review_summary': reviews.aggregate(average=Avg('rating'), count=Count('pk')),
+        'review_summary': review_summary,
         'is_buyer': is_buyer,
         'has_reviewed': has_reviewed,
         'has_delivered_purchase': has_delivered_purchase,
@@ -416,17 +420,22 @@ def product_review_create(request, product_id):
         messages.info(request, 'Bạn đã đánh giá sản phẩm này.')
         return redirect(target)
 
-    form = ProductReviewForm(request.POST)
+    form = ProductReviewForm(request.POST, request.FILES)
     if not form.is_valid():
         return _render_product_detail(request, product, review_form=form, status=400)
 
     try:
         with transaction.atomic():
-            ProductReview.objects.create(
+            review = ProductReview.objects.create(
                 product=product,
                 user=request.user,
-                **form.cleaned_data,
+                rating=form.cleaned_data['rating'],
+                review=form.cleaned_data['review'],
             )
+            ProductReviewImage.objects.bulk_create([
+                ProductReviewImage(review=review, image=image)
+                for image in form.cleaned_data['images']
+            ])
     except IntegrityError:
         messages.info(request, 'Bạn đã đánh giá sản phẩm này.')
         return redirect(target)

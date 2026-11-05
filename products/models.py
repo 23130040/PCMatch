@@ -96,6 +96,14 @@ class ProductReview(models.Model):
         return f'{self.product} — {self.rating}/5'
 
 
+class ProductReviewImage(models.Model):
+    review = models.ForeignKey(ProductReview, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='product_review_images/')
+
+    class Meta:
+        ordering = ['pk']
+
+
 class ProductQuestion(models.Model):
     question_id = models.BigAutoField(primary_key=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions')

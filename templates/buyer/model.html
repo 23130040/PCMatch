@@ -80,6 +80,10 @@
                     <h2 id="product-reviews-title">Đánh giá sản phẩm</h2>
                     {% if review_summary.count %}
                     <p class="product-review-summary">
+                        <span class="product-review-average-stars" role="img" aria-label="Trung bình {{ review_summary.average|floatformat:'1u' }} trên 5 sao">
+                            <span aria-hidden="true">★★★★★</span>
+                            <span class="product-review-average-stars__fill" aria-hidden="true" style="width:{{ review_summary.stars_percent }}%">★★★★★</span>
+                        </span>
                         <strong>{{ review_summary.average|floatformat:'1u' }} / 5</strong>
                         <span>· {{ review_summary.count }} lượt đánh giá</span>
                     </p>
@@ -88,7 +92,7 @@
                     {% endif %}
                 </div>
                 {% if can_review %}
-                <form method="post" action="{% url 'buyer_product_review_create' p.pk %}#product-reviews" class="stack product-review-form">
+                <form method="post" enctype="multipart/form-data" action="{% url 'buyer_product_review_create' p.pk %}#product-reviews" class="stack product-review-form">
                     {% csrf_token %}
                     {% for error in review_form.non_field_errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
                     <fieldset class="product-review-rating">
@@ -100,6 +104,12 @@
                         <label for="{{ review_form.review.id_for_label }}">{{ review_form.review.label }}</label>
                         {{ review_form.review }}
                         {% for error in review_form.review.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+                    </div>
+                    <div class="field">
+                        <label for="{{ review_form.images.id_for_label }}">Ảnh đánh giá (tối đa 3 ảnh)</label>
+                        {{ review_form.images }}
+                        <small id="product-review-image-help" class="muted">JPG, PNG hoặc WebP; tối đa 5 MB mỗi ảnh.</small>
+                        {% for error in review_form.images.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
                     </div>
                     <button class="btn btn--primary" type="submit">Gửi đánh giá</button>
                 </form>
@@ -116,11 +126,26 @@
                     {% for review in reviews_page %}
                     <article class="product-review">
                         <header>
+                            {% if review.user.avatar %}
+                            <img class="product-review-avatar" src="{{ review.user.avatar.url }}" alt="" width="40" height="40">
+                            {% else %}
+                            <span class="product-review-avatar product-review-avatar--empty" aria-hidden="true">{% include 'includes/buyer_icon.html' with icon='user' %}</span>
+                            {% endif %}
                             <strong>{{ review.user.full_name|default:'Người mua' }}</strong>
                             <span class="product-review-stars" aria-label="{{ review.rating }} trên 5 sao">{{ review.star_display }}</span>
-                            <time class="muted" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:'d/m/Y' }}</time>
+                            <time class="muted" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:'d/m/Y H:i' }}</time>
                         </header>
+                        <p class="product-review-product">Sản phẩm: <a href="{% url 'buyer_product_detail' review.product_id %}">{{ review.product.product_name }}</a></p>
                         <p>{{ review.review|linebreaksbr }}</p>
+                        {% if review.images.all %}
+                        <div class="product-review-images" aria-label="Ảnh do người mua đăng">
+                            {% for image in review.images.all %}
+                            <a href="{{ image.image.url }}" target="_blank" rel="noopener">
+                                <img src="{{ image.image.url }}" alt="Ảnh đánh giá {{ forloop.counter }} cho {{ review.product.product_name }}" loading="lazy">
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         <small class="muted">Đã mua và nhận hàng</small>
                     </article>
                     {% empty %}
