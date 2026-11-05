@@ -80,7 +80,7 @@
 </section>
 <section aria-labelledby="shops-title"><div class="section-heading"><h2 id="shops-title">Gian hàng trên PCMatch</h2></div>
     <div class="shop-strip">
-        {% for shop in shops %}<a href="{% url 'buyer_search' %}?shop={{ shop.pk }}"><strong>{{ shop.shop_name }}</strong><span>Khám phá sản phẩm</span></a>
+        {% for shop in shops %}<a href="{% url 'public_shop_profile' shop.slug %}"><strong>{{ shop.shop_name }}</strong><span>Khám phá gian hàng</span></a>
         {% empty %}<a href="{% url 'buyer_search' %}"><strong>BuildPro Sài Gòn</strong><span>TP. Hồ Chí Minh · Linh kiện máy tính</span></a><a href="{% url 'buyer_search' %}"><strong>TechZone Hà Nội</strong><span>Hà Nội · Phụ kiện và cấu hình</span></a><a href="{% url 'buyer_search' %}"><strong>NovaPC Đà Nẵng</strong><span>Đà Nẵng · Khám phá linh kiện</span></a>{% endfor %}
     </div>
 </section>

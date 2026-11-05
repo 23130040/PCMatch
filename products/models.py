@@ -66,6 +66,44 @@ class ProductSpecification(models.Model):
     def __str__(self):
         return self.specification_name
 
+
+class ProductReview(models.Model):
+    RATING_CHOICES = [(rating, f'{rating} sao') for rating in range(1, 6)]
+
+    review_id = models.BigAutoField(primary_key=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='product_reviews')
+    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES)
+    review = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'user'], name='uniq_product_review_user'),
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1, rating__lte=5),
+                name='product_review_rating_1_5',
+            ),
+        ]
+
+    @property
+    def star_display(self):
+        return '★' * self.rating + '☆' * (5 - self.rating)
+
+    def __str__(self):
+        return f'{self.product} — {self.rating}/5'
+
+
+class ProductReviewImage(models.Model):
+    review = models.ForeignKey(ProductReview, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='product_review_images/')
+
+    class Meta:
+        ordering = ['pk']
+
+
 class ProductQuestion(models.Model):
     question_id = models.BigAutoField(primary_key=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions')

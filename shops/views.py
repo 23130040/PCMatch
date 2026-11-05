@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+import logging
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -21,15 +22,25 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from orders.models import Order, OrderItem, OrderStatusHistory, Return
+from orders.models import (
+    CancellationRequest, Order, OrderItem, OrderStatusHistory, Return, ShopOrder, ShopOrderHistory,
+)
 from analytics.views import _filter_period
-from orders.services import fulfill_order, shop_status
+from orders.services import (
+    ensure_shop_orders,
+    fulfill_order,
+    process_order_timeouts,
+    resolve_cancellation_request,
+    shop_status,
+    update_shop_order,
+)
 from products.models import Brand, Category, Product, ProductQuestion
 from products.forms import ProductAnswerForm
 from products.services import append_question_message, conversation_messages
 from django.db.models.functions import Coalesce
 from users.models import EmailVerificationToken, PasswordResetToken, User
 from users.views import finish_auth_login, is_active_seller, safe_auth_next
+from users.forms import SellerAccountProfileForm
 
 from .email_services import (
     SellerPasswordResetError,
@@ -46,11 +57,13 @@ from .forms import (
     ShopLegalForm,
     ShopLoginForm,
     ShopProfileForm,
+    ShopSettingsForm,
 )
 from .models import Shop
 
 
 shop_required = user_passes_test(is_active_seller, login_url=reverse_lazy('shop_login'))
+logger = logging.getLogger(__name__)
 
 SELLER_DRAFT_SESSION_KEY = 'shop_seller_registration'
 SELLER_EMAIL_TOKEN_TTL = timedelta(hours=24)
@@ -515,30 +528,185 @@ def shop_onboarding_pending(request):
     return render(request, 'shop/onboarding_pending.html', {
         'page_name': 'onboarding-pending',
         'page_section': 'shop',
-        'page_title': 'Chờ xét duyệt',
+        'page_title': (
+            'Hồ sơ shop cần cập nhật' if shop.status == 'REJECTED'
+            else 'Shop đang tạm ngưng' if shop.status == 'SUSPENDED'
+            else 'Chờ xét duyệt'
+        ),
         'shop': shop,
     })
 
 
-@require_GET
+@require_http_methods(['GET', 'POST'])
+@shop_required
 def shop_notifications(request):
     shop = _owned_shop(request.user)
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
+    notifications = request.user.notifications.order_by('-created_at', '-pk')
+    if request.method == 'POST':
+        notification_id = request.POST.get('notification_id')
+        if notification_id:
+            if not notification_id.isascii() or not notification_id.isdigit() or len(notification_id) > 19:
+                raise Http404
+            notification = get_object_or_404(notifications, pk=notification_id)
+            if not notification.is_read:
+                notification.is_read = True
+                notification.save(update_fields=['is_read'])
+        else:
+            notifications.filter(is_read=False).update(is_read=True)
+        return redirect('shop_notifications')
+    notification_page = Paginator(notifications, 20).get_page(request.GET.get('page'))
     return render(request, 'shop/notifications.html', {
         'page_name': 'notifications',
         'page_section': 'shop',
         'page_title': 'Thông báo',
         'shop': shop,
-        'notifications': request.user.notifications.order_by('-created_at')[:50],
+        'notifications': notification_page,
+        'notifications_page': notification_page,
+        'notification_total': notifications.count(),
+        'unread_notification_count': notifications.filter(is_read=False).count(),
+        'filter_query': '',
+    })
+
+
+@require_http_methods(['GET', 'POST'])
+@shop_required
+def shop_profile_settings(request):
+    shop = _owned_shop(request.user)
+    if shop is None:
+        return redirect('shop_onboarding_profile')
+
+    account_form = SellerAccountProfileForm(
+        request.POST if request.method == 'POST' and request.POST.get('profile_section') == 'account' else None,
+        request.FILES if request.method == 'POST' and request.POST.get('profile_section') == 'account' else None,
+        instance=User.objects.get(pk=request.user.pk),
+    )
+    form = ShopSettingsForm(
+        request.POST if request.method == 'POST' and request.POST.get('profile_section') != 'account' else None,
+        request.FILES if request.method == 'POST' and request.POST.get('profile_section') != 'account' else None,
+        instance=shop,
+    )
+    if request.method == 'POST' and request.POST.get('profile_section') == 'account' and account_form.is_valid():
+        owner = account_form.save(commit=False)
+        phone_changed = 'phone' in account_form.changed_data
+        if phone_changed:
+            owner.phone_verified = False
+        try:
+            with transaction.atomic():
+                owner.save()
+        except DatabaseError:
+            logger.exception('Could not update seller account profile for user %s.', request.user.pk)
+            account_form.add_error(None, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+            messages.error(request, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+        else:
+            messages.success(request, 'Thông tin tài khoản đã được cập nhật.')
+            if phone_changed:
+                messages.warning(request, 'Số điện thoại đã đổi và cần được xác minh lại.')
+            return redirect('shop_profile_settings')
+
+    if request.method == 'POST' and request.POST.get('profile_section') != 'account' and form.is_valid():
+        changed_fields = set(form.changed_data)
+        legal_fields = {
+            'legal_entity_type', 'representative_name', 'representative_birth_date',
+            'id_number', 'id_card_front', 'id_card_back', 'id_card',
+            'tax_number', 'business_license',
+        }
+        legal_details_changed = bool(changed_fields & legal_fields)
+        contact_details_changed = bool(changed_fields & {'phone', 'contact_email'})
+        was_identity_verified = shop.identity_verified
+        previous_verification = (
+            shop.identity_verified,
+            shop.contact_phone_verified,
+            shop.contact_email_verified,
+            shop.admin_note,
+        )
+        updated_shop = form.save(commit=False)
+        if 'phone' in changed_fields:
+            updated_shop.contact_phone_verified = False
+        if 'contact_email' in changed_fields:
+            updated_shop.contact_email_verified = False
+        if was_identity_verified and legal_details_changed:
+            updated_shop.identity_verified = False
+            updated_shop.admin_note = 'Hồ sơ pháp lý đã được chủ shop cập nhật; cần quản trị viên xác minh lại.'
+        try:
+            with transaction.atomic():
+                updated_shop.save()
+        except DatabaseError:
+            logger.exception('Could not update shop profile for shop %s.', shop.pk)
+            form.add_error(None, 'Không thể lưu hồ sơ shop lúc này. Vui lòng thử lại.')
+            (
+                shop.identity_verified,
+                shop.contact_phone_verified,
+                shop.contact_email_verified,
+                shop.admin_note,
+            ) = previous_verification
+            messages.error(request, 'Không thể lưu hồ sơ shop lúc này. Vui lòng thử lại.')
+        else:
+            messages.success(request, 'Đã lưu thông tin trang cá nhân của shop.')
+            if legal_details_changed and was_identity_verified:
+                messages.warning(request, 'Thông tin pháp lý đã đổi và cần được quản trị viên xác minh lại.')
+            if contact_details_changed:
+                messages.warning(request, 'Thông tin liên hệ shop đã đổi và trạng thái xác minh đã được đặt lại.')
+            return redirect('shop_profile_settings')
+
+    orders = _orders(shop)
+    shop_orders = Order.objects.filter(order_items__shop=shop).distinct()
+    order_count = shop_orders.count()
+    cancelled_count = shop_orders.filter(order_status='CANCELLED').count()
+    returned_count = shop_orders.filter(order_status='RETURNED').count()
+    delivered_count = shop_orders.filter(order_status__in=['DELIVERED', 'COMPLETED']).count()
+    questions = ProductQuestion.objects.filter(product__shop=shop)
+    question_count = questions.count()
+    answered_questions = questions.filter(status=True).count()
+    return render(request, 'shop/profile_settings.html', {
+        'page_name': 'profile-settings',
+        'page_section': 'shop',
+        'page_title': 'Trang cá nhân',
+        'shop': shop,
+        'form': form,
+        'account_form': account_form,
+        'stats': {
+            'product_count': Product.objects.filter(shop=shop).count(),
+            'sold_quantity': Product.objects.filter(shop=shop).aggregate(total=Sum('sold_quantity'))['total'] or 0,
+            'delivered_orders': delivered_count,
+            'rating_average': None,
+            'rating_count': None,
+            'response_rate': round(answered_questions * 100 / question_count) if question_count else None,
+            'cancel_rate': round(cancelled_count * 100 / order_count) if order_count else None,
+            'return_rate': round(returned_count * 100 / order_count) if order_count else None,
+        },
+        'owner_phone': request.user.phone,
+        'owner_email': request.user.email,
+        'email_verified': request.user.email_verified,
+        'phone_verified': request.user.phone_verified,
+    })
+
+
+@require_GET
+def public_shop_profile(request, slug):
+    shop = get_object_or_404(Shop, slug=slug, status='ACTIVE')
+    products = Product.objects.filter(
+        shop=shop,
+        status='ACTIVE',
+        stock_quantity__gt=0,
+    ).select_related('category', 'brand').order_by('-created_at', '-pk')
+    return render(request, 'buyer/shop_profile.html', {
+        'page_name': 'shop-profile',
+        'page_section': 'buyer',
+        'shop': shop,
+        'products': products[:24],
+        'product_count': products.count(),
     })
 
 
 ORDER_LABELS = {
-    'AWAITING_PAYMENT': 'Chờ thanh toán VNPay',
-    'PENDING': 'Chờ admin xác nhận', 'COMFIRMED': 'Admin đã xác nhận',
-    'PROCESSING': 'Đang xử lý', 'SHIPPING': 'Đang giao',
-    'DELIVERED': 'Hoàn thành', 'CANCELLED': 'Đã hủy', 'RETURNED': 'Đã hoàn hàng',
+    'PENDING': 'Chờ shop xác nhận',
+    'PROCESSING': 'Đang xử lý',
+    'SHIPPING': 'Đang giao',
+    'DELIVERED': 'Chờ buyer xác nhận',
+    'COMPLETED': 'Hoàn thành',
+    'CANCELLED': 'Đã hủy',
 }
 RETURN_LABELS = {'REQUESTED': 'Chờ xử lý', 'APPROVED': 'Đã duyệt', 'REJECTED': 'Từ chối', 'REFUNDED': 'Đã hoàn tiền'}
 TITLES = {
@@ -547,22 +715,46 @@ TITLES = {
     'revenue': 'Báo cáo doanh thu', 'questions': 'Câu hỏi sản phẩm', 'aftersales': 'Hậu mãi',
     'build-requests': 'Yêu cầu cấu hình build', 'build-request-detail': 'Chi tiết yêu cầu build',
     'proposal-builder': 'Tạo báo giá', 'proposal-list': 'Báo giá đã gửi', 'proposal': 'Chi tiết báo giá',
+    'profile-settings': 'Trang cá nhân',
 }
 
 
 def _orders(shop):
     if shop is None:
         return []
+    process_order_timeouts()
+    legacy_orders = Order.objects.filter(
+        order_items__shop=shop,
+    ).exclude(
+        shop_orders__shop=shop,
+    ).distinct()
+    for order in legacy_orders:
+        ensure_shop_orders(order)
+
     own_items = OrderItem.objects.filter(shop=shop).select_related('product__category')
-    queryset = Order.objects.filter(order_items__shop=shop).distinct().select_related('user', 'address').prefetch_related(
-        Prefetch('order_items', queryset=own_items, to_attr='shop_items'), 'status_history',
-    ).order_by('-created_at', '-pk')
-    rows = list(queryset)
-    for order in rows:
-        order.order_status = shop_status(order, order.shop_items)
+    queryset = ShopOrder.objects.filter(shop=shop).select_related(
+        'order__user', 'order__address',
+    ).prefetch_related(
+        Prefetch('order__order_items', queryset=own_items, to_attr='shop_items'),
+        Prefetch(
+            'history',
+            queryset=ShopOrderHistory.objects.select_related('changed_by'),
+            to_attr='shop_history',
+        ),
+        Prefetch(
+            'cancellation_requests',
+            queryset=CancellationRequest.objects.select_related('requested_by', 'resolved_by'),
+        ),
+    ).order_by('-order__created_at', '-order_id')
+    rows = []
+    for shop_order in queryset:
+        order = shop_order.order
+        order.shop_order = shop_order
+        order.order_status = shop_order.status
         order.shop_total = sum((item.subtotal for item in order.shop_items), Decimal('0'))
         order.status_label = ORDER_LABELS.get(order.order_status, order.get_order_status_display())
-        order.status_css = 'success' if order.order_status == 'DELIVERED' else 'error' if order.order_status in {'CANCELLED', 'RETURNED'} else 'info'
+        order.status_css = 'success' if order.order_status == 'COMPLETED' else 'error' if order.order_status == 'CANCELLED' else 'info'
+        rows.append(order)
     return rows
 
 
@@ -578,11 +770,11 @@ def _owned_object(queryset, identifier):
 def _revenue(orders, days):
     today = timezone.localdate()
     start = today - timedelta(days=days - 1)
-    completed = [order for order in orders if order.order_status == 'DELIVERED' and start <= timezone.localdate(order.updated_at) <= today]
+    completed = [order for order in orders if order.order_status == 'COMPLETED' and start <= timezone.localdate(order.shop_order.completed_at or order.updated_at) <= today]
     daily = defaultdict(lambda: {'amount': Decimal('0'), 'count': 0})
     categories = defaultdict(Decimal)
     for order in completed:
-        date = timezone.localdate(order.updated_at)
+        date = timezone.localdate(order.shop_order.completed_at or order.updated_at)
         daily[date]['amount'] += order.shop_total
         daily[date]['count'] += 1
         for item in order.shop_items:
@@ -623,9 +815,9 @@ def shop_page(request, page):
         'product_low': products.exclude(status='INACTIVE').filter(stock_quantity__lte=3).count(),
         'product_ok': products.filter(status='ACTIVE', stock_quantity__gt=3).count(),
         'order_total': len(orders), 'order_pending': sum(order.order_status == 'PENDING' for order in orders),
-        'order_processing': sum(order.order_status in {'COMFIRMED', 'PROCESSING'} for order in orders),
-        'order_delivered': sum(order.order_status == 'DELIVERED' for order in orders),
-        'recent_orders': orders[:5], 'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'COMFIRMED', 'PROCESSING'}][:5],
+        'order_processing': sum(order.order_status in {'PROCESSING', 'SHIPPING'} for order in orders),
+        'order_delivered': sum(order.order_status in {'DELIVERED', 'COMPLETED'} for order in orders),
+        'recent_orders': orders[:5], 'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'PROCESSING'}][:5],
         'order_statuses': [{'code': code, 'label': label, 'count': sum(order.order_status == code for order in orders)} for code, label in ORDER_LABELS.items()],
         'revenue': _revenue(orders, 30), 'top_products': products.order_by('-sold_quantity', 'pk')[:5],
     })
@@ -821,26 +1013,59 @@ def shop_order_update_status(request, order_id):
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
 
-    order = get_object_or_404(
-        Order.objects.filter(order_items__shop=shop).distinct(),
-        pk=order_id,
-    )
-
+    process_order_timeouts()
+    order = get_object_or_404(Order.objects.filter(order_items__shop=shop).distinct(), pk=order_id)
+    shop_order = get_object_or_404(ShopOrder, order=order, shop=shop)
+    action = request.POST.get('action', '').strip()
     new_status = request.POST.get('new_status', '').strip()
     note = request.POST.get('note', '').strip()
     redirect_to = request.POST.get('redirect', '')
 
     try:
-        fulfill_order(
-            order.pk, shop, request.user, new_status,
-            cod_collected=request.POST.get('cod_collected') == 'yes', note=note,
-        )
+        if action in {'approve_cancellation', 'reject_cancellation'}:
+            cancellation = resolve_cancellation_request(
+                request.POST.get('cancellation_request_id', ''),
+                shop,
+                request.user,
+                action == 'approve_cancellation',
+                note,
+            )
+            if cancellation.status == 'ESCALATED':
+                messages.warning(request, 'Yêu cầu đã quá hạn và được chuyển admin xử lý.')
+            else:
+                messages.success(
+                    request,
+                    'Đã xử lý yêu cầu hủy.' if action == 'approve_cancellation'
+                    else 'Đã từ chối yêu cầu hủy; phần hàng tiếp tục được xử lý.',
+                )
+        else:
+            if action == 'accept':
+                new_status = 'PROCESSING'
+            elif action == 'reject':
+                new_status = 'CANCELLED'
+            elif action == 'handoff':
+                new_status = 'SHIPPING'
+            updated = update_shop_order(
+                order.pk, shop, request.user, new_status,
+                reason=request.POST.get('reason', '').strip(),
+                note=note,
+                carrier_name=request.POST.get('carrier_name', '').strip(),
+                tracking_code=request.POST.get('tracking_code', '').strip(),
+            )
+            if (
+                updated.status == 'CANCELLED'
+                and updated.confirmation_deadline <= timezone.now()
+                and action != 'reject'
+            ):
+                messages.warning(request, 'Hạn xác nhận đã hết; hệ thống đã tự hủy phần hàng.')
+            else:
+                messages.success(request, f'Đã cập nhật phần hàng của đơn {order.order_code}.')
     except ValidationError as error:
         messages.error(request, error.messages[0])
         return redirect('shop_orders')
-
-    label = ORDER_LABELS.get(new_status, new_status)
-    messages.success(request, f'Đơn {order.order_code} đã chuyển sang "{label}".')
+    except DatabaseError:
+        messages.error(request, 'Chưa cập nhật được đơn hàng. Vui lòng thử lại.')
+        return redirect('shop_orders')
 
     if redirect_to == 'fulfillment':
         return redirect('shop_fulfillment')
@@ -901,6 +1126,7 @@ def shop_return_update(request, return_id):
 STAFF_SHOP_STATUSES = (
     ('PENDING', 'Chờ duyệt tham gia'),
     ('ACTIVE', 'Đang hoạt động'),
+    ('REJECTED', 'Bị từ chối'),
     ('SUSPENDED', 'Tạm ngưng'),
 )
 STAFF_SHOP_LABELS = dict(STAFF_SHOP_STATUSES)
@@ -1034,9 +1260,41 @@ def staff_shop_approve(request, shop_id):
         )
     else:
         shop.status = 'ACTIVE'
+        shop.admin_note = ''
         shop.save()
         messages.success(request, f'Đã duyệt shop "{shop.shop_name}". Chủ shop đã được thông báo.')
     return redirect(_staff_shop_return(request, shop))
+
+
+@require_POST
+def staff_shop_reject(request, shop_id):
+    shop = get_object_or_404(Shop, pk=shop_id)
+    note = request.POST.get('admin_note', '').strip()
+    if not note:
+        messages.error(request, f'Nhập lý do từ chối hồ sơ shop "{shop.shop_name}".')
+    else:
+        shop.status = 'REJECTED'
+        shop.admin_note = note
+        shop.save(update_fields=['status', 'admin_note', 'updated_at'])
+        messages.success(request, f'Đã từ chối hồ sơ shop "{shop.shop_name}".')
+    return redirect(_staff_shop_return(request))
+
+
+@require_POST
+def staff_shop_set_identity_verified(request, shop_id):
+    shop = get_object_or_404(Shop, pk=shop_id)
+    verify = request.POST.get('verified') == 'true'
+    has_identity_document = bool(shop.id_card or (shop.id_card_front and shop.id_card_back))
+    if verify and (not shop.legal_submitted_at or not has_identity_document):
+        messages.error(request, 'Cần có hồ sơ định danh đã nộp trước khi xác minh shop.')
+    else:
+        shop.identity_verified = verify
+        shop.save(update_fields=['identity_verified', 'updated_at'])
+        if verify:
+            messages.success(request, f'Đã xác minh danh tính shop "{shop.shop_name}".')
+        else:
+            messages.info(request, f'Đã gỡ xác minh danh tính shop "{shop.shop_name}".')
+    return redirect(_staff_shop_return(request))
 
 
 @require_GET
@@ -1044,6 +1302,8 @@ def staff_shop_document(request, shop_id, document_type):
     shop = get_object_or_404(Shop, pk=shop_id)
     document_fields = {
         'id-card': shop.id_card,
+        'id-card-front': shop.id_card_front,
+        'id-card-back': shop.id_card_back,
         'business-license': shop.business_license,
     }
     document = document_fields.get(document_type)

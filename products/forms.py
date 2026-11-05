@@ -1,8 +1,25 @@
 from django import forms
+from django.core.files.uploadedfile import UploadedFile
+from PIL import Image, UnidentifiedImageError
 
 from shops.models import Shop
 
-from .models import Brand, Category, ProductSpecification
+from .models import Brand, Category, ProductReview, ProductSpecification
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleImageField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        if not data:
+            return []
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        return [super().clean(upload, initial) for upload in data]
 
 
 class ProductQuestionForm(forms.Form):
@@ -42,6 +59,69 @@ class ProductFollowupForm(forms.Form):
             'placeholder': 'Hỏi thêm hoặc tham gia trao đổi về câu hỏi này...',
         }),
     )
+
+
+class ProductReviewForm(forms.ModelForm):
+    rating = forms.TypedChoiceField(
+        label='Đánh giá số sao',
+        choices=ProductReview.RATING_CHOICES,
+        coerce=int,
+        widget=forms.RadioSelect,
+    )
+    review = forms.CharField(
+        label='Nhận xét',
+        max_length=2000,
+        widget=forms.Textarea(attrs={
+            'rows': 4,
+            'maxlength': 2000,
+            'placeholder': 'Chia sẻ trải nghiệm thực tế của bạn về sản phẩm...',
+        }),
+    )
+    images = MultipleImageField(
+        required=False,
+        widget=MultipleFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/webp',
+            'aria-describedby': 'product-review-image-help',
+        }),
+    )
+
+    class Meta:
+        model = ProductReview
+        fields = ['rating', 'review']
+
+    def clean_review(self):
+        review = self.cleaned_data['review'].strip()
+        if not review:
+            raise forms.ValidationError('Vui lòng nhập nhận xét.')
+        return review
+
+    def clean_images(self):
+        uploads = self.cleaned_data['images']
+        if len(uploads) > 3:
+            raise forms.ValidationError('Mỗi đánh giá chỉ được tải lên tối đa 3 ảnh.')
+
+        for upload in uploads:
+            if not isinstance(upload, UploadedFile):
+                continue
+            if upload.size > 5 * 1024 * 1024:
+                raise forms.ValidationError('Mỗi ảnh đánh giá không được vượt quá 5 MB.')
+            suffix = upload.name.rsplit('.', 1)[-1].lower() if '.' in upload.name else ''
+            if suffix not in {'jpg', 'jpeg', 'png', 'webp'}:
+                raise forms.ValidationError('Ảnh đánh giá chỉ hỗ trợ JPG, PNG hoặc WebP.')
+            try:
+                image = Image.open(upload)
+                valid = (
+                    image.format in {'JPEG', 'PNG', 'WEBP'}
+                    and image.width * image.height <= 20_000_000
+                )
+                image.verify()
+            except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+                valid = False
+            finally:
+                upload.seek(0)
+            if not valid:
+                raise forms.ValidationError('Tệp tải lên không phải ảnh hợp lệ.')
+        return uploads
 
 
 class AdminProductFilterForm(forms.Form):

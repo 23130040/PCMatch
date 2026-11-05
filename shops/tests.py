@@ -1,16 +1,19 @@
 from decimal import Decimal
 from datetime import timedelta
+import io
 import re
 from smtplib import SMTPException
 import tempfile
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from notifications.models import Notification
 from orders.models import Order, OrderItem, Return
@@ -65,6 +68,24 @@ class ShopBackendLayoutsTests(TestCase):
         self.assertEqual(response.context['revenue']['count'], 1)
         self.assertNotContains(response, self.foreign_order.order_code)
 
+    def test_shop_notifications_show_unread_count_and_can_be_marked_read(self):
+        note = Notification.objects.create(
+            user=self.owner,
+            title='Đơn hàng mới',
+            message='Có đơn mới cần xác nhận.',
+        )
+        response = self.client.get(reverse('shop_notifications'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '1 thông báo · 1 chưa đọc')
+        self.assertContains(response, 'Đơn hàng mới')
+        self.assertEqual(response.context['notification_count'], 1)
+
+        self.client.post(reverse('shop_notifications'), {'notification_id': note.pk})
+        note.refresh_from_db()
+        self.assertTrue(note.is_read)
+        self.assertEqual(self.client.get(reverse('shop_notifications')).context['unread_notification_count'], 0)
+
     def test_query_string_cannot_open_another_shops_records(self):
         cases = [('shop_offers', {'edit': self.foreign_product.pk}), ('shop_order', {'id': self.foreign_order.pk}), ('shop_aftersales', {'id': self.foreign_case.pk})]
         for name, query in cases:
@@ -101,10 +122,224 @@ class ShopBackendLayoutsTests(TestCase):
 
     def test_account_without_shop_is_sent_to_onboarding(self):
         self.client.force_login(self.seller_without_shop)
-        for name in ['shop_dashboard', 'shop_offers', 'shop_orders', 'shop_questions', 'shop_revenue', 'shop_inventory']:
+        for name in ['shop_dashboard', 'shop_offers', 'shop_orders', 'shop_questions', 'shop_revenue', 'shop_inventory', 'shop_profile_settings']:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302)
             self.assertEqual(response.url, reverse('shop_onboarding_profile'))
+
+    def test_platform_staff_cannot_own_or_access_a_seller_shop(self):
+        User = get_user_model()
+        platform_admin = User.objects.create_user(
+            username='platform-admin',
+            email='platform-admin@example.test',
+            password='PlatformAdmin!321',
+            full_name='Quản trị nền tảng',
+            role='SELLER',
+            status='ACTIVE',
+            is_staff=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            Shop.objects.create(
+                owner=platform_admin,
+                shop_name='Shop quản trị',
+                phone='0901234570',
+                address='Địa chỉ nền tảng',
+                status='ACTIVE',
+            )
+
+        self.client.force_login(platform_admin)
+        response = self.client.get(reverse('shop_orders'))
+        self.assertRedirects(
+            response,
+            reverse('shop_login') + '?next=' + reverse('shop_orders'),
+        )
+
+    def test_buyer_cannot_access_seller_profile(self):
+        self.client.force_login(self.buyer)
+        response = self.client.get(reverse('shop_profile_settings'))
+        self.assertRedirects(
+            response,
+            f"{reverse('shop_login')}?next={reverse('shop_profile_settings')}",
+            fetch_redirect_response=False,
+        )
+
+    def test_seller_profile_requires_csrf_for_updates(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.owner)
+        response = client.get(reverse('shop_profile_settings'))
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
+        self.assertEqual(
+            client.post(reverse('shop_profile_settings'), {'profile_section': 'account'}).status_code,
+            403,
+        )
+
+    def test_owner_can_update_profile_without_changing_admin_managed_status(self):
+        response = self.client.get(reverse('shop_profile_settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cài đặt')
+        self.assertContains(response, 'Trang cá nhân')
+        self.assertEqual(response.context['stats']['product_count'], 1)
+        self.assertEqual(response.context['stats']['sold_quantity'], 1)
+        self.assertEqual(response.context['stats']['delivered_orders'], 1)
+        self.assertIsNone(response.context['stats']['rating_average'])
+        self.assertEqual(response.context['stats']['response_rate'], 0)
+
+        response = self.client.post(reverse('shop_profile_settings'), {
+            'shop_name': self.shop.shop_name,
+            'slug': 'gian-hang-that',
+            'phone': self.shop.phone,
+            'address': self.shop.address,
+            'description': 'Cửa hàng linh kiện PC.',
+            'business_categories': 'CPU, VGA, RAM',
+            'province': 'TP. Hồ Chí Minh',
+            'bank_name': 'Ngân hàng kiểm thử',
+            'bank_account_number': '123456789',
+            'bank_account_holder': 'CHU SHOP',
+            'shipping_carriers': 'GHN',
+            'processing_time_days': '2',
+            'default_shipping_fee': '25000',
+            'status': 'ACTIVE',
+            'identity_verified': 'on',
+            'admin_note': 'Không được phép sửa từ form seller',
+        })
+        self.assertRedirects(response, reverse('shop_profile_settings'))
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'ACTIVE')
+        self.assertFalse(self.shop.identity_verified)
+        self.assertEqual(self.shop.admin_note, '')
+        self.assertEqual(self.shop.bank_account_number, '123456789')
+        self.assertEqual(self.shop.province, 'TP. Hồ Chí Minh')
+        self.assertEqual(self.shop.slug, 'gian-hang-that')
+
+    def test_seller_can_update_own_account_and_avatar_without_changing_access_fields(self):
+        self.owner.phone_verified = True
+        self.owner.save(update_fields=['phone_verified'])
+        image_buffer = io.BytesIO()
+        Image.new('RGB', (8, 8), color='green').save(image_buffer, format='PNG')
+        avatar = SimpleUploadedFile('seller.png', image_buffer.getvalue(), content_type='image/png')
+
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post(reverse('shop_profile_settings'), {
+                'profile_section': 'account',
+                'full_name': 'Tên chủ shop mới',
+                'phone': '0987654321',
+                'avatar': avatar,
+                'role': 'ADMIN',
+                'is_staff': '1',
+                'status': 'LOCKED',
+            })
+
+        self.assertRedirects(response, reverse('shop_profile_settings'), fetch_redirect_response=False)
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.full_name, 'Tên chủ shop mới')
+        self.assertEqual(self.owner.phone, '0987654321')
+        self.assertFalse(self.owner.phone_verified)
+        self.assertEqual(self.owner.role, 'SELLER')
+        self.assertFalse(self.owner.is_staff)
+        self.assertEqual(self.owner.status, 'ACTIVE')
+        self.assertTrue(self.owner.avatar.name.startswith('avatar/'))
+
+    def test_shop_contact_and_legal_changes_require_reverification(self):
+        self.shop.identity_verified = True
+        self.shop.contact_phone_verified = True
+        self.shop.contact_email_verified = True
+        self.shop.save()
+
+        response = self.client.post(reverse('shop_profile_settings'), {
+            'profile_section': 'shop',
+            'shop_name': self.shop.shop_name,
+            'slug': self.shop.slug,
+            'phone': '0987654321',
+            'contact_email': 'contact@example.test',
+            'address': self.shop.address,
+            'legal_entity_type': 'INDIVIDUAL',
+            'representative_name': 'Người đại diện mới',
+            'processing_time_days': '1',
+            'default_shipping_fee': '0',
+            'status': 'SUSPENDED',
+            'identity_verified': 'on',
+            'contact_phone_verified': 'on',
+            'contact_email_verified': 'on',
+        })
+
+        self.assertRedirects(response, reverse('shop_profile_settings'), fetch_redirect_response=False)
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.phone, '0987654321')
+        self.assertFalse(self.shop.contact_phone_verified)
+        self.assertFalse(self.shop.contact_email_verified)
+        self.assertFalse(self.shop.identity_verified)
+        self.assertIn('cần quản trị viên xác minh lại', self.shop.admin_note)
+        self.assertEqual(self.shop.status, 'ACTIVE')
+
+    def test_shop_profile_rejects_invalid_vietnamese_phone(self):
+        response = self.client.post(reverse('shop_profile_settings'), {
+            'profile_section': 'shop',
+            'shop_name': self.shop.shop_name,
+            'slug': self.shop.slug,
+            'phone': '123',
+            'address': self.shop.address,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '10 chữ số, bắt đầu bằng 0')
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.phone, '0901234567')
+
+    def test_seller_settings_and_public_shop_page_keep_private_data_separate(self):
+        self.shop.bank_account_number = '987654321'
+        self.shop.id_number = '012345678901'
+        self.shop.identity_verified = True
+        self.shop.save()
+        response = self.client.get(reverse('shop_profile_settings'))
+        self.assertContains(response, '987654321')
+        self.assertContains(response, '012345678901')
+        self.assertContains(response, reverse('public_shop_profile', args=[self.shop.slug]))
+
+        response = self.client.get(reverse('public_shop_profile', args=[self.shop.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.shop.shop_name)
+        self.assertNotContains(response, '987654321')
+        self.assertNotContains(response, '012345678901')
+
+    def test_shop_settings_are_scoped_to_the_signed_in_owner(self):
+        self.client.force_login(self.other)
+        response = self.client.get(reverse('shop_profile_settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.other_shop.shop_name)
+        self.assertNotContains(response, '123456789')
+
+    def test_order_rates_use_only_this_shops_orders(self):
+        for suffix, status in [('CANCEL', 'CANCELLED'), ('RETURN', 'RETURNED')]:
+            order = Order.objects.create(
+                user=self.buyer,
+                address=self.address,
+                order_code=f'ORDER-{suffix}',
+                subtotal=100000,
+                total_amount=100000,
+                payment_method='COD',
+                order_status=status,
+            )
+            OrderItem.objects.create(
+                order=order,
+                product=self.product,
+                shop=self.shop,
+                quantity=1,
+                unit_price=100000,
+                subtotal=100000,
+                item_status=status,
+            )
+
+        response = self.client.get(reverse('shop_profile_settings'))
+        self.assertEqual(response.context['stats']['cancel_rate'], 33)
+        self.assertEqual(response.context['stats']['return_rate'], 33)
+        self.assertEqual(response.context['stats']['delivered_orders'], 1)
+
+    def test_rejected_shop_is_not_public_and_requires_admin_reason(self):
+        self.shop.status = 'REJECTED'
+        self.shop.admin_note = 'Bổ sung hồ sơ pháp lý.'
+        self.shop.save()
+        self.assertEqual(self.client.get(reverse('public_shop_profile', args=[self.shop.slug])).status_code, 404)
+        self.assertContains(self.client.get(reverse('shop_profile_settings')), 'Bổ sung hồ sơ pháp lý.')
 
     def test_shop_sign_in_page_uses_existing_django_authentication(self):
         self.client.logout()
@@ -405,6 +640,40 @@ class StaffShopApprovalTests(TestCase):
         self.assertRedirects(self.client.get(reverse('shop_dashboard')),
                              reverse('shop_onboarding_pending'))
 
+    def test_staff_can_reject_a_shop_with_a_reason(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('staff_shop_reject', args=[self.shop.pk]), {
+            'admin_note': 'Vui lòng bổ sung thông tin định danh.',
+        })
+        self.assertRedirects(response, reverse('staff_shop'))
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'REJECTED')
+        self.assertEqual(self.shop.admin_note, 'Vui lòng bổ sung thông tin định danh.')
+
+        self.client.force_login(self.seller)
+        response = self.client.get(reverse('shop_onboarding_pending'))
+        self.assertContains(response, 'Vui lòng bổ sung thông tin định danh.')
+        self.assertContains(response, reverse('shop_profile_settings'))
+
+    def test_staff_cannot_reject_without_a_reason(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse('staff_shop_reject', args=[self.shop.pk]), {'admin_note': '  '})
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.status, 'PENDING')
+        self.assertEqual(self.shop.admin_note, '')
+
+    def test_staff_can_verify_identity_only_after_identity_documents_are_submitted(self):
+        self.client.force_login(self.admin)
+        url = reverse('staff_shop_set_identity_verified', args=[self.shop.pk])
+        self.client.post(url, {'verified': 'true'})
+        self.shop.refresh_from_db()
+        self.assertFalse(self.shop.identity_verified)
+
+        self.submit_legal_documents()
+        self.client.post(url, {'verified': 'true'})
+        self.shop.refresh_from_db()
+        self.assertTrue(self.shop.identity_verified)
+
     def test_shop_actions_require_staff_and_post(self):
         self.client.logout()
         url = reverse('staff_shop_approve', args=[self.shop.pk])
@@ -467,9 +736,16 @@ class SellerOnboardingFlowTests(TestCase):
         self.assertFalse(Shop.objects.filter(shop_name='Shop mới').exists())
 
         # Valid final submission creates an email-verified account and the shop.
+        identity_photo = io.BytesIO()
+        Image.new('RGB', (1, 1), color='white').save(identity_photo, format='PNG')
+        identity_photo_bytes = identity_photo.getvalue()
         response = self.client.post(reverse('shop_onboarding_legal'), {
-            'id_card': SimpleUploadedFile('cccd.pdf', b'%PDF-1.4\ncccd-bytes'),
-            'business_license': SimpleUploadedFile('gpkd.pdf', b'%PDF-1.4\ngpkd-bytes'),
+            'legal_entity_type': 'INDIVIDUAL',
+            'representative_name': 'Nguyễn Văn A',
+            'representative_birth_date': '1990-01-01',
+            'id_number': '012345678901',
+            'id_card_front': SimpleUploadedFile('cccd-front.png', identity_photo_bytes, content_type='image/png'),
+            'id_card_back': SimpleUploadedFile('cccd-back.png', identity_photo_bytes, content_type='image/png'),
         })
         self.assertRedirects(response, reverse('shop_onboarding_pending'), fetch_redirect_response=False)
         seller = get_user_model().objects.get(username='newseller')
@@ -485,7 +761,9 @@ class SellerOnboardingFlowTests(TestCase):
         # Dashboard is blocked while the shop is not approved.
         self.assertRedirects(self.client.get(reverse('shop_dashboard')),
                              reverse('shop_onboarding_pending'), fetch_redirect_response=False)
-        self.assertContains(self.client.get(reverse('shop_onboarding_pending')), 'đang chờ xét duyệt')
+        pending_response = self.client.get(reverse('shop_onboarding_pending'))
+        self.assertContains(pending_response, 'đang chờ xét duyệt')
+        self.assertContains(pending_response, reverse('shop_profile_settings'))
 
         # Admin approval creates the notification and unlocks the dashboard.
         shop.status = 'ACTIVE'
@@ -586,10 +864,33 @@ class SellerOnboardingFlowTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('Nội dung tệp không khớp', str(form.errors['id_card']))
 
+    def test_company_onboarding_requires_business_license_and_tax_number(self):
+        from .forms import ShopLegalForm
+
+        payload = {
+            'legal_entity_type': 'COMPANY',
+            'representative_name': 'Nguyễn Văn A',
+            'representative_birth_date': '1985-05-10',
+            'id_number': '012345678901',
+            'tax_number': '0312345678',
+        }
+        documents = {
+            'id_card': SimpleUploadedFile('representative.pdf', b'%PDF-1.4\nidentity'),
+            'business_license': SimpleUploadedFile('license.pdf', b'%PDF-1.4\nlicense'),
+        }
+        self.assertTrue(ShopLegalForm(data=payload, files=documents).is_valid())
+
+        documents.pop('business_license')
+        form = ShopLegalForm(data=payload, files=documents)
+        self.assertFalse(form.is_valid())
+        self.assertIn('business_license', form.errors)
+
     def test_shop_name_must_be_unique(self):
         other = get_user_model().objects.create_user(
             username='owner1', email='owner1@example.test', password=self.password, full_name='Owner 1',
         )
+        other.role = 'SELLER'
+        other.save(update_fields=['role'])
         Shop.objects.create(owner=other, shop_name='Tên đã dùng', phone='0900000000', address='X')
         seller = get_user_model().objects.create_user(
             username='owner2', email='owner2@example.test', password=self.password, full_name='Owner 2',

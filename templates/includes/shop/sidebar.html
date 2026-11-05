@@ -77,6 +77,14 @@
                 Câu hỏi
             </span>
         </a>
+        <p class="sa-sidebar__group sa-sidebar__group--settings">
+            Cài đặt
+        </p>
+        <a href="{% url 'shop_profile_settings' %}" {% if page_name == 'profile-settings' %}aria-current="page"{% endif %}>
+            <span>
+                Trang cá nhân
+            </span>
+        </a>
     </nav>
     {% if request.user.is_authenticated %}
     <div class="sa-sidebar__footer">

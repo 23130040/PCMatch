@@ -6,7 +6,7 @@ class Payment(models.Model):
         ('VNPAY', 'VNPay'),
     ]
     STATUS_CHOICES = [
-        ('UNPAID', 'Unpaid'),
+        ('UNPAID', 'Chưa thanh toán'),
         ('PENDING', 'Pending'),
         ('PAID', 'Paid'),
         ('FAILED', 'Failed'),

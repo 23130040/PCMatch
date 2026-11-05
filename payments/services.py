@@ -5,7 +5,7 @@ from django.db import transaction
 from django.db.models import F
 
 from orders.models import Order
-from orders.services import history
+from orders.services import _notify, ensure_shop_orders, history
 from products.models import Product
 from .models import Payment
 
@@ -61,5 +61,13 @@ def process_notification(params):
             Product.objects.filter(pk=item.product_id).update(stock_quantity=F('stock_quantity') + item.quantity)
     order.order_items.update(item_status=order.order_status)
     order.save(update_fields=['payment_status', 'order_status', 'updated_at'])
+    if success:
+        for shop_order in ensure_shop_orders(order):
+            _notify(
+                shop_order.shop.owner,
+                'Bạn có đơn hàng mới',
+                f'Đơn {order.order_code} có phần hàng của shop và đang chờ bạn xác nhận.',
+                'ORDER_NEW',
+            )
     history(order, order.user, old_status, 'VNPay IPN: thanh toán thành công.' if success else 'VNPay IPN: thanh toán thất bại; đã hoàn tồn kho.')
     return '00', 'Confirm success'

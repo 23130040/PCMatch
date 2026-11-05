@@ -1,6 +1,5 @@
 {% extends 'includes/buyer_base.html' %}
-{% load cart_prices %}
-{% load static %}
+{% load static cart_prices %}
 {% block title %}Thanh toán — PCMatch{% endblock %}
 {% block content %}
 <header class="page-head">
@@ -54,7 +53,7 @@
         {% endfor %}
         <section class="panel panel--padded" aria-labelledby="payment-methods-title">
             <h2 id="payment-methods-title">Phương thức thanh toán</h2>
-            {% if not vnpay_ready %}<p class="muted">VNPay sandbox chưa được cấu hình. Bạn có thể đặt hàng bằng COD.</p>{% endif %}
+            <p class="muted">Chọn phương thức thanh toán cho đơn hàng. Đơn COD được chuyển thẳng đến shop; đơn VNPay chỉ chuyển đến shop sau khi thanh toán thành công.</p>
             <div class="payment-method-list" role="radiogroup" aria-labelledby="payment-methods-title">
                 <label class="payment-option" for="cod">
                     <input type="radio" id="cod" name="paymentMethod" value="COD" checked>
@@ -69,6 +68,7 @@
                         <strong>Thanh toán khi nhận hàng (COD)</strong>
                     </div>
                 </label>
+                {% if vnpay_available %}
                 <label class="payment-option" for="vnpay">
                     <input type="radio" id="vnpay" name="paymentMethod" value="VNPAY">
                     <div class="payment-info">
@@ -79,6 +79,9 @@
                         <small>Áp dụng cho đơn hàng từ 5.000 ₫</small>
                     </div>
                 </label>
+                {% else %}
+                <p class="muted">Thanh toán VNPay hiện chưa khả dụng; vui lòng chọn COD.</p>
+                {% endif %}
             </div>
         </section>
     </div>

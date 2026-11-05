@@ -60,7 +60,7 @@ def vnpay_return(request):
     payment.refresh_from_db()
     payment.order.refresh_from_db()
     if payment.status == 'PAID':
-        messages.success(request, 'Thanh toán thành công. Đơn hàng đang chờ admin xác nhận.')
+        messages.success(request, 'Thanh toán thành công. Đơn hàng đang chờ shop xác nhận.')
     elif payment.status == 'FAILED':
         messages.error(request, 'Thanh toán thất bại. Đơn hàng đã được hủy và hoàn tồn kho.')
     else:

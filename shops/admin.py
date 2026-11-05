@@ -5,9 +5,9 @@ from .models import Shop
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
-    list_display = ('shop_name', 'owner', 'status', 'phone', 'legal_submitted_at', 'created_at')
+    list_display = ('shop_name', 'owner', 'status', 'identity_verified', 'phone', 'legal_submitted_at', 'created_at')
     list_filter = ('status',)
-    search_fields = ('shop_name', 'owner__email', 'owner__username', 'phone')
+    search_fields = ('shop_name', 'slug', 'owner__email', 'owner__username', 'phone', 'id_number', 'tax_number')
     actions = ('approve_shops', 'suspend_shops')
 
     @admin.action(description='Phê duyệt shop đã chọn')

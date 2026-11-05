@@ -1,0 +1,6 @@
+<label class="field" for="{{ field.id_for_label }}">
+    <span>{{ field.label }}</span>
+    {{ field }}
+    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+    {% if field.errors %}<span class="shop-form-error" role="alert">{{ field.errors }}</span>{% endif %}
+</label>

@@ -3,12 +3,8 @@
 {% block content %}
 <div class="page-head">
     <div>
-        <h1>
-            Xin chào, {{ request.user.full_name|default:request.user.username }}
-        </h1>
-        <p>
-            {{ request.user.email }}
-        </p>
+        <h1>Xin chào, {{ request.user.full_name|default:request.user.username }}</h1>
+        <p>{{ request.user.email }}</p>
     </div>
     <div class="cluster">
         <a class="btn btn--secondary" href="{% url 'auth_logout' %}">Đăng xuất</a>
@@ -41,82 +37,46 @@
 </nav>
 <div class="two-col">
     <section class="panel panel--padded">
-        <h2>
-            Hồ sơ
-        </h2>
-        <section class="stack" id="" data-backend-form="pending">
-            <label class="field">
-                <span>
-                    Username
-                </span>
-                <input name="name" type="text" value="{{ request.user.full_name }}" required="" maxlength="80">
+        <h2>Hồ sơ</h2>
+        <form class="stack" method="post" enctype="multipart/form-data" action="{% url 'buyer_account' %}">
+            {% csrf_token %}
+            {% if profile_form.non_field_errors %}
+            <div class="form-error" role="alert">{{ profile_form.non_field_errors }}</div>
+            {% endif %}
+            {% if request.user.avatar %}
+            <img src="{{ request.user.avatar.url }}" alt="Ảnh đại diện" width="96" height="96" class="account-avatar">
+            {% endif %}
+            <label class="field" for="{{ profile_form.avatar.id_for_label }}">
+                <span>{{ profile_form.avatar.label }}</span>
+                {{ profile_form.avatar }}
+                {% if profile_form.avatar.help_text %}<small>{{ profile_form.avatar.help_text }}</small>{% endif %}
+                {% if profile_form.avatar.errors %}<span class="form-error" role="alert">{{ profile_form.avatar.errors }}</span>{% endif %}
+            </label>
+            <label class="field" for="{{ profile_form.full_name.id_for_label }}">
+                <span>{{ profile_form.full_name.label }}</span>
+                {{ profile_form.full_name }}
+                {% if profile_form.full_name.errors %}<span class="form-error" role="alert">{{ profile_form.full_name.errors }}</span>{% endif %}
             </label>
             <label class="field">
-                <span>
-                    Email
-                </span>
-                <input name="email" type="email" value="{{ request.user.email }}" disabled="">
+                <span>Email</span>
+                <input type="email" value="{{ request.user.email }}" autocomplete="email" disabled>
             </label>
-            <label class="field">
-                <span>
-                    Số điện thoại liên hệ
-                </span>
-                <input name="phone" type="tel" value="{{ request.user.phone }}" pattern="0[0-9]{9}">
+            <label class="field" for="{{ profile_form.phone.id_for_label }}">
+                <span>{{ profile_form.phone.label }}</span>
+                {{ profile_form.phone }}
+                <small>{% if request.user.phone_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</small>
+                {% if profile_form.phone.errors %}<span class="form-error" role="alert">{{ profile_form.phone.errors }}</span>{% endif %}
             </label>
-            <button class="btn btn--primary" type="button" disabled="">
-                Lưu hồ sơ
-            </button>
-            <button type="button" class="btn btn--secondary" data-id="" disabled="">
-                Hủy thay đổi
-            </button>
-            <p class="form-error" role="alert">
-            </p>
-        </section>
+            <button class="btn btn--primary" type="submit">Lưu hồ sơ</button>
+        </form>
     </section>
     <section class="panel panel--padded">
-        <h2>
-            Đổi mật khẩu
-        </h2>
-        <section class="stack" id="" data-backend-form="pending">
-            <label class="field password-field">
-                <span>
-                    Mật khẩu hiện tại
-                </span>
-                <span class="password-wrap">
-                    <input name="old" type="password" required="">
-                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
-                        👁
-                    </button>
-                </span>
-            </label>
-            <label class="field password-field">
-                <span>
-                    Mật khẩu mới
-                </span>
-                <span class="password-wrap">
-                    <input name="password" type="password" required="" minlength="8">
-                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
-                        👁
-                    </button>
-                </span>
-            </label>
-            <label class="field password-field">
-                <span>
-                    Nhập lại mật khẩu
-                </span>
-                <span class="password-wrap">
-                    <input name="confirm" type="password" required="" minlength="8">
-                    <button type="button" class="password-eye" aria-label="Hiện mật khẩu" disabled="">
-                        👁
-                    </button>
-                </span>
-            </label>
-            <button class="btn btn--primary" type="button" disabled="">
-                Đổi mật khẩu
-            </button>
-            <p class="form-error" role="alert">
-            </p>
-        </section>
+        <h2>Đổi mật khẩu</h2>
+        <p>Gửi liên kết đặt mật khẩu mới tới email {{ request.user.email }}. Liên kết có hiệu lực trong 1 giờ.</p>
+        <form class="stack" method="post" action="{% url 'buyer_password_change_request' %}">
+            {% csrf_token %}
+            <button class="btn btn--primary" type="submit">Gửi liên kết đổi mật khẩu</button>
+        </form>
     </section>
 </div>
 {% endblock %}

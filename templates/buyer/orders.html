@@ -9,7 +9,7 @@
 </form>
 {% for order in orders_page %}
 <article class="panel panel--padded buyer-order-card">
-    <div class="buyer-order-card__summary"><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p></div>
+    <div class="buyer-order-card__summary"><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p>{% if order.has_partial_cancellation %}<p>Đã hủy một phần</p>{% endif %}</div>
     <div class="buyer-order-card__products" aria-label="Sản phẩm trong đơn {{ order.order_code }}">
         {% for item in order.order_items.all %}
         <div class="buyer-order-product">

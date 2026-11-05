@@ -40,3 +40,36 @@ document.querySelectorAll('table[data-selectable-table]').forEach(table => {
     boxes.forEach(box => box.addEventListener('change', refresh));
     toolbar.querySelector('[data-ui-clear-selection]').addEventListener('click', () => {boxes.forEach(box => box.checked = false); refresh();});
 });
+
+const orderDetailDrawer = document.querySelector('#order-detail-drawer');
+const orderDetailContent = document.querySelector('#order-detail-content');
+let orderDetailRequest;
+
+if (orderDetailDrawer && orderDetailContent) {
+    document.querySelectorAll('[data-order-detail-url]').forEach(button => {
+        button.addEventListener('click', async () => {
+            orderDetailRequest?.abort();
+            orderDetailRequest = new AbortController();
+            orderDetailContent.innerHTML = '<p class="order-detail-drawer__loading">Đang tải chi tiết đơn hàng…</p>';
+            if (!orderDetailDrawer.open) orderDetailDrawer.showModal();
+
+            try {
+                const response = await fetch(button.dataset.orderDetailUrl, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    signal: orderDetailRequest.signal,
+                });
+                if (!response.ok || response.redirected) throw new Error('Không tải được chi tiết đơn hàng.');
+                orderDetailContent.innerHTML = await response.text();
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                orderDetailContent.innerHTML = '<p class="order-detail-drawer__error" role="alert">Không tải được chi tiết đơn hàng. Vui lòng thử lại.</p>';
+            }
+        });
+    });
+
+    orderDetailDrawer.querySelector('[data-order-detail-close]')?.addEventListener('click', () => orderDetailDrawer.close());
+    orderDetailDrawer.addEventListener('click', event => {
+        if (event.target === orderDetailDrawer) orderDetailDrawer.close();
+    });
+    orderDetailDrawer.addEventListener('close', () => orderDetailRequest?.abort());
+}

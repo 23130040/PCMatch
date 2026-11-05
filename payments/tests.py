@@ -7,8 +7,10 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from carts.models import CartItem
-from orders.models import Order
+from notifications.models import Notification
+from orders.models import Order, ShopOrder
 from orders.tests import checkout_data
+from orders.services import mark_carrier_delivered
 from .models import Payment
 
 
@@ -48,7 +50,7 @@ class VNPayTests(TestCase):
         self.assertEqual((self.order.order_status, self.order.payment_status), ('AWAITING_PAYMENT', 'PENDING'))
         self.assertFalse(CartItem.objects.exists())
 
-    def test_verified_ipn_marks_paid_and_waits_for_admin(self):
+    def test_verified_ipn_marks_paid_and_creates_shop_orders(self):
         self.client.logout()
         self.assertEqual(self.ipn().json()['RspCode'], '00')
         self.order.refresh_from_db()
@@ -57,6 +59,8 @@ class VNPayTests(TestCase):
         self.assertEqual(self.payment.gateway_transaction_no, '1234567')
         self.assertIsNotNone(self.payment.paid_at)
         self.assertEqual(self.order.order_items.get().item_status, 'PENDING')
+        self.assertEqual(ShopOrder.objects.filter(order=self.order).count(), 1)
+        self.assertTrue(Notification.objects.filter(user=self.owner, type='ORDER_NEW').exists())
 
     def test_repeated_callback_does_not_duplicate_history(self):
         self.ipn()
@@ -105,19 +109,32 @@ class VNPayTests(TestCase):
         self.assertEqual(self.product.stock_quantity, 3)
         self.assertEqual(self.ipn().json()['RspCode'], '00')
 
-    def test_admin_cannot_approve_unpaid_vnpay(self):
-        self.client.force_login(self.admin)
-        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'order_status': 'COMFIRMED'})
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.order_status, 'AWAITING_PAYMENT')
-
-    def test_paid_vnpay_fulfillment_keeps_paid_without_cod_checkbox(self):
-        self.ipn()
-        self.client.force_login(self.admin)
-        self.client.post(reverse('update_order_status', args=[self.order.pk]), {'order_status': 'COMFIRMED'})
+    def test_unpaid_vnpay_order_is_not_visible_to_shop_until_paid(self):
+        self.client.force_login(self.buyer)
+        self.client.get(reverse('buyer_order'), {'id': self.order.order_code})
+        self.assertFalse(ShopOrder.objects.filter(order=self.order).exists())
         self.client.force_login(self.owner)
-        for status in ['PROCESSING', 'SHIPPING', 'DELIVERED']:
-            self.client.post(reverse('shop_order_update_status', args=[self.order.pk]), {'new_status': status})
+        response = self.client.get(reverse('shop_orders'))
+        self.assertNotContains(response, self.order.order_code)
+        self.assertFalse(ShopOrder.objects.filter(order=self.order).exists())
+        self.assertEqual(self.ipn().json()['RspCode'], '00')
+        self.assertTrue(ShopOrder.objects.filter(order=self.order, shop=self.shop).exists())
+
+    def test_shop_fulfills_paid_vnpay_order_without_admin_approval(self):
+        self.ipn()
+        self.client.force_login(self.owner)
+        self.client.post(reverse('shop_order_update_status', args=[self.order.pk]), {
+            'action': 'accept', 'new_status': 'PROCESSING',
+        })
+        self.client.post(reverse('shop_order_update_status', args=[self.order.pk]), {
+            'action': 'handoff', 'new_status': 'SHIPPING',
+            'carrier_name': 'Carrier', 'tracking_code': 'TRACK-VNPAY-1',
+        })
+        self.assertEqual(mark_carrier_delivered(
+            provider='test-carrier',
+            event_id='vnpay-delivery-1',
+            tracking_code='TRACK-VNPAY-1',
+        ), 'delivered')
         self.order.refresh_from_db()
         self.assertEqual((self.order.order_status, self.order.payment_status), ('DELIVERED', 'PAID'))
         self.assertEqual(self.ipn().json()['RspCode'], '02')

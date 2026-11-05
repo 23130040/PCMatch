@@ -62,6 +62,8 @@
             <article class="panel metric-panel admin-metric admin-metric--amber"><span class="metric-label">Chờ duyệt tham gia</span><strong class="metric-value">{{ shop_counts.PENDING }} <small>yêu cầu</small></strong><p>Hồ sơ shop cần admin xác nhận</p></article>
             <article class="panel metric-panel admin-metric admin-metric--plain"><span class="metric-label">Phí sàn cần đối soát</span><strong class="metric-value">{{ platform_fee_total|compact_vnd }} <small>₫</small></strong><p>Phí từ {{ fee_shop_count }} shop có đơn đã giao</p></article>
             <article class="panel metric-panel admin-metric admin-metric--blue"><span class="metric-label">Đang hoạt động</span><strong class="metric-value">{{ shop_counts.ACTIVE }} <small>shop</small></strong><p>Shop đã được phê duyệt trên sàn</p></article>
+            <article class="panel metric-panel admin-metric admin-metric--plain"><span class="metric-label">Bị từ chối</span><strong class="metric-value">{{ shop_counts.REJECTED }} <small>shop</small></strong><p>Hồ sơ chưa đạt yêu cầu</p></article>
+            <article class="panel metric-panel admin-metric admin-metric--plain"><span class="metric-label">Tạm ngưng</span><strong class="metric-value">{{ shop_counts.SUSPENDED }} <small>shop</small></strong><p>Shop hiện không hoạt động</p></article>
         </section>
 
         <section class="shop-table-card">
@@ -92,11 +94,12 @@
             <form id="bulk-shop-form" method="post" action="{% url 'staff_shop_bulk' %}">{% csrf_token %}
                 <input type="hidden" name="action" id="bulk-shop-action"><input type="hidden" name="select_all" id="bulk-shop-select-all" value="0"><input type="hidden" name="status" value="{{ status }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}"><input type="hidden" name="return_query" value="{{ filter_query }}">
                 <div class="order-bulk-actions" id="shop-bulk-actions" hidden aria-live="polite"><strong><span id="selected-shop-count">0</span> shop đã chọn</strong><div class="order-bulk-actions__buttons"><button type="button" class="btn btn--primary" data-shop-action="APPROVE"><i class="fa-solid fa-circle-check"></i> Duyệt tham gia sàn</button><button type="button" class="btn btn--secondary" data-shop-action="SUSPEND"><i class="fa-solid fa-circle-pause"></i> Tạm ngưng shop</button><button type="button" class="btn btn--secondary" data-shop-action="REMIND_FEE"><i class="fa-regular fa-bell"></i> Gửi nhắc phí sàn</button></div><button type="button" class="order-bulk-actions__clear" id="clear-shop-selection"><i class="fa-solid fa-xmark"></i> Bỏ chọn</button></div>
+            </form>
             <div class="table-scroll">
                 <table class="shop-table">
                     <thead>
                     <tr>
-                        <th><input id="shop-select-all" type="checkbox" aria-label="Chọn tất cả shop đang lọc"></th>
+                        <th><input id="shop-select-all" form="bulk-shop-form" type="checkbox" aria-label="Chọn tất cả shop đang lọc"></th>
                         <th>Shop</th>
                         <th>Chủ shop</th>
                         <th>Ngành hàng</th><th>Sản phẩm</th><th>Doanh thu</th><th>Phí sàn</th><th>Trạng thái</th><th>Thao tác</th>
@@ -105,9 +108,19 @@
                     <tbody>
                     {% for shop in shop_page %}
                     <tr>
-                        <td><input class="shop-check" type="checkbox" name="shop_ids" value="{{ shop.pk }}" aria-label="Chọn shop {{ shop.shop_name }}"></td>
+                        <td><input class="shop-check" form="bulk-shop-form" type="checkbox" name="shop_ids" value="{{ shop.pk }}" aria-label="Chọn shop {{ shop.shop_name }}"></td>
                         <td>
                             <strong class="shop-name">{{ shop.shop_name }}</strong><small>SH-{{ shop.pk }}</small>
+                            {% if shop.legal_submitted_at %}
+                            <small>
+                                Hồ sơ:
+                                {% if shop.id_card %}<a href="{% url 'staff_shop_document' shop.pk 'id-card' %}">CCCD</a>{% endif %}
+                                {% if shop.id_card_front %}<a href="{% url 'staff_shop_document' shop.pk 'id-card-front' %}">Mặt trước CCCD</a>{% endif %}
+                                {% if shop.id_card_back %}<a href="{% url 'staff_shop_document' shop.pk 'id-card-back' %}">Mặt sau CCCD</a>{% endif %}
+                                {% if shop.id_card or shop.id_card_front or shop.id_card_back %} · {% endif %}
+                                {% if shop.business_license %}<a href="{% url 'staff_shop_document' shop.pk 'business-license' %}">Giấy phép kinh doanh</a>{% endif %}
+                            </small>
+                            {% endif %}
                         </td>
                         <td><strong>{{ shop.owner.full_name|default:shop.owner.username }}</strong><small>{{ shop.owner.phone|default:shop.phone }}</small></td>
                         <td>{{ shop.category_name }}</td><td><strong>{{ shop.product_count }}</strong></td><td class="revenue"><strong>{{ shop.delivered_revenue|compact_vnd }} ₫</strong></td><td><span class="badge badge--paid">Phí sàn {{ shop.platform_fee_percent }}%</span></td>
@@ -116,11 +129,52 @@
                             <span class="status status--active">Đang hoạt động</span>
                             {% elif shop.status == 'PENDING' %}
                             <span class="status status--pending">Chờ duyệt tham gia</span>
+                            {% elif shop.status == 'REJECTED' %}
+                            <span class="status status--suspended">Bị từ chối</span>
                             {% else %}
                             <span class="status status--suspended">Tạm ngưng</span>
                             {% endif %}
+                            {% if shop.identity_verified %}<small>Đã xác minh danh tính</small>{% endif %}
+                            {% if shop.admin_note %}<small>{{ shop.admin_note|truncatechars:100 }}</small>{% endif %}
+                            <form method="post" action="{% url 'staff_shop_set_identity_verified' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <input type="hidden" name="verified" value="{% if shop.identity_verified %}false{% else %}true{% endif %}">
+                                <button class="button button--secondary" type="submit"
+                                    {% if not shop.identity_verified and not shop.id_card and not shop.id_card_front %}disabled title="Cần hồ sơ định danh trước khi xác minh"{% endif %}>
+                                    {% if shop.identity_verified %}Gỡ xác minh{% else %}Xác minh danh tính{% endif %}
+                                </button>
+                            </form>
                         </td>
-                        <td>
+                        <td class="center">
+                            {% if shop.status != 'ACTIVE' %}
+                            <form method="post" action="{% url 'staff_shop_approve' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <button class="button button--primary" type="submit"
+                                    {% if not shop.is_ready_for_approval %}disabled title="Cần xác thực email và nộp đủ hồ sơ pháp lý"{% endif %}>
+                                    <i class="fa-solid fa-check"></i> <span>Duyệt</span>
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'staff_shop_reject' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <input type="text" name="admin_note" maxlength="1000" placeholder="Lý do từ chối" aria-label="Lý do từ chối">
+                                <button class="button button--secondary" type="submit"><span>Từ chối</span></button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="{% url 'staff_shop_suspend' shop.pk %}" class="table-action-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="search" value="{{ search }}">
+                                <input type="hidden" name="status" value="{{ status }}">
+                                <button class="button button--secondary" type="submit">
+                                    <i class="fa-solid fa-ban"></i> <span>Tạm ngưng</span>
+                                </button>
+                            </form>
+                            {% endif %}
                             <button type="button" class="order-detail-button" data-shop-detail data-id="{{ shop.pk }}" data-name="{{ shop.shop_name }}" data-code="SH-{{ shop.pk }}" data-created="Tham gia {{ shop.created_at|date:'d/m/Y' }}" data-revenue="{{ shop.delivered_revenue|compact_vnd }} ₫" data-status="{% if shop.status == 'ACTIVE' %}Đang hoạt động{% elif shop.status == 'PENDING' %}Chờ duyệt tham gia{% else %}Tạm ngưng{% endif %}" data-owner="{{ shop.owner.full_name|default:shop.owner.username }}" data-phone="{{ shop.owner.phone|default:shop.phone }}" data-email="{{ shop.owner.email }}" data-category="{{ shop.category_name }}" data-address="{{ shop.address }}" data-products="{{ shop.product_count }}" data-fee="{{ shop.platform_fee_percent }}%"><i class="fa-regular fa-eye"></i> Chi tiết</button>
                         </td>
                     </tr>
@@ -132,7 +186,6 @@
                     </tbody>
                 </table>
             </div>
-            </form>
 
             <footer class="table-pagination">
                 <p>Hiển thị <strong>{{ shop_page.start_index|default:0 }} – {{ shop_page.end_index|default:0 }}</strong> trên <strong>{{ shop_page.paginator.count }}</strong> bản ghi</p>

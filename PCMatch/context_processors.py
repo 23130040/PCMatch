@@ -16,6 +16,8 @@ def frontend(request):
     session_user = None
     cart_items = []
     cart_subtotal = Decimal('0')
+    notification_count = 0
+    notification_preview = []
     if request.user.is_authenticated:
         cart_items = list(CartItem.objects.filter(cart__user=request.user).select_related('product__shop').order_by('added_at', 'pk'))
         cart_count = sum(item.quantity for item in cart_items)
@@ -23,6 +25,9 @@ def frontend(request):
             item.line_total = item.quantity * item.product.price
             cart_subtotal += item.line_total
         session_user = {'id': request.user.pk, 'name': request.user.full_name or request.user.username}
+        notifications = request.user.notifications.order_by('-created_at', '-pk')
+        notification_count = notifications.filter(is_read=False).count()
+        notification_preview = list(notifications[:5])
     # Only staff sessions pay for the shop counters shown in the admin sidebar.
     staff_shops = {'total': 0, 'pending': 0}
     if is_staff_user(request.user):
@@ -37,6 +42,8 @@ def frontend(request):
         'database_cart_count': cart_count,
         'database_cart_items': cart_items[:6],
         'database_cart_subtotal': cart_subtotal,
+        'notification_count': notification_count,
+        'notification_preview': notification_preview,
         'navigation_categories': Category.objects.filter(status=True).order_by('category_name'),
         'staff_shops': staff_shops,
         'frontend_config': {

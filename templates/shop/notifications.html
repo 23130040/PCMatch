@@ -31,25 +31,44 @@
             <h2>
                 Tất cả thông báo
             </h2>
+            {% if unread_notification_count %}
+            <form method="post">
+                {% csrf_token %}
+                <button class="btn btn--secondary" type="submit">Đánh dấu tất cả đã đọc</button>
+            </form>
+            {% endif %}
         </div>
-        {% for note in notifications %}
-        <div class="dash-order-row" style="padding:12px 16px">
-            <div>
-                <strong>
-                    {{ note.title }}
-                </strong>
-                <p>
-                    {{ note.message }}
-                </p>
-            </div>
-            <span class="sa-badge sa-badge--info">
-                {{ note.created_at|date:"d/m/Y H:i" }}
-            </span>
-        </div>
-        {% empty %}
-        <p style="padding:16px">
-            Chưa có thông báo nào.
-        </p>
-        {% endfor %}
+        <p class="sa-notification-count">{{ notification_total }} thông báo · {{ unread_notification_count }} chưa đọc</p>
+        <ol class="timeline sa-notification-timeline">
+            {% for note in notifications %}
+            <li class="timeline__item{% if note.is_read %} is-done{% else %} is-current{% endif %}">
+                <span class="timeline__dot" aria-hidden="true"></span>
+                <div class="timeline__content">
+                    <strong>{{ note.title }}</strong>
+                    <small>{{ note.created_at|date:"d/m/Y H:i" }}{% if not note.is_read %} · Chưa đọc{% endif %}</small>
+                    <p>{{ note.message }}</p>
+                    {% if not note.is_read %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="notification_id" value="{{ note.pk }}">
+                        <button class="btn btn--secondary" type="submit">Đánh dấu đã đọc</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </li>
+            {% empty %}
+            <li class="sa-notification-empty">Chưa có thông báo nào.</li>
+            {% endfor %}
+        </ol>
+        {% if notifications_page.has_other_pages %}
+        <footer class="sa-table-pagination">
+            <p>Hiển thị {{ notifications_page.start_index }}–{{ notifications_page.end_index }} / {{ notifications_page.paginator.count }} thông báo</p>
+            <nav aria-label="Phân trang thông báo">
+                {% if notifications_page.has_previous %}<a class="btn btn--secondary" href="?page={{ notifications_page.previous_page_number }}">Trang trước</a>{% endif %}
+                <span>Trang {{ notifications_page.number }} / {{ notifications_page.paginator.num_pages }}</span>
+                {% if notifications_page.has_next %}<a class="btn btn--secondary" href="?page={{ notifications_page.next_page_number }}">Trang sau</a>{% endif %}
+            </nav>
+        </footer>
+        {% endif %}
     </section>
 {% endblock %}
