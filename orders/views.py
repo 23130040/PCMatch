@@ -21,35 +21,42 @@ from orders.services import (
     resolve_escalated_cancellation,
     verify_carrier_webhook,
 )
+from analytics.views import _filter_period, _filtered_orders
+from django.utils import timezone
+from urllib.parse import urlencode
 
 from users.views import buyer_required, staff_required
-from .services import create_order
+from payments.vnpay import configured, payment_url
+from .services import create_order, retry_vnpay_payment
+
+
+def _staff_filtered_orders(period_orders, status, search, shop_id):
+    orders = period_orders
+    if status and status != 'ALL':
+        orders = orders.filter(order_status=status)
+    if search:
+        orders = orders.filter(order_code__icontains=search)
+    if shop_id:
+        orders = orders.filter(order_items__shop_id=shop_id).distinct()
+    return orders
+
 
 def order_list(request):
     process_order_timeouts()
+    period = _filter_period(request)
+    period_orders = _filtered_orders(period)
     search = request.GET.get('search', '').strip()
     locStatus = request.GET.get('status', '').strip()
     idOfShop = request.GET.get('shop', '').strip()
     page = request.GET.get('page', 1)
-    allOrder = Order.objects.select_related('user', 'address').prefetch_related(
+    allOrder = _staff_filtered_orders(period_orders, locStatus, search, idOfShop)
+
+    allOrder = allOrder.select_related('user', 'address').prefetch_related(
         Prefetch(
             'order_items',
             queryset=OrderItem.objects.select_related('product', 'shop'),
         ),
     ).order_by('-created_at', '-pk')
-
-   
-    if locStatus != '' and locStatus != 'ALL':
-        allOrder = allOrder.filter(order_status=locStatus)
-
-   
-    if search != '':
-        allOrder = allOrder.filter(order_code__icontains=search)
-
-    
-    if idOfShop != '':
-        allOrder = allOrder.filter(order_items__shop_id=idOfShop).distinct()
-
     dividePage = Paginator(allOrder, 10)
     showOrder = dividePage.get_page(page)
 
@@ -61,6 +68,26 @@ def order_list(request):
         'search': search,
         'idOfShop': idOfShop,
         'shops': Shop.objects.all(),
+        'period_label': period['label'],
+        'selected_year': period['selected_year'],
+        'selected_month': period['selected_month'],
+        'month_input_value': period['month_input_value'],
+        'active_preset': period['active_preset'],
+        'active_picker_tab': period['active_picker_tab'],
+        'current_year': timezone.localdate().year,
+        'from_date': period['requested_start'].isoformat() if period['requested_start'] else '',
+        'to_date': period['requested_end'].isoformat() if period['requested_end'] else '',
+        'period_query': urlencode({key: request.GET[key] for key in ('preset', 'period_month', 'year', 'from_date', 'to_date') if request.GET.get(key)}),
+        'period_preset': request.GET.get('preset', ''),
+        'period_month_query': request.GET.get('period_month', ''),
+        'period_year_query': request.GET.get('year', ''),
+        'filter_query': urlencode({key: value for key, value in request.GET.items() if key != 'page'}),
+        'filtered_order_count': allOrder.count(),
+        'updated_at': timezone.localtime(),
+        'total_orders': period_orders.count(),
+        'pending_orders': period_orders.filter(order_status='PENDING').count(),
+        'shipping_orders': period_orders.filter(order_status__in=('COMFIRMED', 'PROCESSING', 'SHIPPING')).count(),
+        'cancelled_orders': period_orders.filter(order_status__in=('CANCELLED', 'RETURNED')).count(),
     }
     return render(request, 'admin/order.html', box)
 
@@ -110,8 +137,8 @@ def place_order(request):
         if token['user'] != request.user.pk:
             raise signing.BadSignature
         payment_method = request.POST.get('paymentMethod', '').strip()
-        if payment_method != 'COD':
-            raise ValidationError('Thanh toán VNPay chưa được triển khai. Vui lòng chọn COD.')
+        if payment_method == 'VNPAY' and not configured():
+            raise ValidationError('VNPay chưa được cấu hình sandbox. Vui lòng chọn COD hoặc thử lại sau.')
         order = create_order(request.user, payment_method, token['nonce'])
     except (signing.BadSignature, KeyError, TypeError):
         messages.error(request, 'Phiên đặt hàng không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang.')
@@ -122,6 +149,29 @@ def place_order(request):
     except DatabaseError:
         messages.error(request, 'Hệ thống đang bận. Vui lòng thử lại; đơn đã tạo sẽ không bị tạo trùng.')
         return redirect('buyer_checkout')
+    if order.payment_method == 'VNPAY' and order.payment_status == 'PENDING':
+        payment = order.payments.filter(status='PENDING').order_by('-created_at', '-pk').first()
+        if payment is None:
+            messages.error(request, 'Không tìm thấy giao dịch VNPay đang chờ thanh toán.')
+            return redirect(f'{reverse("buyer_order")}?id={order.order_code}')
+        return redirect(payment_url(payment, request.META.get('REMOTE_ADDR', '127.0.0.1')))
+    return redirect(f'{reverse("buyer_order")}?id={order.order_code}')
+
+
+@require_POST
+@buyer_required
+def buyer_retry_vnpay_payment(request, order_id):
+    if not configured():
+        messages.error(request, 'VNPay chưa được cấu hình sandbox. Vui lòng thử lại sau.')
+        return redirect('buyer_orders')
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    try:
+        payment = retry_vnpay_payment(order.pk, request.user)
+        return redirect(payment_url(payment, request.META.get('REMOTE_ADDR', '127.0.0.1')))
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+    except DatabaseError:
+        messages.error(request, 'Hệ thống đang bận. Vui lòng thử lại.')
     return redirect(f'{reverse("buyer_order")}?id={order.order_code}')
 
 
@@ -129,7 +179,9 @@ def place_order(request):
 @buyer_required
 def buyer_orders(request):
     process_order_timeouts()
-    orders = Order.objects.filter(user=request.user).prefetch_related('shop_orders').order_by('-created_at', '-pk')
+    orders = Order.objects.filter(user=request.user).prefetch_related(
+        'shop_orders', 'order_items__product',
+    ).order_by('-created_at', '-pk')
     query = request.GET.get('q', '').strip()
     if query:
         orders = orders.filter(order_code__icontains=query)
@@ -242,7 +294,6 @@ def staff_resolve_cancellation(request, request_id):
         return redirect('load_ListOrder')
     messages.success(request, f'Đã xử lý yêu cầu hủy đơn {cancellation.shop_order.order.order_code}.')
     return redirect('staff_order_detail', order_id=cancellation.shop_order.order_id)
-
 
 @csrf_exempt
 @require_POST

@@ -10,11 +10,12 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from products.models import Product
+from payments.vnpay import configured as vnpay_configured
 from users.views import buyer_required, is_active_buyer
 from .forms import CartQuantityForm
 from .models import CartItem
 from .services import add_product, cart_summary, validate_quantity
-
+from interactions.models import UserProductInteraction
 
 @buyer_required
 def cart_detail(request):
@@ -57,8 +58,17 @@ def cart_add(request, product_id):
 
             try:
                 add_product(request.user, product_id, quantity)
+
+                UserProductInteraction.objects.create(
+                    user=request.user,
+                    product=product,
+                    interacted_type='CART',
+                    quantity=quantity,
+                )
+
                 message = 'Đã thêm sản phẩm vào giỏ hàng thành công!'
                 error = False
+
             except ValidationError as exc:
                 message = exc.messages[0]
                 error = True
@@ -121,5 +131,6 @@ def cart_checkout(request):
         'page_name': 'checkout', 'page_section': 'buyer',
         'checkout_user': request.user, 'shipping_address': address,
         'checkout_token': checkout_token(request.user),
+        'vnpay_available': vnpay_configured(),
         **cart_summary(request.user),
     })

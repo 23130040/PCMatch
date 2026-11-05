@@ -5,7 +5,7 @@ from django.db import transaction
 from django.db.models import F
 
 from orders.models import Order
-from orders.services import history
+from orders.services import _notify, ensure_shop_orders, history
 from products.models import Product
 from .models import Payment
 
@@ -22,8 +22,19 @@ def process_notification(params):
         amount = int(params.get('vnp_Amount', ''))
     except (TypeError, ValueError):
         return '04', 'Invalid amount'
-    if amount != payment.amount * 100 or payment.amount != order.total_amount:
+
+    if (
+            (
+                    'vnp_CurrCode' in params
+                    and params.get('vnp_CurrCode') != 'VND'
+            )
+            or payment.payment_method != 'VNPAY'
+            or order.payment_method != 'VNPAY'
+            or amount != payment.amount * 100
+            or payment.amount != order.total_amount
+    ):
         return '04', 'Invalid amount'
+
     if payment.status != 'PENDING' or order.order_status != 'AWAITING_PAYMENT':
         return '02', 'Order already confirmed'
     success = params.get('vnp_ResponseCode') == '00' and params.get('vnp_TransactionStatus') == '00'
@@ -38,8 +49,6 @@ def process_notification(params):
     elif not params.get('vnp_ResponseCode') or not params.get('vnp_TransactionStatus'):
         return '99', 'Missing transaction result'
     elif params.get('vnp_TransactionStatus') != '02' or params.get('vnp_ResponseCode') in {'00', '07'}:
-        # Unknown, pending, reversed or suspected transactions need reconciliation.
-        # Do not release stock while a debit may still settle successfully.
         return '99', 'Transaction requires reconciliation'
     old_status = order.order_status
     payment.status = order.payment_status = 'PAID' if success else 'FAILED'
@@ -52,5 +61,13 @@ def process_notification(params):
             Product.objects.filter(pk=item.product_id).update(stock_quantity=F('stock_quantity') + item.quantity)
     order.order_items.update(item_status=order.order_status)
     order.save(update_fields=['payment_status', 'order_status', 'updated_at'])
+    if success:
+        for shop_order in ensure_shop_orders(order):
+            _notify(
+                shop_order.shop.owner,
+                'Bạn có đơn hàng mới',
+                f'Đơn {order.order_code} có phần hàng của shop và đang chờ bạn xác nhận.',
+                'ORDER_NEW',
+            )
     history(order, order.user, old_status, 'VNPay IPN: thanh toán thành công.' if success else 'VNPay IPN: thanh toán thất bại; đã hoàn tồn kho.')
     return '00', 'Confirm success'

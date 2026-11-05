@@ -26,3 +26,22 @@ class UserProductInteraction(models.Model):
 
     def __str__(self):
         return f"{self.interacted_type} | {self.quantity}"
+
+class FilterHistory(models.Model):
+    filter_history_id = models.BigAutoField(primary_key=True)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='filter_history',
+    )
+
+    filters = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Lịch sử lọc của {self.user} - {self.created_at}'

@@ -28,34 +28,61 @@
                 <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý đơn hàng</span></nav>
                 <h1>Quản lý đơn hàng</h1>
                 <p>Chỉ xem và tra cứu đơn hàng. Shop xác nhận và trực tiếp xử lý phần hàng của mình.</p>
-                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật: 20/09/2026 · 09:45</p>
+                <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lúc {{ updated_at|date:'d/m/Y H:i' }} · Đang xem: {{ period_label }}</p>
             </div>
-            <div class="cluster admin-page-actions">
-                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
-                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
-                <button class="btn btn--primary" type="button"><i class="fa-solid fa-file"></i> Xuất báo cáo</button>
+            <div class="cluster admin-page-actions" aria-label="Lọc đơn hàng theo thời gian">
+                <form method="get" class="cluster">
+                    <input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                    <label>Khoảng thời gian
+                        <select name="preset">
+                            <option value="all"{% if active_preset == 'all' %} selected{% endif %}>Tất cả</option>
+                            <option value="7days"{% if active_preset == '7days' %} selected{% endif %}>7 ngày qua</option>
+                            <option value="30days"{% if active_preset == '30days' %} selected{% endif %}>30 ngày qua</option>
+                            <option value="month"{% if active_preset == 'month' %} selected{% endif %}>Tháng này</option>
+                            <option value="quarter"{% if active_preset == 'quarter' %} selected{% endif %}>Quý này</option>
+                            <option value="year"{% if active_preset == 'year' %} selected{% endif %}>Năm nay</option>
+                        </select>
+                    </label>
+                    <button class="btn btn--primary" type="submit">Áp dụng</button>
+                </form>
+                <form method="get" class="cluster">
+                    <input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                    <label>Tháng <input type="month" name="period_month" value="{{ month_input_value }}"></label>
+                    <button class="btn btn--secondary" type="submit">Lọc tháng</button>
+                </form>
+                <form method="get" class="cluster">
+                    <input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                    <label>Năm <input type="number" name="year" min="2000" max="{{ current_year|add:1 }}" value="{{ selected_year }}"></label>
+                    <button class="btn btn--secondary" type="submit">Lọc năm</button>
+                </form>
+                <form method="get" class="cluster">
+                    <input type="hidden" name="status" value="{{ locStatus }}"><input type="hidden" name="search" value="{{ search }}"><input type="hidden" name="shop" value="{{ idOfShop }}">
+                    <label>Từ ngày <input type="date" name="from_date" value="{{ from_date }}"></label>
+                    <label>Đến ngày <input type="date" name="to_date" value="{{ to_date }}"></label>
+                    <button class="btn btn--secondary" type="submit">Lọc khoảng ngày</button>
+                </form>
             </div>
         </div>
 
         <section class="dashboard-metrics order-metrics admin-metrics" aria-label="Tổng quan đơn hàng">
             <article class="panel metric-panel admin-metric admin-metric--blue">
-                <span class="metric-label">Tổng đơn hôm nay</span>
-                <strong class="metric-value">428 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +6,4%</em></strong>
-                <p>Toàn bộ đơn linh kiện phát sinh trong ngày trên sàn</p>
+                <span class="metric-label">Tổng đơn</span>
+                <strong class="metric-value">{{ total_orders }} <small>đơn</small></strong>
+                <p>Đơn hàng trong {{ period_label|lower }}</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--amber">
                 <span class="metric-label">Chờ shop xác nhận</span>
-                <strong class="metric-value">36 <small>đơn</small> <em style="color:#a45c08"><i class="fa-solid fa-arrow-down"></i> -2,1%</em></strong>
+                <strong class="metric-value">{{ pending_orders }} <small>đơn</small></strong>
                 <p>Theo dõi phần hàng chờ shop xác nhận</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--plain">
                 <span class="metric-label">Đang giao</span>
-                <strong class="metric-value">154 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +3,8%</em></strong>
+                <strong class="metric-value">{{ shipping_orders }} <small>đơn</small></strong>
                 <p>Đã bàn giao cho đơn vị vận chuyển</p>
             </article>
             <article class="panel metric-panel admin-metric admin-metric--blue">
                 <span class="metric-label">Hủy / Trả hàng</span>
-                <strong class="metric-value">22 <small>đơn</small> <em><i class="fa-solid fa-arrow-up"></i> +1,2%</em></strong>
+                <strong class="metric-value">{{ cancelled_orders }} <small>đơn</small></strong>
                 <p>Cần theo dõi để tránh phát sinh khiếu nại</p>
             </article>
         </section>
@@ -64,6 +91,7 @@
             <!-- Form Lọc Tìm kiếm & Chọn Shop -->
             <form method="GET" action="{% url 'loadOrder' %}" class="order-toolbar">
                 <input type="hidden" name="status" value="{{ locStatus }}">
+                <input type="hidden" name="preset" value="{{ period_preset }}"><input type="hidden" name="period_month" value="{{ period_month_query }}"><input type="hidden" name="year" value="{{ period_year_query }}"><input type="hidden" name="from_date" value="{{ from_date }}"><input type="hidden" name="to_date" value="{{ to_date }}">
                 <div class="order-toolbar__top">
                     <label class="order-toolbar__search">
                         <span class="sr-only">Tìm đơn hàng</span>
@@ -88,14 +116,14 @@
             
             
             <div class="order-tabs" role="tablist" aria-label="Lọc đơn hàng theo trạng thái">
-                <a href="{% url 'loadOrder' %}?status=ALL&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'ALL' or locStatus == '' %}is-active{% endif %}" style="text-decoration: none;">Tất cả</a>
-                <a href="{% url 'loadOrder' %}?status=PENDING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'PENDING' %}is-active{% endif %}" style="text-decoration: none;">Chờ shop xác nhận</a>
-                <a href="{% url 'loadOrder' %}?status=PROCESSING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'PROCESSING' %}is-active{% endif %}" style="text-decoration: none;">Shop đang xử lý</a>
-                <a href="{% url 'loadOrder' %}?status=SHIPPING&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'SHIPPING' %}is-active{% endif %}" style="text-decoration: none;">Đang giao</a>
-                <a href="{% url 'loadOrder' %}?status=DELIVERED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'DELIVERED' %}is-active{% endif %}" style="text-decoration: none;">Chờ buyer xác nhận</a>
-                <a href="{% url 'loadOrder' %}?status=COMPLETED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'COMPLETED' %}is-active{% endif %}" style="text-decoration: none;">Hoàn thành</a>
-                <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
-                <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search }}&shop={{ idOfShop }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
+                <a href="{% url 'loadOrder' %}?status=ALL&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'ALL' or locStatus == '' %}is-active{% endif %}" style="text-decoration: none;">Tất cả</a>
+                <a href="{% url 'loadOrder' %}?status=PENDING&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'PENDING' %}is-active{% endif %}" style="text-decoration: none;">Chờ shop xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=PROCESSING&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'PROCESSING' %}is-active{% endif %}" style="text-decoration: none;">Shop đang xử lý</a>
+                <a href="{% url 'loadOrder' %}?status=SHIPPING&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'SHIPPING' %}is-active{% endif %}" style="text-decoration: none;">Đang giao</a>
+                <a href="{% url 'loadOrder' %}?status=DELIVERED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'DELIVERED' %}is-active{% endif %}" style="text-decoration: none;">Chờ buyer xác nhận</a>
+                <a href="{% url 'loadOrder' %}?status=COMPLETED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'COMPLETED' %}is-active{% endif %}" style="text-decoration: none;">Hoàn thành</a>
+                <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
+                <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
              </div>
 
             <div class="admin-table-wrap">
@@ -183,19 +211,19 @@
                 <span>Trang <strong>{{ showOrder.number }}</strong> / <strong>{{ showOrder.paginator.num_pages }}</strong></span>
                 <div class="order-pagination__buttons">
                     {% if showOrder.has_previous %}
-                        <a href="{% url 'loadOrder' %}?page={{ showOrder.previous_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">‹</a>
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.previous_page_number }}&search={{ search|urlencode }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">‹</a>
                     {% endif %}
 
                     {% for i in showOrder.paginator.page_range %}
                         {% if showOrder.number == i %}
                             <button class="order-page-btn is-active" type="button">{{ i }}</button>
                         {% else %}
-                            <a href="{% url 'loadOrder' %}?page={{ i }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">{{ i }}</a>
+                            <a href="{% url 'loadOrder' %}?page={{ i }}&search={{ search|urlencode }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">{{ i }}</a>
                         {% endif %}
                     {% endfor %}
 
                     {% if showOrder.has_next %}
-                        <a href="{% url 'loadOrder' %}?page={{ showOrder.next_page_number }}&search={{ search }}&status={{ locStatus }}&shop={{ idOfShop }}" class="order-page-btn">›</a>
+                        <a href="{% url 'loadOrder' %}?page={{ showOrder.next_page_number }}&search={{ search|urlencode }}&status={{ locStatus }}&shop={{ idOfShop }}&{{ period_query }}" class="order-page-btn">›</a>
                     {% endif %}
                 </div>
             </div>
