@@ -30,7 +30,9 @@ class DatabaseCartTests(TestCase):
             username='buyer', email='buyer@example.com', password=cls.password,
             full_name='Người mua', role='BUYER',
         )
-        cls.other = get_user_model().objects.create_user(username='other', email='other@example.com')
+        cls.other = get_user_model().objects.create_user(
+            username='other', email='other@example.com', role='SELLER',
+        )
         cls.shop = Shop.objects.create(owner=cls.other, shop_name='Shop A', status='ACTIVE')
         category = Category.objects.create(category_name='Chuột')
         cls.product = Product.objects.create(

@@ -7,6 +7,7 @@ import tempfile
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
@@ -67,6 +68,24 @@ class ShopBackendLayoutsTests(TestCase):
         self.assertEqual(response.context['revenue']['count'], 1)
         self.assertNotContains(response, self.foreign_order.order_code)
 
+    def test_shop_notifications_show_unread_count_and_can_be_marked_read(self):
+        note = Notification.objects.create(
+            user=self.owner,
+            title='Đơn hàng mới',
+            message='Có đơn mới cần xác nhận.',
+        )
+        response = self.client.get(reverse('shop_notifications'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '1 thông báo · 1 chưa đọc')
+        self.assertContains(response, 'Đơn hàng mới')
+        self.assertEqual(response.context['notification_count'], 1)
+
+        self.client.post(reverse('shop_notifications'), {'notification_id': note.pk})
+        note.refresh_from_db()
+        self.assertTrue(note.is_read)
+        self.assertEqual(self.client.get(reverse('shop_notifications')).context['unread_notification_count'], 0)
+
     def test_query_string_cannot_open_another_shops_records(self):
         cases = [('shop_offers', {'edit': self.foreign_product.pk}), ('shop_order', {'id': self.foreign_order.pk}), ('shop_aftersales', {'id': self.foreign_case.pk})]
         for name, query in cases:
@@ -107,6 +126,34 @@ class ShopBackendLayoutsTests(TestCase):
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302)
             self.assertEqual(response.url, reverse('shop_onboarding_profile'))
+
+    def test_platform_staff_cannot_own_or_access_a_seller_shop(self):
+        User = get_user_model()
+        platform_admin = User.objects.create_user(
+            username='platform-admin',
+            email='platform-admin@example.test',
+            password='PlatformAdmin!321',
+            full_name='Quản trị nền tảng',
+            role='SELLER',
+            status='ACTIVE',
+            is_staff=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            Shop.objects.create(
+                owner=platform_admin,
+                shop_name='Shop quản trị',
+                phone='0901234570',
+                address='Địa chỉ nền tảng',
+                status='ACTIVE',
+            )
+
+        self.client.force_login(platform_admin)
+        response = self.client.get(reverse('shop_orders'))
+        self.assertRedirects(
+            response,
+            reverse('shop_login') + '?next=' + reverse('shop_orders'),
+        )
 
     def test_buyer_cannot_access_seller_profile(self):
         self.client.force_login(self.buyer)
@@ -842,6 +889,8 @@ class SellerOnboardingFlowTests(TestCase):
         other = get_user_model().objects.create_user(
             username='owner1', email='owner1@example.test', password=self.password, full_name='Owner 1',
         )
+        other.role = 'SELLER'
+        other.save(update_fields=['role'])
         Shop.objects.create(owner=other, shop_name='Tên đã dùng', phone='0900000000', address='X')
         seller = get_user_model().objects.create_user(
             username='owner2', email='owner2@example.test', password=self.password, full_name='Owner 2',

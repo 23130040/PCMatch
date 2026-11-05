@@ -24,6 +24,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from users.models import Address, BuyerEmailOTP, PasswordResetToken, SocialAccount, User
+from notifications.models import Notification
 from .address_services import save_address, set_default_address
 from users.forms import (
     BuyerRegisterForm,
@@ -76,10 +77,42 @@ def is_active_buyer(user):
 
 def is_active_seller(user):
     """Shop portal. Buyers and staff must sign in through their own portals."""
-    return _is_live_account(user) and getattr(user, 'role', '') in SELLER_ROLES
+    return (
+        _is_live_account(user)
+        and getattr(user, 'role', '') in SELLER_ROLES
+        and not user.is_staff
+        and not user.is_superuser
+    )
 
 
 buyer_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('auth_login'))
+
+
+@require_http_methods(['GET', 'POST'])
+@buyer_required
+def buyer_notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at', '-pk')
+    if request.method == 'POST':
+        notification_id = request.POST.get('notification_id')
+        if notification_id:
+            if not notification_id.isascii() or not notification_id.isdigit() or len(notification_id) > 19:
+                raise Http404
+            notification = get_object_or_404(notifications, pk=notification_id)
+            if not notification.is_read:
+                notification.is_read = True
+                notification.save(update_fields=['is_read'])
+        else:
+            notifications.filter(is_read=False).update(is_read=True)
+        return redirect('buyer_notifications')
+    notification_page = Paginator(notifications, 20).get_page(request.GET.get('page'))
+    return render(request, 'buyer/notifications.html', {
+        'page_name': 'notifications',
+        'page_section': 'buyer',
+        'notifications': notification_page,
+        'notifications_page': notification_page,
+        'notification_total': notifications.count(),
+        'unread_notification_count': notifications.filter(is_read=False).count(),
+    })
 
 
 @require_http_methods(['GET', 'POST'])

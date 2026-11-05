@@ -1,17 +1,30 @@
 from decimal import Decimal
+from datetime import timedelta
+import hashlib
+import hmac
+import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from carts.models import Cart, CartItem
+from notifications.models import Notification
 from payments.models import Payment
 from products.models import Category, Product
 from shops.models import Shop
 from users.models import Address
-from .models import Order, OrderItem
+from .models import CancellationRequest, Order, OrderItem, ShopOrder
+from .services import (
+    complete_delivered_shop_orders,
+    escalate_expired_cancellation_requests,
+    expire_unconfirmed_shop_orders,
+    mark_carrier_delivered,
+    request_order_cancellation,
+)
 
 
 def checkout_data(cls):
@@ -47,12 +60,13 @@ class CheckoutTests(TestCase):
         return Order.objects.get()
 
     def update_shop(self, order, status, owner=None, **extra):
-        self.client.force_login(owner or self.owner)
+        owner = owner or self.owner
+        self.client.force_login(owner)
+        if status == 'SHIPPING':
+            extra.setdefault('carrier_name', 'Hãng kiểm thử')
+            extra.setdefault('tracking_code', f'TRACK-{order.pk}-{owner.pk}')
+            extra['action'] = 'handoff'
         return self.client.post(reverse('shop_order_update_status', args=[order.pk]), {'new_status': status, **extra})
-
-    def approve(self, order):
-        self.client.force_login(self.admin)
-        return self.client.post(reverse('update_order_status', args=[order.pk]), {'status': 'COMFIRMED'})
 
     def test_cod_creates_real_order_from_server_prices(self):
         response = self.submit(total_amount='1', user_id=self.other_buyer.pk, address_id=999999)
@@ -67,6 +81,67 @@ class CheckoutTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 3)
         self.assertFalse(CartItem.objects.exists())
+
+    def test_new_order_is_listed_and_notified_in_the_owning_shop_portal(self):
+        order = self.create_cod()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('shop_orders'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, order.order_code)
+        self.assertEqual(response.context['orders_page'].paginator.count, 1)
+        self.assertTrue(Notification.objects.filter(
+            user=self.owner,
+            type='ORDER_NEW',
+            message__contains=order.order_code,
+        ).exists())
+
+    def test_buyer_notifications_show_unread_count_and_can_be_marked_read(self):
+        first = Notification.objects.create(user=self.buyer, title='Đơn đã được tạo', message='Đơn hàng đang chờ shop.')
+        Notification.objects.create(user=self.buyer, title='Cập nhật mới', message='Shop đã cập nhật đơn.')
+
+        response = self.client.get(reverse('buyer_notifications'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '2 thông báo · 2 chưa đọc')
+        self.assertContains(response, 'Đơn đã được tạo')
+        self.assertContains(response, 'aria-label="Thông báo, 2 chưa đọc"')
+        self.assertEqual(response.context['notification_count'], 2)
+
+        self.client.post(reverse('buyer_notifications'), {'notification_id': first.pk})
+        first.refresh_from_db()
+        self.assertTrue(first.is_read)
+        self.assertEqual(self.client.get(reverse('buyer_notifications')).context['unread_notification_count'], 1)
+
+        self.client.post(reverse('buyer_notifications'))
+        self.assertFalse(Notification.objects.filter(user=self.buyer, is_read=False).exists())
+
+    def test_buyer_cannot_mark_another_users_notification_as_read(self):
+        foreign_note = Notification.objects.create(
+            user=self.other_buyer,
+            title='Thông báo riêng',
+            message='Không thuộc tài khoản đang đăng nhập.',
+        )
+
+        response = self.client.post(reverse('buyer_notifications'), {'notification_id': foreign_note.pk})
+
+        self.assertEqual(response.status_code, 404)
+        foreign_note.refresh_from_db()
+        self.assertFalse(foreign_note.is_read)
+
+    def test_buyer_notifications_page_includes_all_records_through_pagination(self):
+        Notification.objects.bulk_create([
+            Notification(user=self.buyer, title=f'Thông báo {index}', message='Cập nhật đơn hàng.')
+            for index in range(21)
+        ])
+
+        response = self.client.get(reverse('buyer_notifications'), {'page': 2})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['notification_total'], 21)
+        self.assertEqual(len(response.context['notifications_page']), 1)
+        self.assertContains(response, 'Trang 2 / 2')
 
     def test_repeated_post_is_idempotent_even_after_cart_changes(self):
         token = self.client.get(reverse('buyer_checkout')).context['checkout_token']
@@ -141,19 +216,20 @@ class CheckoutTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 5)
 
-    def test_only_admin_can_approve_and_only_using_post(self):
+    def test_admin_order_page_is_read_only_and_order_is_already_available_to_shop(self):
         order = self.create_cod()
-        url = reverse('update_order_status', args=[order.pk])
-        self.client.post(url, {'status': 'COMFIRMED'})
         self.client.force_login(self.admin)
-        self.assertEqual(self.client.get(url, {'status': 'COMFIRMED'}).status_code, 405)
+        response = self.client.get(reverse('staff_order_detail', args=[order.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Xác nhận đơn')
+        self.assertEqual(
+            self.client.post(f'/staff/order/{order.pk}/update/', {'status': 'COMFIRMED'}).status_code,
+            404,
+        )
         order.refresh_from_db()
         self.assertEqual(order.order_status, 'PENDING')
-        self.approve(order)
-        self.approve(order)
-        order.refresh_from_db()
-        self.assertEqual(order.order_status, 'COMFIRMED')
-        self.assertEqual(order.status_history.count(), 2)
+        self.assertEqual(order.status_history.count(), 1)
+        self.assertEqual(order.shop_orders.get(shop=self.shop).status, 'PENDING')
         response = self.client.get(reverse('load_ListOrder'))
         self.assertContains(response, order.order_code)
         self.assertContains(response, reverse('staff_order_detail', args=[order.pk]))
@@ -186,7 +262,7 @@ class CheckoutTests(TestCase):
             'Người mua',
             '0901234567',
             '123 Lê Lợi',
-            'Chờ admin xác nhận',
+            'Chờ shop xác nhận',
             'Chưa thanh toán',
             'Cash on Delivery',
             'CPU checkout',
@@ -197,22 +273,21 @@ class CheckoutTests(TestCase):
             'Phí giao hàng',
             'Phí nền tảng',
             'Tổng tiền',
-            'Người mua đặt hàng.',
-            'Xác nhận đơn',
+            'Buyer đặt đơn; đang chờ shop xác nhận.',
+            'Tiến độ theo shop',
         ]:
             with self.subTest(expected=expected):
                 self.assertContains(response, expected)
-        self.assertEqual(response.content.count(b'class="order-detail__item"'), 2)
+        self.assertNotContains(response, 'Xác nhận đơn')
 
-    def test_staff_order_detail_hides_confirmation_after_order_is_confirmed(self):
+    def test_staff_order_detail_never_exposes_order_confirmation(self):
         order = self.create_cod()
         self.client.force_login(self.admin)
-        self.approve(order)
 
         response = self.client.get(reverse('staff_order_detail', args=[order.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Admin đã xác nhận')
+        self.assertContains(response, 'Chờ shop xác nhận')
         self.assertNotContains(response, 'Xác nhận đơn')
 
     def test_staff_order_detail_rejects_missing_order(self):
@@ -222,50 +297,205 @@ class CheckoutTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_shop_cannot_approve_or_skip_processing(self):
+    def test_shop_cannot_skip_confirmation_or_modify_another_shops_order(self):
         order = self.create_cod()
-        self.update_shop(order, 'COMFIRMED')
-        self.update_shop(order, 'PROCESSING')
+        self.update_shop(order, 'SHIPPING')
         order.refresh_from_db()
         self.assertEqual(order.order_status, 'PENDING')
-        self.approve(order)
-        self.update_shop(order, 'SHIPPING')
+        self.update_shop(order, 'PROCESSING', owner=self.other_owner)
+        self.update_shop(order, 'PROCESSING')
         order.refresh_from_db()
-        self.assertEqual(order.order_status, 'COMFIRMED')
+        self.assertEqual(order.order_status, 'PROCESSING')
 
-    def test_cod_requires_delivery_and_collection_before_paid(self):
+    def test_shop_handoff_waits_for_carrier_and_buyer_confirmation(self):
         order = self.create_cod()
-        self.approve(order)
         self.update_shop(order, 'PROCESSING')
         self.update_shop(order, 'SHIPPING')
-        self.update_shop(order, 'DELIVERED')
+        shop_order = order.shop_orders.get(shop=self.shop)
+        result = mark_carrier_delivered(
+            provider='test-carrier',
+            event_id=f'event-{order.pk}',
+            tracking_code=shop_order.tracking_code,
+        )
+        self.assertEqual(result, 'delivered')
         order.refresh_from_db()
-        self.assertEqual((order.order_status, order.payment_status), ('SHIPPING', 'UNPAID'))
-        response = self.client.get(reverse('shop_order'), {'id': order.pk})
-        self.assertContains(response, 'name="cod_collected"')
-        self.update_shop(order, 'DELIVERED', cod_collected='yes')
-        self.update_shop(order, 'DELIVERED', cod_collected='yes')
+        self.assertEqual((order.order_status, order.payment_status), ('DELIVERED', 'UNPAID'))
+        self.client.force_login(self.buyer)
+        self.client.post(reverse('buyer_confirm_received', args=[order.pk]))
         order.refresh_from_db()
-        self.assertEqual((order.order_status, order.payment_status), ('DELIVERED', 'PAID'))
-        self.assertEqual(order.payments.get().status, 'PAID')
-        self.assertIsNotNone(order.payments.get().paid_at)
+        self.assertEqual((order.order_status, order.payment_status), ('COMPLETED', 'UNPAID'))
         self.product.refresh_from_db()
         self.assertEqual(self.product.sold_quantity, 2)
 
-    def test_multi_shop_completion_is_scoped_to_each_shop(self):
+    def test_buyer_order_detail_shows_shop_status_and_cancellation_options(self):
+        order = self.create_cod()
+        response = self.client.get(reverse('buyer_order'), {'id': order.order_code})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.shop.shop_name)
+        self.assertContains(response, 'Chờ shop xác nhận')
+        self.assertContains(response, 'Gửi yêu cầu hủy')
+        self.assertContains(response, 'Đổi ý')
+
+    def test_multi_shop_status_rolls_up_from_the_slowest_active_shop(self):
         CartItem.objects.create(cart=self.cart, product=self.other_product, quantity=1)
         order = self.create_cod()
-        self.approve(order)
-        for status in ['PROCESSING', 'SHIPPING', 'DELIVERED']:
-            self.update_shop(order, status, cod_collected='yes')
+        self.update_shop(order, 'PROCESSING')
+        self.update_shop(order, 'SHIPPING')
+        first = order.shop_orders.get(shop=self.shop)
+        mark_carrier_delivered(provider='test-carrier', event_id='first', tracking_code=first.tracking_code)
         order.refresh_from_db()
-        self.assertEqual((order.order_status, order.payment_status), ('COMFIRMED', 'UNPAID'))
-        self.assertEqual(OrderItem.objects.get(order=order, shop=self.other_shop).item_status, 'COMFIRMED')
-        self.assertContains(self.client.get(reverse('shop_order'), {'id': order.pk}), 'Hoàn thành')
-        for status in ['PROCESSING', 'SHIPPING', 'DELIVERED']:
-            self.update_shop(order, status, owner=self.other_owner, cod_collected='yes')
+        self.assertEqual((order.order_status, order.payment_status), ('PENDING', 'UNPAID'))
+        self.assertEqual(OrderItem.objects.get(order=order, shop=self.other_shop).item_status, 'PENDING')
+        self.assertContains(self.client.get(reverse('shop_order'), {'id': order.pk}), 'Chờ buyer xác nhận')
+        self.update_shop(order, 'PROCESSING', owner=self.other_owner)
+        self.update_shop(order, 'SHIPPING', owner=self.other_owner)
+        second = order.shop_orders.get(shop=self.other_shop)
+        mark_carrier_delivered(provider='test-carrier', event_id='second', tracking_code=second.tracking_code)
         order.refresh_from_db()
-        self.assertEqual((order.order_status, order.payment_status), ('DELIVERED', 'PAID'))
+        self.assertEqual((order.order_status, order.payment_status), ('DELIVERED', 'UNPAID'))
+
+    def test_shop_rejection_restores_stock_and_records_reason(self):
+        order = self.create_cod()
+        self.update_shop(
+            order,
+            'CANCELLED',
+            action='reject',
+            reason='OUT_OF_STOCK',
+            note='Tồn kho vừa hết.',
+        )
+        shop_order = order.shop_orders.get(shop=self.shop)
+        self.assertEqual(shop_order.status, 'CANCELLED')
+        self.assertIn('Hết hàng', shop_order.history.filter(new_status='CANCELLED').get().note)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
+
+    def test_buyer_cancels_pending_single_shop_order_and_restores_stock(self):
+        order = self.create_cod()
+        response = self.client.post(
+            reverse('buyer_cancel_order', args=[order.pk]),
+            {'reason': 'CHANGED_MIND'},
+        )
+        self.assertEqual(response.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.order_status, 'CANCELLED')
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
+
+    def test_multishop_buyer_cancellation_is_independent_per_shop(self):
+        CartItem.objects.create(cart=self.cart, product=self.other_product, quantity=1)
+        order = self.create_cod()
+        self.update_shop(order, 'PROCESSING')
+
+        self.client.force_login(self.buyer)
+        response = self.client.post(
+            reverse('buyer_cancel_order', args=[order.pk]),
+            {'reason': 'CHANGED_MIND', 'note': 'Đặt nhầm.'},
+        )
+        self.assertEqual(response.status_code, 302)
+        shop_a = order.shop_orders.get(shop=self.shop)
+        shop_b = order.shop_orders.get(shop=self.other_shop)
+        cancellation = CancellationRequest.objects.get(shop_order=shop_a)
+        self.assertEqual(cancellation.status, 'PENDING')
+        self.assertEqual(shop_b.status, 'CANCELLED')
+        self.other_product.refresh_from_db()
+        self.assertEqual(self.other_product.stock_quantity, 3)
+
+        self.client.force_login(self.owner)
+        self.client.post(reverse('shop_order_update_status', args=[order.pk]), {
+            'action': 'approve_cancellation',
+            'cancellation_request_id': cancellation.pk,
+        })
+        shop_a.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(shop_a.status, 'CANCELLED')
+        self.assertEqual(order.order_status, 'CANCELLED')
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
+
+    def test_unconfirmed_timeout_restores_stock_and_records_system_actor(self):
+        order = self.create_cod()
+        now = timezone.now() + timedelta(days=1)
+        self.assertEqual(expire_unconfirmed_shop_orders(now), 1)
+        shop_order = order.shop_orders.get(shop=self.shop)
+        self.assertEqual(shop_order.status, 'CANCELLED')
+        history = shop_order.history.filter(new_status='CANCELLED').get()
+        self.assertIsNone(history.changed_by)
+        self.assertIn('Hệ thống', history.note)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
+
+    @override_settings(CARRIER_WEBHOOK_SECRET='test-webhook-secret')
+    def test_signed_carrier_webhook_is_idempotent(self):
+        order = self.create_cod()
+        self.update_shop(order, 'PROCESSING')
+        self.update_shop(order, 'SHIPPING')
+        shop_order = order.shop_orders.get(shop=self.shop)
+        body = json.dumps({
+            'provider': 'test-carrier',
+            'event_id': 'delivery-1',
+            'tracking_code': shop_order.tracking_code,
+            'status': 'DELIVERED',
+        }).encode()
+        timestamp = str(int(timezone.now().timestamp()))
+        signature = hmac.new(
+            b'test-webhook-secret',
+            timestamp.encode() + b'.' + body,
+            hashlib.sha256,
+        ).hexdigest()
+        headers = {
+            'HTTP_X_PCMATCH_TIMESTAMP': timestamp,
+            'HTTP_X_PCMATCH_SIGNATURE': signature,
+        }
+        url = reverse('carrier_delivery_webhook')
+        first = self.client.post(url, body, content_type='application/json', **headers)
+        duplicate = self.client.post(url, body, content_type='application/json', **headers)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()['result'], 'delivered')
+        self.assertEqual(duplicate.json()['result'], 'duplicate')
+        shop_order.refresh_from_db()
+        self.assertEqual(shop_order.status, 'DELIVERED')
+
+    def test_delivered_order_auto_completes_after_three_days(self):
+        order = self.create_cod()
+        self.update_shop(order, 'PROCESSING')
+        self.update_shop(order, 'SHIPPING')
+        shop_order = order.shop_orders.get(shop=self.shop)
+        mark_carrier_delivered(
+            provider='test-carrier',
+            event_id='auto-complete',
+            tracking_code=shop_order.tracking_code,
+        )
+        self.assertEqual(complete_delivered_shop_orders(timezone.now() + timedelta(days=4)), 1)
+        shop_order.refresh_from_db()
+        self.assertEqual(shop_order.status, 'COMPLETED')
+        self.assertIsNone(shop_order.history.filter(new_status='COMPLETED').get().changed_by)
+
+    def test_unanswered_cancellation_is_escalated_for_admin_resolution(self):
+        CartItem.objects.create(cart=self.cart, product=self.other_product, quantity=1)
+        order = self.create_cod()
+        self.update_shop(order, 'PROCESSING')
+        cancellation_result = request_order_cancellation(
+            order.pk, self.buyer, 'CHANGED_MIND', 'Đổi ý.',
+        )
+        self.assertTrue(cancellation_result['request_created'])
+        cancellation = CancellationRequest.objects.get(shop_order__shop=self.shop)
+        self.assertEqual(
+            escalate_expired_cancellation_requests(timezone.now() + timedelta(hours=13)),
+            1,
+        )
+        cancellation.refresh_from_db()
+        self.assertEqual(cancellation.status, 'ESCALATED')
+
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('staff_resolve_cancellation', args=[cancellation.pk]),
+            {'decision': 'approve'},
+        )
+        self.assertEqual(response.status_code, 302)
+        cancellation.refresh_from_db()
+        self.assertEqual(cancellation.status, 'ADMIN_APPROVED')
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
 
     def test_foreign_shop_and_buyer_cannot_access_order(self):
         order = self.create_cod()

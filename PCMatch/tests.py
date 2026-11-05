@@ -177,6 +177,7 @@ class FrontendPagesTests(TestCase):
             'includes/product_card.html',
             'includes/buyer_icon.html', 'includes/buyer_header.html', 'includes/buyer_account_links.html',
             'includes/admin_interface_controls.html',
+            'admin/order_detail.html',
             'includes/admin_product_drawers.html',
             'includes/admin_support_drawers.html',
             'includes/compare_button.html', 'includes/compare_tray.html',

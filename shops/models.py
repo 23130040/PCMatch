@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import models
 from django.utils.text import slugify
@@ -86,7 +87,17 @@ class Shop(models.Model):
             and self.tax_number
         )
 
+    def clean(self):
+        super().clean()
+        if self.owner_id:
+            owner = self.owner
+            if owner.role != 'SELLER' or owner.is_staff or owner.is_superuser:
+                raise ValidationError({
+                    'owner': 'Shop phải thuộc tài khoản người bán, không phải tài khoản quản trị nền tảng.',
+                })
+
     def save(self, *args, **kwargs):
+        self.clean()
         if not self.slug:
             base_slug = slugify(self.shop_name) or 'shop'
             candidate = base_slug

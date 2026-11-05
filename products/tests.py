@@ -19,7 +19,7 @@ class CatalogTestData(TestCase):
     @classmethod
     def setUpTestData(cls):
         owner = get_user_model().objects.create_user(
-            username='catalog-owner', email='catalog@example.com',
+            username='catalog-owner', email='catalog@example.com', role='SELLER',
         )
         cls.shop = Shop.objects.create(owner=owner, shop_name='Shop A', status='ACTIVE')
         cls.other_shop = Shop.objects.create(owner=owner, shop_name='Shop B', status='ACTIVE')

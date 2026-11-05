@@ -62,14 +62,8 @@ urlpatterns = [
     path('buyer/cart/items/<int:item_id>/remove/', cart_views.cart_remove, name='buyer_cart_remove'),
     path('buyer/compare/selection/', product_views.buyer_comparison_update, name='buyer_comparison_update'),
 
-    path('staff/orders/', staff_required(order_views.orderList), name='loadOrder'),
-    path('staff/orders/', staff_required(order_views.orderList), name='load_ListOrder'),
-    path('staff/orders/many/', staff_required(order_views.changeManyStatus), name='updateOrderStatus'),
-    path('staff/order/<int:order_id>/update/', order_views.changeStatus, name='updateStatus'),
-    path('staff/products/', staff_required(product_views.load_products), name='load_products'),
     path('staff/orders/<int:order_id>/', order_views.staff_order_detail, name='staff_order_detail'),
     path('staff/products/<int:product_id>/toggle/', product_views.showORhide_Product, name='showORhide_Product'),
-    path('staff/order/<int:order_id>/update/', order_views.changeStatus, name='update_order_status'),
     path('staff/guest/<int:user_id>/toggle/', staff_required(user_views.toggle_user_lock), name='staff_guest_toggle'),
 
     path('', product_views.buyer_home, name='home'),
@@ -136,6 +130,10 @@ urlpatterns = [
          name='shop_return_update',
     ),
     path('buyer/orders/create/', order_views.place_order, name='buyer_place_order',),
+    path('buyer/orders/<int:order_id>/cancel/', order_views.buyer_cancel_order, name='buyer_cancel_order'),
+    path('buyer/orders/<int:order_id>/received/', order_views.buyer_confirm_received, name='buyer_confirm_received'),
+    path('staff/cancellations/<int:request_id>/resolve/', order_views.staff_resolve_cancellation, name='staff_resolve_cancellation'),
+    path('carrier/webhooks/delivery/', order_views.carrier_delivery_webhook, name='carrier_delivery_webhook'),
     path('buyer/addresses/<int:address_id>/default/', user_views.buyer_address_default, name='buyer_address_default'),
     path('payments/vnpay/ipn/', payment_views.vnpay_ipn, name='vnpay_ipn'),
     path('payments/vnpay/return/', payment_views.vnpay_return, name='vnpay_return'),
@@ -173,7 +171,7 @@ for section, pages in PAGE_GROUPS.items():
         elif section == 'staff' and page == 'dashboard':
             view = staff_required(analytics_views.dashboard_view)
         elif section == 'staff' and (page == 'order' or page == 'orders'):
-            staff_required(order_views.orderList)
+            view = staff_required(order_views.order_list)
         elif section == 'staff' and page == 'products':
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
@@ -185,6 +183,8 @@ for section, pages in PAGE_GROUPS.items():
             view = shop_views.shop_login
         elif section == 'shop':
             view = shop_views.shop_required(partial(shop_views.shop_page, page=page))
+        elif section == 'buyer' and page == 'notifications':
+            view = user_views.buyer_notifications
         elif section == 'staff':
             view = staff_required(TemplateView.as_view(
                 template_name=template,
@@ -206,6 +206,12 @@ for section, pages in PAGE_GROUPS.items():
             view,
             name=route_name(section, page),
         ))
+
+urlpatterns += [
+    path('staff/orders/', staff_required(order_views.order_list), name='loadOrder'),
+    path('staff/orders/', staff_required(order_views.order_list), name='load_ListOrder'),
+    path('staff/products/', staff_required(product_views.load_products), name='load_products'),
+]
 
 if settings.DEBUG:
     urlpatterns += [

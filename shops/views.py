@@ -22,8 +22,13 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from orders.models import Order, OrderItem, OrderStatusHistory, Return
-from orders.services import fulfill_order, shop_status
+from orders.models import CancellationRequest, Order, OrderItem, Return, ShopOrder, ShopOrderHistory
+from orders.services import (
+    ensure_shop_orders,
+    process_order_timeouts,
+    resolve_cancellation_request,
+    update_shop_order,
+)
 from products.models import Brand, Category, Product, ProductQuestion
 from products.forms import ProductAnswerForm
 from products.services import append_question_message, conversation_messages
@@ -527,17 +532,36 @@ def shop_onboarding_pending(request):
     })
 
 
-@require_GET
+@require_http_methods(['GET', 'POST'])
+@shop_required
 def shop_notifications(request):
     shop = _owned_shop(request.user)
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
+    notifications = request.user.notifications.order_by('-created_at', '-pk')
+    if request.method == 'POST':
+        notification_id = request.POST.get('notification_id')
+        if notification_id:
+            if not notification_id.isascii() or not notification_id.isdigit() or len(notification_id) > 19:
+                raise Http404
+            notification = get_object_or_404(notifications, pk=notification_id)
+            if not notification.is_read:
+                notification.is_read = True
+                notification.save(update_fields=['is_read'])
+        else:
+            notifications.filter(is_read=False).update(is_read=True)
+        return redirect('shop_notifications')
+    notification_page = Paginator(notifications, 20).get_page(request.GET.get('page'))
     return render(request, 'shop/notifications.html', {
         'page_name': 'notifications',
         'page_section': 'shop',
         'page_title': 'Thông báo',
         'shop': shop,
-        'notifications': request.user.notifications.order_by('-created_at')[:50],
+        'notifications': notification_page,
+        'notifications_page': notification_page,
+        'notification_total': notifications.count(),
+        'unread_notification_count': notifications.filter(is_read=False).count(),
+        'filter_query': '',
     })
 
 
@@ -622,9 +646,11 @@ def shop_profile_settings(request):
             return redirect('shop_profile_settings')
 
     orders = _orders(shop)
-    order_count = len(orders)
-    cancelled_count = sum(order.order_status == 'CANCELLED' for order in orders)
-    returned_count = sum(order.order_status == 'RETURNED' for order in orders)
+    shop_orders = Order.objects.filter(order_items__shop=shop).distinct()
+    order_count = shop_orders.count()
+    cancelled_count = shop_orders.filter(order_status='CANCELLED').count()
+    returned_count = shop_orders.filter(order_status='RETURNED').count()
+    delivered_count = shop_orders.filter(order_status__in=['DELIVERED', 'COMPLETED']).count()
     questions = ProductQuestion.objects.filter(product__shop=shop)
     question_count = questions.count()
     answered_questions = questions.filter(status=True).count()
@@ -638,7 +664,7 @@ def shop_profile_settings(request):
         'stats': {
             'product_count': Product.objects.filter(shop=shop).count(),
             'sold_quantity': Product.objects.filter(shop=shop).aggregate(total=Sum('sold_quantity'))['total'] or 0,
-            'delivered_orders': sum(order.order_status == 'DELIVERED' for order in orders),
+            'delivered_orders': delivered_count,
             'rating_average': None,
             'rating_count': None,
             'response_rate': round(answered_questions * 100 / question_count) if question_count else None,
@@ -670,10 +696,12 @@ def public_shop_profile(request, slug):
 
 
 ORDER_LABELS = {
-    'AWAITING_PAYMENT': 'Chờ thanh toán VNPay',
-    'PENDING': 'Chờ admin xác nhận', 'COMFIRMED': 'Admin đã xác nhận',
-    'PROCESSING': 'Đang xử lý', 'SHIPPING': 'Đang giao',
-    'DELIVERED': 'Hoàn thành', 'CANCELLED': 'Đã hủy', 'RETURNED': 'Đã hoàn hàng',
+    'PENDING': 'Chờ shop xác nhận',
+    'PROCESSING': 'Đang xử lý',
+    'SHIPPING': 'Đang giao',
+    'DELIVERED': 'Chờ buyer xác nhận',
+    'COMPLETED': 'Hoàn thành',
+    'CANCELLED': 'Đã hủy',
 }
 RETURN_LABELS = {'REQUESTED': 'Chờ xử lý', 'APPROVED': 'Đã duyệt', 'REJECTED': 'Từ chối', 'REFUNDED': 'Đã hoàn tiền'}
 TITLES = {
@@ -689,16 +717,39 @@ TITLES = {
 def _orders(shop):
     if shop is None:
         return []
+    process_order_timeouts()
+    legacy_orders = Order.objects.filter(
+        order_items__shop=shop,
+    ).exclude(
+        shop_orders__shop=shop,
+    ).distinct()
+    for order in legacy_orders:
+        ensure_shop_orders(order)
+
     own_items = OrderItem.objects.filter(shop=shop).select_related('product__category')
-    queryset = Order.objects.filter(order_items__shop=shop).distinct().select_related('user', 'address').prefetch_related(
-        Prefetch('order_items', queryset=own_items, to_attr='shop_items'), 'status_history',
-    ).order_by('-created_at', '-pk')
-    rows = list(queryset)
-    for order in rows:
-        order.order_status = shop_status(order, order.shop_items)
+    queryset = ShopOrder.objects.filter(shop=shop).select_related(
+        'order__user', 'order__address',
+    ).prefetch_related(
+        Prefetch('order__order_items', queryset=own_items, to_attr='shop_items'),
+        Prefetch(
+            'history',
+            queryset=ShopOrderHistory.objects.select_related('changed_by'),
+            to_attr='shop_history',
+        ),
+        Prefetch(
+            'cancellation_requests',
+            queryset=CancellationRequest.objects.select_related('requested_by', 'resolved_by'),
+        ),
+    ).order_by('-order__created_at', '-order_id')
+    rows = []
+    for shop_order in queryset:
+        order = shop_order.order
+        order.shop_order = shop_order
+        order.order_status = shop_order.status
         order.shop_total = sum((item.subtotal for item in order.shop_items), Decimal('0'))
         order.status_label = ORDER_LABELS.get(order.order_status, order.get_order_status_display())
-        order.status_css = 'success' if order.order_status == 'DELIVERED' else 'error' if order.order_status in {'CANCELLED', 'RETURNED'} else 'info'
+        order.status_css = 'success' if order.order_status == 'COMPLETED' else 'error' if order.order_status == 'CANCELLED' else 'info'
+        rows.append(order)
     return rows
 
 
@@ -714,11 +765,11 @@ def _owned_object(queryset, identifier):
 def _revenue(orders, days):
     today = timezone.localdate()
     start = today - timedelta(days=days - 1)
-    completed = [order for order in orders if order.order_status == 'DELIVERED' and start <= timezone.localdate(order.updated_at) <= today]
+    completed = [order for order in orders if order.order_status == 'COMPLETED' and start <= timezone.localdate(order.shop_order.completed_at or order.updated_at) <= today]
     daily = defaultdict(lambda: {'amount': Decimal('0'), 'count': 0})
     categories = defaultdict(Decimal)
     for order in completed:
-        date = timezone.localdate(order.updated_at)
+        date = timezone.localdate(order.shop_order.completed_at or order.updated_at)
         daily[date]['amount'] += order.shop_total
         daily[date]['count'] += 1
         for item in order.shop_items:
@@ -759,9 +810,9 @@ def shop_page(request, page):
         'product_low': products.exclude(status='INACTIVE').filter(stock_quantity__lte=3).count(),
         'product_ok': products.filter(status='ACTIVE', stock_quantity__gt=3).count(),
         'order_total': len(orders), 'order_pending': sum(order.order_status == 'PENDING' for order in orders),
-        'order_processing': sum(order.order_status in {'COMFIRMED', 'PROCESSING'} for order in orders),
-        'order_delivered': sum(order.order_status == 'DELIVERED' for order in orders),
-        'recent_orders': orders[:5], 'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'COMFIRMED', 'PROCESSING'}][:5],
+        'order_processing': sum(order.order_status in {'PROCESSING', 'SHIPPING'} for order in orders),
+        'order_delivered': sum(order.order_status in {'DELIVERED', 'COMPLETED'} for order in orders),
+        'recent_orders': orders[:5], 'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'PROCESSING'}][:5],
         'order_statuses': [{'code': code, 'label': label, 'count': sum(order.order_status == code for order in orders)} for code, label in ORDER_LABELS.items()],
         'revenue': _revenue(orders, 30), 'top_products': products.order_by('-sold_quantity', 'pk')[:5],
     })
@@ -957,26 +1008,59 @@ def shop_order_update_status(request, order_id):
     if shop is None or shop.status != 'ACTIVE':
         return redirect('shop_dashboard')
 
-    order = get_object_or_404(
-        Order.objects.filter(order_items__shop=shop).distinct(),
-        pk=order_id,
-    )
-
+    process_order_timeouts()
+    order = get_object_or_404(Order.objects.filter(order_items__shop=shop).distinct(), pk=order_id)
+    shop_order = get_object_or_404(ShopOrder, order=order, shop=shop)
+    action = request.POST.get('action', '').strip()
     new_status = request.POST.get('new_status', '').strip()
     note = request.POST.get('note', '').strip()
     redirect_to = request.POST.get('redirect', '')
 
     try:
-        fulfill_order(
-            order.pk, shop, request.user, new_status,
-            cod_collected=request.POST.get('cod_collected') == 'yes', note=note,
-        )
+        if action in {'approve_cancellation', 'reject_cancellation'}:
+            cancellation = resolve_cancellation_request(
+                request.POST.get('cancellation_request_id', ''),
+                shop,
+                request.user,
+                action == 'approve_cancellation',
+                note,
+            )
+            if cancellation.status == 'ESCALATED':
+                messages.warning(request, 'Yêu cầu đã quá hạn và được chuyển admin xử lý.')
+            else:
+                messages.success(
+                    request,
+                    'Đã xử lý yêu cầu hủy.' if action == 'approve_cancellation'
+                    else 'Đã từ chối yêu cầu hủy; phần hàng tiếp tục được xử lý.',
+                )
+        else:
+            if action == 'accept':
+                new_status = 'PROCESSING'
+            elif action == 'reject':
+                new_status = 'CANCELLED'
+            elif action == 'handoff':
+                new_status = 'SHIPPING'
+            updated = update_shop_order(
+                order.pk, shop, request.user, new_status,
+                reason=request.POST.get('reason', '').strip(),
+                note=note,
+                carrier_name=request.POST.get('carrier_name', '').strip(),
+                tracking_code=request.POST.get('tracking_code', '').strip(),
+            )
+            if (
+                updated.status == 'CANCELLED'
+                and updated.confirmation_deadline <= timezone.now()
+                and action != 'reject'
+            ):
+                messages.warning(request, 'Hạn xác nhận đã hết; hệ thống đã tự hủy phần hàng.')
+            else:
+                messages.success(request, f'Đã cập nhật phần hàng của đơn {order.order_code}.')
     except ValidationError as error:
         messages.error(request, error.messages[0])
         return redirect('shop_orders')
-
-    label = ORDER_LABELS.get(new_status, new_status)
-    messages.success(request, f'Đơn {order.order_code} đã chuyển sang "{label}".')
+    except DatabaseError:
+        messages.error(request, 'Chưa cập nhật được đơn hàng. Vui lòng thử lại.')
+        return redirect('shop_orders')
 
     if redirect_to == 'fulfillment':
         return redirect('shop_fulfillment')

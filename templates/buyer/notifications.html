@@ -3,28 +3,51 @@
 {% block content %}
 <div class="page-head">
     <div>
-        <h1>
-            Thông báo
-        </h1>
-        <p>
-            Mở thông báo để xem đúng đối tượng liên quan.
-        </p>
+        <h1>Thông báo</h1>
+        <p>{{ notification_total }} thông báo · {{ unread_notification_count }} chưa đọc.</p>
     </div>
-    <div class="cluster">
-        <button type="button" class="btn btn--secondary" data-id="" disabled="">
-            Đánh dấu tất cả đã đọc
-        </button>
-    </div>
+    {% if unread_notification_count %}
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn--secondary">Đánh dấu tất cả đã đọc</button>
+    </form>
+    {% endif %}
 </div>
-<section class="empty">
-    <h2>
-        Chưa có thông báo
-    </h2>
-    <p>
-        Thông báo xuất hiện khi gửi yêu cầu, thanh toán hoặc nhận phản hồi.
-    </p>
-    <a class="btn btn--secondary" href="/buyer/search/">
-        Tiếp tục mua
-    </a>
+<section class="panel panel--padded">
+    <ol class="timeline notification-timeline">
+        {% for note in notifications %}
+        <li class="timeline__item{% if note.is_read %} is-done{% else %} is-current{% endif %}">
+            <span class="timeline__dot" aria-hidden="true"></span>
+            <div class="timeline__content">
+                <strong>{{ note.title }}</strong>
+                <small>{{ note.created_at|date:'d/m/Y H:i' }}{% if not note.is_read %} · Chưa đọc{% endif %}</small>
+                <p>{{ note.message }}</p>
+                {% if not note.is_read %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="notification_id" value="{{ note.pk }}">
+                    <button class="btn btn--secondary" type="submit">Đánh dấu đã đọc</button>
+                </form>
+                {% endif %}
+            </div>
+        </li>
+        {% empty %}
+        <li class="timeline__item">
+            <span class="timeline__dot" aria-hidden="true"></span>
+            <div class="timeline__content">
+                <strong>Chưa có thông báo</strong>
+                <p>Các cập nhật về đơn hàng và hoạt động của bạn sẽ xuất hiện tại đây.</p>
+                <a class="btn btn--secondary" href="{% url 'buyer_search' %}">Tiếp tục mua</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% if notifications_page.has_other_pages %}
+    <nav class="pagination" aria-label="Phân trang thông báo">
+        {% if notifications_page.has_previous %}<a class="btn btn--secondary" href="?page={{ notifications_page.previous_page_number }}">Trang trước</a>{% endif %}
+        <span>Trang {{ notifications_page.number }} / {{ notifications_page.paginator.num_pages }}</span>
+        {% if notifications_page.has_next %}<a class="btn btn--secondary" href="?page={{ notifications_page.next_page_number }}">Trang sau</a>{% endif %}
+    </nav>
+    {% endif %}
 </section>
 {% endblock %}

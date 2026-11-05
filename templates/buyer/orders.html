@@ -9,7 +9,7 @@
 </form>
 {% for order in orders_page %}
 <article class="panel panel--padded list-row">
-    <div><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p></div>
+    <div><h2>{{ order.order_code }}</h2><p>{{ order.created_at|date:'d/m/Y H:i' }} · {{ order.total_amount|vnd }} ₫</p><p>{{ order.get_order_status_display }} · {{ order.get_payment_status_display }}</p>{% if order.has_partial_cancellation %}<p>Đã hủy một phần</p>{% endif %}</div>
     <a class="btn btn--secondary" href="{% url 'buyer_order' %}?id={{ order.order_code }}">Xem đơn</a>
 </article>
 {% empty %}<section class="empty"><h2>Chưa có đơn hàng</h2><a href="{% url 'buyer_cart' %}">Về giỏ hàng</a></section>{% endfor %}

@@ -379,24 +379,33 @@ Trang chủ, danh mục, tìm kiếm/lọc theo giá – hãng – shop – thô
 Chi tiết sản phẩm + hỏi đáp nhiều lượt giữa buyer và shop.
 So sánh tối đa 4 sản phẩm cùng danh mục, lưu trong session, có tray so sánh.
 Giỏ hàng DB: thêm/sửa/xóa, kiểm tra tồn kho; nếu chưa đăng nhập thì lưu sản phẩm chờ và tự thêm sau khi login.
-Đặt hàng: chọn COD hoặc VNPay, tạo đơn trong transaction, trừ tồn kho, chống tạo trùng bằng checkout_token.
-Xem danh sách/chi tiết đơn hàng, lịch sử trạng thái.
+Đặt hàng COD: tạo đơn trong transaction, trừ tồn kho bằng cập nhật có điều kiện, chống tạo trùng bằng checkout_token; đơn được chia phần hàng theo shop.
+Xem trạng thái từng shop, yêu cầu hủy, lịch sử xử lý và xác nhận đã nhận hàng.
 Người bán
 
 Wizard đăng ký 4 bước: tài khoản → xác thực email → hồ sơ shop → giấy tờ pháp lý.
 Shop ở trạng thái PENDING chờ admin duyệt; được duyệt thì nhận notification + email.
 Dashboard shop: sản phẩm, tồn kho, đơn hàng, giao nhận, doanh thu, câu hỏi, hậu mãi.
 CRUD sản phẩm, ẩn/hiện, cập nhật tồn kho, trả lời câu hỏi, duyệt/từ chối đổi trả.
-Cập nhật trạng thái đơn theo đúng thứ tự: COMFIRMED → PROCESSING → SHIPPING → DELIVERED; đơn COD phải xác nhận đã thu tiền.
+Quản lý riêng phần hàng của shop: xác nhận/từ chối trong 12 giờ, bàn giao cho hãng vận chuyển kèm mã vận đơn, xử lý yêu cầu hủy; phần không phản hồi tự hủy và hoàn tồn kho.
 Quản trị
 
 Duyệt/tạm ngưng shop.
-Xác nhận đơn hàng, xem danh sách đơn, quản lý sản phẩm (ẩn/hiện), khóa/mở khóa người dùng.
+Chỉ xem/tra cứu đơn; xử lý yêu cầu hủy được shop chuyển cấp, quản lý sản phẩm (ẩn/hiện), khóa/mở khóa người dùng.
 Dashboard doanh thu 12 tháng + top sản phẩm + biểu đồ trạng thái đơn.
 Thanh toán
 
-COD: đơn PENDING → admin xác nhận → shop xử lý → giao → thu tiền → cập nhật PAID, tăng sold_quantity.
-VNPay: tạo URL có chữ ký HMAC-SHA512, xử lý IPN/return, xác thực số tiền/mã giao dịch; thất bại thì hủy đơn và hoàn tồn kho.
+Mọi đơn hiện vào trạng thái chờ shop xác nhận; trạng thái thanh toán được lưu riêng. Giao diện hiện chỉ cho phép COD; VNPay chưa được kích hoạt.
+Đơn nhiều shop tổng hợp theo phần hàng hoạt động chậm nhất; buyer hủy phần chưa xác nhận ngay hoặc gửi yêu cầu riêng cho shop đã nhận đơn.
+Hãng vận chuyển gọi webhook có chữ ký để xác nhận giao thành công. Buyer có thể xác nhận đã nhận; nếu không, hệ thống tự hoàn thành sau 3 ngày.
+
+Để chạy các hạn 12 giờ (xác nhận của shop và phản hồi yêu cầu hủy) và tự hoàn thành 3 ngày, hãy lập lịch chạy lệnh sau mỗi phút:
+
+```powershell
+python manage.py process_order_timeouts
+```
+
+Webhook giao hàng: `POST /carrier/webhooks/delivery/`. Cấu hình `CARRIER_WEBHOOK_SECRET` bằng một chuỗi ngẫu nhiên đủ mạnh trong môi trường; gửi JSON gồm `provider`, `event_id`, `tracking_code`, `status: "DELIVERED"` cùng hai header `X-PCMatch-Timestamp` (Unix time) và `X-PCMatch-Signature`. Chữ ký là hex HMAC-SHA256 của `timestamp + "." + raw_request_body`; webhook chỉ hợp lệ trong vòng 5 phút. `event_id` được dùng để loại sự kiện gửi lặp.
 4. Phần mới ở mức khung / chưa triển khai
 recommendations/: chỉ có model (ProductRecommendation, FrequentItemset, AssociationRule) và đăng ký admin — chưa có thuật toán/giao diện gợi ý.
 interactions/: có bảng lưu view/tương tác nhưng chưa được ghi nhận từ view sản phẩm.
@@ -413,9 +422,7 @@ Staff: transaction, return, categories, review, complain, authorization, profile
 Lưu ý: db.sqlite3 đang có thay đổi chưa commit (git status báo M db.sqlite3).
 
 6. Điểm cần lưu ý
-Cấu hình còn ở mức dev: SECRET_KEY hard-code, DEBUG=True, ALLOWED_HOSTS=[], email dùng console backend, VNPay lấy credential từ biến môi trường (nếu chưa set thì chỉ dùng COD).
-Trong PCMatch/urls.py đang khai báo trùng route staff/logout/ (dòng 51 và 61) — nên gộp lại.
-Trạng thái COMFIRMED bị viết sai chính tả nhưng đã ăn vào DB/logic; nếu sửa phải làm migration + đổi đồng loạt.
+Cấu hình còn ở mức dev: SECRET_KEY hard-code, DEBUG=True, email/VNPay dùng biến môi trường.
 Nên bổ sung gợi ý sản phẩm/ghi nhận interaction nếu mục tiêu đồ án là “recommendation system”.
 README.md đã mô tả khá đầy đủ luồng và cách kiểm thử — nên đọc kèm khi báo cáo.
 7. Cách chạy
