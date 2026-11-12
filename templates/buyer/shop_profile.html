@@ -1,0 +1,54 @@
+{% extends 'includes/buyer_base.html' %}
+{% load cart_prices %}
+{% block title %}{{ shop.shop_name }} — PCMatch{% endblock %}
+{% block body_class %}catalog-page{% endblock %}
+{% block content %}
+<section class="public-shop-hero">
+    {% if shop.cover_image %}<img class="public-shop-hero__cover" src="{{ shop.cover_image.url }}" alt="Ảnh bìa {{ shop.shop_name }}">{% endif %}
+    <div class="public-shop-hero__identity">
+        {% if shop.logo %}<img class="public-shop-hero__logo" src="{{ shop.logo.url }}" alt="Logo {{ shop.shop_name }}">{% endif %}
+        <div>
+            <h1>{{ shop.shop_name }}</h1>
+            {% if shop.identity_verified %}<span class="shop-verified-badge">Shop uy tín · Đã xác minh</span>{% endif %}
+            {% if shop.business_categories %}<p>{{ shop.business_categories }}</p>{% endif %}
+        </div>
+    </div>
+</section>
+<section class="public-shop-details">
+    <div>
+        <h2>Giới thiệu shop</h2>
+        <p>{{ shop.description|default:'Shop chưa cập nhật phần giới thiệu.'|linebreaksbr }}</p>
+        <dl class="public-shop-facts">
+            {% if shop.address or shop.ward or shop.district or shop.province %}
+            <div><dt>Địa chỉ</dt><dd>{% if shop.address %}{{ shop.address }}{% endif %}{% if shop.ward %}, {{ shop.ward }}{% endif %}{% if shop.district %}, {{ shop.district }}{% endif %}{% if shop.province %}, {{ shop.province }}{% endif %}</dd></div>
+            {% endif %}
+            {% if shop.phone %}<div><dt>Điện thoại</dt><dd>{{ shop.phone }} · {% if shop.contact_phone_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</dd></div>{% endif %}
+            {% if shop.contact_email %}<div><dt>Email</dt><dd>{{ shop.contact_email }} · {% if shop.contact_email_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</dd></div>{% endif %}
+            {% if shop.working_hours %}<div><dt>Giờ làm việc</dt><dd>{{ shop.working_hours }}</dd></div>{% endif %}
+            <div><dt>Tham gia PCMatch</dt><dd>{{ shop.created_at|date:'d/m/Y' }}</dd></div>
+        </dl>
+    </div>
+    <aside>
+        {% if shop.warranty_policy %}<h2>Bảo hành</h2><p>{{ shop.warranty_policy|linebreaksbr }}</p>{% endif %}
+        {% if shop.return_policy %}<h2>Đổi trả</h2><p>{{ shop.return_policy|linebreaksbr }}</p>{% endif %}
+    </aside>
+</section>
+<section aria-labelledby="public-shop-products">
+    <div class="section-heading"><h2 id="public-shop-products">Sản phẩm đang bán</h2><span>{{ product_count }} sản phẩm</span></div>
+    <div class="catalog-grid">
+        {% for product in products %}
+        <article class="catalog-card">
+            <a href="{% url 'buyer_product_detail' product.pk %}" aria-label="{{ product.product_name }}">
+                <div class="home-media">{% if product.thumbnail %}<img src="{{ product.thumbnail.url }}" alt="{{ product.product_name }}" width="480" height="320" loading="lazy">{% else %}<span>Chưa có ảnh sản phẩm</span>{% endif %}</div>
+            </a>
+            <div class="catalog-body">
+                <p>{{ product.category.category_name }}</p>
+                <h3><a href="{% url 'buyer_product_detail' product.pk %}">{{ product.product_name }}</a></h3>
+                <div class="catalog-price"><small>Giá bán</small><strong>{{ product.price|vnd }} ₫</strong><span>Đã bán {{ product.sold_quantity }}</span></div>
+                <a class="btn btn--primary" href="{% url 'buyer_product_detail' product.pk %}">Xem sản phẩm</a>
+            </div>
+        </article>
+        {% empty %}<p class="muted">Shop chưa có sản phẩm đang bán.</p>{% endfor %}
+    </div>
+</section>
+{% endblock %}

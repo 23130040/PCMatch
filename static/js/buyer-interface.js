@@ -1,6 +1,32 @@
 // UI only: all content is rendered by Django/HTML and business forms submit normally.
 document.documentElement.classList.add('interface-ready');
 
+document.querySelectorAll('.product-detail-cart-form input[name="quantity"]').forEach(input => {
+    input.addEventListener('beforeinput', event => {
+        if (event.data && /[^0-9]/.test(event.data)) event.preventDefault();
+    });
+    input.addEventListener('input', () => {
+        const cursor = input.selectionStart;
+        const valueBeforeCursor = cursor === null ? '' : input.value.slice(0, cursor);
+        const sanitizedValue = input.value.replace(/[^0-9]/g, '');
+        if (sanitizedValue !== input.value) {
+            input.value = sanitizedValue;
+            if (cursor !== null) {
+                const sanitizedCursor = valueBeforeCursor.replace(/[^0-9]/g, '').length;
+                input.setSelectionRange(sanitizedCursor, sanitizedCursor);
+            }
+        }
+        const quantity = Number(input.value);
+        const min = Number(input.min);
+        const max = Number(input.max);
+        input.setCustomValidity(
+            input.value && (quantity < min || quantity > max)
+                ? `Số lượng phải từ ${min} đến ${max}.`
+                : ''
+        );
+    });
+});
+
 const header = document.querySelector('.buyer-header');
 const nav = document.querySelector('#market-nav');
 const dock = document.querySelector('.header-nav-strip');

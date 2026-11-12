@@ -98,51 +98,99 @@ it does not grant staff access or create a Shop.
 Buyer registration requires a six-digit email OTP. The code expires after three
 minutes; users can request a replacement immediately, and five incorrect entries
 require entering the email again. The account can sign in after successful
-verification. OTP mail uses SMTP (it is not printed to the terminal), configured
-through environment variables. The default SMTP settings are already configured
-for `pcmatchcomputer@gmail.com`. For Gmail, use an App Password rather than the
-regular account password; enter it in the current PowerShell session without
-adding it to source control:
+verification. OTP and password-change mail use SMTP (credentials are never printed to the
+terminal), configured in the local `.env` file. The default SMTP settings are
+already configured for `pcmatchcomputer@gmail.com`. For Gmail, use an App
+Password rather than the regular account password. Put it in the untracked
+`.env` file, without spaces, and restart Django so it loads the updated setting:
 
-```powershell
-$env:EMAIL_HOST_PASSWORD = "PASTE_GMAIL_APP_PASSWORD_HERE"
-$env:SHOP_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
-.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+```dotenv
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=true
+EMAIL_HOST_USER=pcmatchcomputer@gmail.com
+EMAIL_HOST_PASSWORD=PASTE_GMAIL_APP_PASSWORD_HERE
+DEFAULT_FROM_EMAIL=pcmatchcomputer@gmail.com
 ```
 
-Do not commit the App Password or share it in chat. Both buyer OTP and seller
-activation email use Gmail SMTP. Seller activation links use `SHOP_PUBLIC_BASE_URL`;
-set it to the public HTTPS domain in deployed environments.
+Do not commit the App Password or share it in chat. A running server does not
+reload `.env`; stop it and start it again after changing mail settings. Both
+buyer OTP and seller activation email use Gmail SMTP. Seller activation links
+use `SHOP_PUBLIC_BASE_URL`; set it to the public HTTPS domain in deployed
+environments.
 
 ### Facebook sign-in configuration
 
-Create a Meta app in Meta for Developers, add the Facebook Login product, and
-allow the exact OAuth redirect URI provided by your HTTPS tunnel, ending in
-`/auth/facebook/callback/` (for example,
-`https://example-tunnel.ngrok-free.app/auth/facebook/callback/`). Facebook does
-not accept the plain HTTP `127.0.0.1` callback for this OAuth flow. Use the
-matching HTTPS URI and domain in production. The login requests `email` and
-`public_profile`; accounts without an accessible email cannot sign in. In
-development mode, add test users or app roles in Meta before testing.
+1. Open [Meta for Developers](https://developers.facebook.com/) and create an
+   app. Choose the consumer app/use case that offers Facebook Login, then add
+   the **Facebook Login** product and choose **Web** as its platform.
+2. In Facebook Login's **Settings**, enable client OAuth login and web OAuth
+   login. Add the exact public HTTPS callback to **Valid OAuth Redirect URIs**,
+   including its trailing slash, for example
+   `https://example-tunnel.ngrok-free.app/auth/facebook/callback/`. Add the
+   hostname (without a path) to **App Domains** and configure the app's contact
+   email and privacy policy/data-deletion information in the app settings.
+3. Keep the app in **Development** mode while building. In **App roles**, add
+   each tester as a Developer/Tester (or create a test user); invitees must
+   accept the invitation. Only app-role accounts and test users can use the
+   login while the app is in Development mode. Use an account that grants the
+   requested `email` and `public_profile` permissions.
+4. For sign-in by ordinary users, switch the app to **Live** only after
+   completing Meta's dashboard requirements. Submit any permission or business
+   verification review Meta requires. Do not try to bypass Development-mode,
+   review, or account restrictions; the app must meet Meta's requirements.
 
-For local development, copy `.env.example` to `.env` and fill in the Facebook
-app ID, secret, callback URI, and allowed host there. Django loads `.env`
-automatically when it starts. Keep `.env` private; it is ignored by Git and
-must never be committed or shared.
+Facebook OAuth requires a public HTTPS callback; the callback cannot be
+`https://127.0.0.1:8000/...`. For local development this project uses
+Cloudflare Quick Tunnel to forward HTTPS traffic to Django on localhost. The
+Quick Tunnel hostname is temporary, so create the tunnel first and copy the
+hostname it prints into both Meta and `.env`.
 
-Then start Django normally:
+1. Copy `.env.example` to `.env`. Fill in `FACEBOOK_APP_ID` and
+   `FACEBOOK_APP_SECRET` from **App settings → Basic**. The app secret is
+   server-only; keep `.env` private and never commit or share it.
+2. In PowerShell terminal 1, start Django on loopback:
 
-```powershell
-.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
-```
+   ```powershell
+   .venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+   ```
 
-The callback URI must exactly match a URI registered in Meta. A Cloudflare
-Quick Tunnel hostname can change when a new tunnel is created; saving that
-temporary hostname in `.env` does not make it permanent. To avoid updating Meta
-after a tunnel restart, use a fixed hostname (such as a Cloudflare Named Tunnel
-on a domain you control) and keep that same hostname in `.env` and Meta. Open
-the application through the HTTPS tunnel before clicking Facebook; starting
-at localhost and returning to a tunnel can lose the OAuth session/state.
+3. In PowerShell terminal 2, start the HTTPS tunnel (install `cloudflared`
+   first if the command is not available):
+
+   ```powershell
+   cloudflared tunnel --url http://127.0.0.1:8000
+   ```
+
+   Wait for the `https://....trycloudflare.com` URL in the output. Keep both
+   terminals running. Do not use the HTTP URL or visit the app at localhost
+   during the Facebook login flow.
+4. Put the tunnel hostname (without `https://` or a path) in `.env`. For
+   example, if the tunnel prints `https://sample-name.trycloudflare.com`, set:
+
+   ```dotenv
+   FACEBOOK_REDIRECT_URI=https://sample-name.trycloudflare.com/auth/facebook/callback/
+   ALLOWED_HOSTS=127.0.0.1,localhost,sample-name.trycloudflare.com
+   CSRF_TRUSTED_ORIGINS=https://sample-name.trycloudflare.com
+   ```
+
+   If also enabling Google sign-in, set
+   `GOOGLE_REDIRECT_URI=https://sample-name.trycloudflare.com/auth/google/callback/`.
+   Restart Django after editing `.env` so it loads the new values.
+5. In Meta Facebook Login **Settings**, add the exact
+   `FACEBOOK_REDIRECT_URI` value to **Valid OAuth Redirect URIs**. Add
+   `sample-name.trycloudflare.com` (hostname only) to **App Domains**.
+6. Open `https://sample-name.trycloudflare.com/auth/login/` in the browser and
+   click Facebook. Use the same hostname from the start through callback so
+   the session cookie and OAuth `state` remain available.
+
+The callback must match Meta exactly, including HTTPS and its trailing slash.
+If the Quick Tunnel is restarted, Cloudflare normally assigns another
+hostname: update `.env`, Meta's redirect URI and App Domains, then restart
+Django. For a stable hostname, use a named Cloudflare Tunnel on a domain you
+control. Django trusts the forwarded HTTPS scheme and the tunnel origin for
+CSRF only as configured above; keep the local Django server bound to
+`127.0.0.1` and do not expose its development port directly.
 
 The secret is used only by the server during the code exchange; it is not
 rendered into the page or sent to the browser. Facebook identity links are
@@ -151,6 +199,22 @@ active, email-verified buyer account with the same email, or creates a buyer
 account when no matching email exists. Seller/admin accounts cannot sign in
 through the buyer portal. Canceling or denying Facebook permissions returns
 the user to the login page without creating or changing an account.
+
+### Google sign-in configuration
+
+Create a Google OAuth client of type **Web application** in Google Cloud
+Console. Add the exact HTTPS callback URL to **Authorized redirect URIs**:
+`https://YOUR-FIXED-HOST/auth/google/callback/`. If the OAuth consent screen is
+in testing mode, add the Google accounts used for testing as test users.
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in
+`.env`. The callback URI must exactly match the URI registered with Google.
+Google sign-in requests `openid`, `email`, and `profile`, and only accepts a
+Google identity with a verified email. A first-time sign-in links to one active,
+email-verified buyer account with the same email, or creates a buyer account
+when no matching email exists. Seller/admin accounts cannot sign in through
+the buyer portal. Google identity links are stored in
+`users.SocialAccount`; the client secret remains server-side.
 
 ## Seller Onboarding
 
@@ -333,24 +397,33 @@ Trang chủ, danh mục, tìm kiếm/lọc theo giá – hãng – shop – thô
 Chi tiết sản phẩm + hỏi đáp nhiều lượt giữa buyer và shop.
 So sánh tối đa 4 sản phẩm cùng danh mục, lưu trong session, có tray so sánh.
 Giỏ hàng DB: thêm/sửa/xóa, kiểm tra tồn kho; nếu chưa đăng nhập thì lưu sản phẩm chờ và tự thêm sau khi login.
-Đặt hàng: chọn COD hoặc VNPay, tạo đơn trong transaction, trừ tồn kho, chống tạo trùng bằng checkout_token.
-Xem danh sách/chi tiết đơn hàng, lịch sử trạng thái.
+Đặt hàng COD: tạo đơn trong transaction, trừ tồn kho bằng cập nhật có điều kiện, chống tạo trùng bằng checkout_token; đơn được chia phần hàng theo shop.
+Xem trạng thái từng shop, yêu cầu hủy, lịch sử xử lý và xác nhận đã nhận hàng.
 Người bán
 
 Wizard đăng ký 4 bước: tài khoản → xác thực email → hồ sơ shop → giấy tờ pháp lý.
 Shop ở trạng thái PENDING chờ admin duyệt; được duyệt thì nhận notification + email.
 Dashboard shop: sản phẩm, tồn kho, đơn hàng, giao nhận, doanh thu, câu hỏi, hậu mãi.
 CRUD sản phẩm, ẩn/hiện, cập nhật tồn kho, trả lời câu hỏi, duyệt/từ chối đổi trả.
-Cập nhật trạng thái đơn theo đúng thứ tự: COMFIRMED → PROCESSING → SHIPPING → DELIVERED; đơn COD phải xác nhận đã thu tiền.
+Quản lý riêng phần hàng của shop: xác nhận/từ chối trong 12 giờ, bàn giao cho hãng vận chuyển kèm mã vận đơn, xử lý yêu cầu hủy; phần không phản hồi tự hủy và hoàn tồn kho.
 Quản trị
 
 Duyệt/tạm ngưng shop.
-Xác nhận đơn hàng, xem danh sách đơn, quản lý sản phẩm (ẩn/hiện), khóa/mở khóa người dùng.
+Chỉ xem/tra cứu đơn; xử lý yêu cầu hủy được shop chuyển cấp, quản lý sản phẩm (ẩn/hiện), khóa/mở khóa người dùng.
 Dashboard doanh thu 12 tháng + top sản phẩm + biểu đồ trạng thái đơn.
 Thanh toán
 
-COD: đơn PENDING → admin xác nhận → shop xử lý → giao → thu tiền → cập nhật PAID, tăng sold_quantity.
-VNPay: tạo URL có chữ ký HMAC-SHA512, xử lý IPN/return, xác thực số tiền/mã giao dịch; thất bại thì hủy đơn và hoàn tồn kho.
+Mọi đơn hiện vào trạng thái chờ shop xác nhận; trạng thái thanh toán được lưu riêng. Giao diện hiện chỉ cho phép COD; VNPay chưa được kích hoạt.
+Đơn nhiều shop tổng hợp theo phần hàng hoạt động chậm nhất; buyer hủy phần chưa xác nhận ngay hoặc gửi yêu cầu riêng cho shop đã nhận đơn.
+Hãng vận chuyển gọi webhook có chữ ký để xác nhận giao thành công. Buyer có thể xác nhận đã nhận; nếu không, hệ thống tự hoàn thành sau 3 ngày.
+
+Để chạy các hạn 12 giờ (xác nhận của shop và phản hồi yêu cầu hủy) và tự hoàn thành 3 ngày, hãy lập lịch chạy lệnh sau mỗi phút:
+
+```powershell
+python manage.py process_order_timeouts
+```
+
+Webhook giao hàng: `POST /carrier/webhooks/delivery/`. Cấu hình `CARRIER_WEBHOOK_SECRET` bằng một chuỗi ngẫu nhiên đủ mạnh trong môi trường; gửi JSON gồm `provider`, `event_id`, `tracking_code`, `status: "DELIVERED"` cùng hai header `X-PCMatch-Timestamp` (Unix time) và `X-PCMatch-Signature`. Chữ ký là hex HMAC-SHA256 của `timestamp + "." + raw_request_body`; webhook chỉ hợp lệ trong vòng 5 phút. `event_id` được dùng để loại sự kiện gửi lặp.
 4. Phần mới ở mức khung / chưa triển khai
 recommendations/: chỉ có model (ProductRecommendation, FrequentItemset, AssociationRule) và đăng ký admin — chưa có thuật toán/giao diện gợi ý.
 interactions/: có bảng lưu view/tương tác nhưng chưa được ghi nhận từ view sản phẩm.
@@ -367,9 +440,7 @@ Staff: transaction, return, categories, review, complain, authorization, profile
 Lưu ý: db.sqlite3 đang có thay đổi chưa commit (git status báo M db.sqlite3).
 
 6. Điểm cần lưu ý
-Cấu hình còn ở mức dev: SECRET_KEY hard-code, DEBUG=True, ALLOWED_HOSTS=[], email dùng console backend, VNPay lấy credential từ biến môi trường (nếu chưa set thì chỉ dùng COD).
-Trong PCMatch/urls.py đang khai báo trùng route staff/logout/ (dòng 51 và 61) — nên gộp lại.
-Trạng thái COMFIRMED bị viết sai chính tả nhưng đã ăn vào DB/logic; nếu sửa phải làm migration + đổi đồng loạt.
+Cấu hình còn ở mức dev: SECRET_KEY hard-code, DEBUG=True, email/VNPay dùng biến môi trường.
 Nên bổ sung gợi ý sản phẩm/ghi nhận interaction nếu mục tiêu đồ án là “recommendation system”.
 README.md đã mô tả khá đầy đủ luồng và cách kiểm thử — nên đọc kèm khi báo cáo.
 7. Cách chạy

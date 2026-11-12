@@ -23,7 +23,8 @@
                                     <h3><a href="{% url 'buyer_product_detail' item.product_id %}">{{ item.product.product_name }}</a></h3>
                                     <p>{{ item.product.price|vnd }} ₫ / sản phẩm</p>
                                     <p class="muted">Còn {{ item.product.stock_quantity }} sản phẩm</p>
-                                    {% if not item.available %}<p class="message message--error" role="alert">Sản phẩm đã hết hàng hoặc tạm ngừng bán.</p>
+                                    {% if item.product.shop.status != 'ACTIVE' %}<p class="message message--error" role="alert">Shop chưa được duyệt hoặc đang tạm ngừng; hiện không nhận đơn hàng.</p>
+                                    {% elif not item.available %}<p class="message message--error" role="alert">Sản phẩm đã hết hàng hoặc tạm ngừng bán.</p>
                                     {% elif item.quantity > item.product.stock_quantity %}<p class="message message--error" role="alert">Số lượng trong giỏ vượt tồn kho. Vui lòng giảm số lượng.</p>{% endif %}
                                 </div>
                             </div>
@@ -45,7 +46,11 @@
             <h2>Tạm tính</h2>
             <dl class="money-summary"><div><dt>Số sản phẩm</dt><dd>{{ item_count }}</dd></div><div class="total"><dt>Tiền hàng</dt><dd>{{ subtotal|vnd }} ₫</dd></div></dl>
             <p>Chưa bao gồm phí vận chuyển và ưu đãi. Giỏ hàng không giữ tồn kho.</p>
-            <a class="btn btn--primary" href="{% url 'buyer_checkout' %}">Tiến hành thanh toán</a>
+            {% if checkout_available %}
+                <a class="btn btn--primary" href="{% url 'buyer_checkout' %}">Tiến hành thanh toán</a>
+            {% else %}
+                <p class="message message--error" role="alert">Hãy xóa hoặc cập nhật các sản phẩm không khả dụng trước khi thanh toán.</p>
+            {% endif %}
         </aside>
     </div>
 {% else %}

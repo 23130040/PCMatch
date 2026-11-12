@@ -1,0 +1,134 @@
+{% extends 'includes/shop/base.html' %}
+{% block content %}
+<section class="sa-page-heading">
+    <div>
+        <div class="sa-breadcrumbs"><a href="{% url 'shop_dashboard' %}">Kênh bán</a><span>/</span><span>Cài đặt</span></div>
+        <h1>Trang cá nhân</h1>
+        <p>Quản lý thông tin công khai, hồ sơ pháp lý, thanh toán và vận chuyển của shop.</p>
+    </div>
+    {% if shop.status == 'ACTIVE' %}
+    <div class="sa-page-actions"><a class="btn btn--secondary" href="{% url 'public_shop_profile' shop.slug %}" target="_blank" rel="noopener">Xem trang công khai</a></div>
+    {% endif %}
+</section>
+
+<section class="shop-settings-status" aria-label="Trạng thái shop">
+    <div>
+        <strong>Trạng thái hồ sơ:</strong>
+        {% if shop.status == 'ACTIVE' %}Đã duyệt{% elif shop.status == 'PENDING' %}Chờ duyệt{% elif shop.status == 'REJECTED' %}Bị từ chối{% else %}Bị khóa / tạm ngưng{% endif %}
+        <span class="shop-verified-badge">{% if shop.identity_verified %}Shop uy tín · Đã xác minh danh tính{% else %}Chưa xác minh danh tính{% endif %}</span>
+    </div>
+    {% if shop.admin_note %}<p><strong>Ghi chú của quản trị viên:</strong> {{ shop.admin_note }}</p>{% endif %}
+    <small>Trạng thái và xác minh do quản trị viên cập nhật, shop không thể tự sửa.</small>
+</section>
+
+<section class="shop-profile-stats" aria-label="Thống kê shop">
+    <article><span>Đánh giá</span><strong>{% if stats.rating_average != None %}{{ stats.rating_average }} / 5{% else %}Chưa có{% endif %}</strong><small>{% if stats.rating_count != None %}{{ stats.rating_count }} lượt{% else %}Hệ thống chưa có dữ liệu đánh giá{% endif %}</small></article>
+    <article><span>Sản phẩm</span><strong>{{ stats.product_count }}</strong><small>{{ stats.sold_quantity }} sản phẩm đã bán</small></article>
+    <article><span>Đơn hoàn thành</span><strong>{{ stats.delivered_orders }}</strong><small>Đơn của shop đã giao</small></article>
+    <article><span>Trả lời câu hỏi</span><strong>{% if stats.response_rate != None %}{{ stats.response_rate }}%{% else %}Chưa có{% endif %}</strong><small>Tỷ lệ trả lời câu hỏi sản phẩm; chưa có hệ thống chat</small></article>
+    <article><span>Tỷ lệ hủy</span><strong>{% if stats.cancel_rate != None %}{{ stats.cancel_rate }}%{% else %}Chưa có{% endif %}</strong><small>{% if stats.cancel_rate != None %}Tính trên các đơn của shop{% else %}Chưa có đơn hàng{% endif %}</small></article>
+    <article><span>Tỷ lệ hoàn</span><strong>{% if stats.return_rate != None %}{{ stats.return_rate }}%{% else %}Chưa có{% endif %}</strong><small>{% if stats.return_rate != None %}Tính trên các đơn của shop{% else %}Chưa có đơn hàng{% endif %}</small></article>
+</section>
+
+<section class="shop-settings-card">
+    <h2>Thông tin tài khoản chủ shop</h2>
+    <p class="shop-settings-hint">Email tài khoản không thể đổi tại đây. Khi đổi số điện thoại, trạng thái xác minh sẽ được đặt lại.</p>
+    <form method="post" enctype="multipart/form-data" class="shop-profile-form">
+        {% csrf_token %}
+        <input type="hidden" name="profile_section" value="account">
+        {% if account_form.non_field_errors %}<div class="message message--error" role="alert">{{ account_form.non_field_errors }}</div>{% endif %}
+        {% if request.user.avatar %}
+        <img src="{{ request.user.avatar.url }}" alt="Ảnh đại diện chủ shop" width="96" height="96" class="account-avatar">
+        {% endif %}
+        <div class="shop-settings-grid">
+            {% include 'includes/shop/profile_field.html' with field=account_form.avatar %}
+            {% include 'includes/shop/profile_field.html' with field=account_form.full_name %}
+            {% include 'includes/shop/profile_field.html' with field=account_form.phone %}
+            <label class="field">
+                <span>Email tài khoản</span>
+                <input type="email" value="{{ owner_email }}" disabled>
+                <small>{% if email_verified %}Đã xác thực{% else %}Chưa xác thực{% endif %}</small>
+            </label>
+        </div>
+        <p class="shop-settings-hint">Trạng thái số điện thoại: {% if phone_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</p>
+        <div class="shop-profile-form__actions">
+            <a class="btn btn--secondary" href="{% url 'shop_profile_settings' %}">Hủy thay đổi</a>
+            <button class="btn btn--primary" type="submit">Lưu thông tin tài khoản</button>
+        </div>
+    </form>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="shop-profile-form">
+    {% csrf_token %}
+    <input type="hidden" name="profile_section" value="shop">
+    {% if form.non_field_errors %}<div class="message message--error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <section class="shop-settings-card">
+        <h2>1. Thông tin shop công khai</h2>
+        <p class="shop-settings-hint">Thông tin này xuất hiện trên trang giới thiệu shop. Ngày tham gia được hệ thống lấy tự động.</p>
+        <div class="shop-settings-grid">
+            {% include 'includes/shop/profile_field.html' with field=form.shop_name %}
+            {% include 'includes/shop/profile_field.html' with field=form.slug %}
+            {% include 'includes/shop/profile_field.html' with field=form.logo %}
+            {% include 'includes/shop/profile_field.html' with field=form.cover_image %}
+            {% include 'includes/shop/profile_field.html' with field=form.description %}
+            {% include 'includes/shop/profile_field.html' with field=form.business_categories %}
+            {% include 'includes/shop/profile_field.html' with field=form.address %}
+            {% include 'includes/shop/profile_field.html' with field=form.province %}
+            {% include 'includes/shop/profile_field.html' with field=form.district %}
+            {% include 'includes/shop/profile_field.html' with field=form.ward %}
+            {% include 'includes/shop/profile_field.html' with field=form.phone %}
+            {% include 'includes/shop/profile_field.html' with field=form.contact_email %}
+            <p class="shop-settings-hint">Xác minh liên hệ: điện thoại {% if shop.contact_phone_verified %}đã xác minh{% else %}chưa xác minh{% endif %}; email {% if shop.contact_email_verified %}đã xác minh{% else %}chưa xác minh{% endif %}.</p>
+            {% include 'includes/shop/profile_field.html' with field=form.working_hours %}
+            {% include 'includes/shop/profile_field.html' with field=form.warranty_policy %}
+            {% include 'includes/shop/profile_field.html' with field=form.return_policy %}
+        </div>
+    </section>
+
+    <section class="shop-settings-card">
+        <h2>2. Thông tin chủ shop và pháp lý</h2>
+        <p class="shop-settings-hint">Chỉ chủ shop và quản trị viên được xem. Giấy tờ định danh và giấy phép không hiển thị công khai.</p>
+        <dl class="shop-owner-contact">
+            <div><dt>Email tài khoản</dt><dd>{{ owner_email }} · {% if email_verified %}Đã xác thực{% else %}Chưa xác thực{% endif %}</dd></div>
+            <div><dt>Số điện thoại tài khoản</dt><dd>{{ owner_phone|default:'Chưa cung cấp' }} · {% if phone_verified %}Đã xác thực{% else %}Chưa xác thực{% endif %}</dd></div>
+        </dl>
+        <div class="shop-settings-grid">
+            {% include 'includes/shop/profile_field.html' with field=form.legal_entity_type %}
+            {% include 'includes/shop/profile_field.html' with field=form.representative_name %}
+            {% include 'includes/shop/profile_field.html' with field=form.representative_birth_date %}
+            {% include 'includes/shop/profile_field.html' with field=form.id_number %}
+            {% include 'includes/shop/profile_field.html' with field=form.id_card_front %}
+            {% include 'includes/shop/profile_field.html' with field=form.id_card_back %}
+            {% include 'includes/shop/profile_field.html' with field=form.id_card %}
+            {% include 'includes/shop/profile_field.html' with field=form.tax_number %}
+            {% include 'includes/shop/profile_field.html' with field=form.business_license %}
+        </div>
+    </section>
+
+    <section class="shop-settings-card">
+        <h2>3. Thanh toán và đối soát</h2>
+        <p class="shop-settings-hint">Thông tin ngân hàng chỉ dùng cho đối soát và không hiển thị với người mua.</p>
+        <div class="shop-settings-grid">
+            {% include 'includes/shop/profile_field.html' with field=form.bank_name %}
+            {% include 'includes/shop/profile_field.html' with field=form.bank_account_number %}
+            {% include 'includes/shop/profile_field.html' with field=form.bank_account_holder %}
+            {% include 'includes/shop/profile_field.html' with field=form.bank_branch %}
+        </div>
+    </section>
+
+    <section class="shop-settings-card">
+        <h2>4. Vận chuyển</h2>
+        <div class="shop-settings-grid">
+            {% include 'includes/shop/profile_field.html' with field=form.shipping_carriers %}
+            {% include 'includes/shop/profile_field.html' with field=form.pickup_address %}
+            {% include 'includes/shop/profile_field.html' with field=form.return_address %}
+            {% include 'includes/shop/profile_field.html' with field=form.processing_time_days %}
+            {% include 'includes/shop/profile_field.html' with field=form.default_shipping_fee %}
+        </div>
+    </section>
+    <div class="shop-profile-form__actions">
+        <a class="btn btn--secondary" href="{% url 'shop_profile_settings' %}">Hủy thay đổi</a>
+        <button class="btn btn--primary" type="submit">Lưu hồ sơ</button>
+    </div>
+</form>
+{% endblock %}

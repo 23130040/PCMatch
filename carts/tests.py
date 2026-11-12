@@ -30,11 +30,13 @@ class DatabaseCartTests(TestCase):
             username='buyer', email='buyer@example.com', password=cls.password,
             full_name='Người mua', role='BUYER',
         )
-        cls.other = get_user_model().objects.create_user(username='other', email='other@example.com')
-        shop = Shop.objects.create(owner=cls.other, shop_name='Shop A', status='ACTIVE')
+        cls.other = get_user_model().objects.create_user(
+            username='other', email='other@example.com', role='SELLER',
+        )
+        cls.shop = Shop.objects.create(owner=cls.other, shop_name='Shop A', status='ACTIVE')
         category = Category.objects.create(category_name='Chuột')
         cls.product = Product.objects.create(
-            shop=shop, category=category, product_name='Chuột <Pro> & USB', slug='mouse',
+            shop=cls.shop, category=category, product_name='Chuột <Pro> & USB', slug='mouse',
             price='379000.50', stock_quantity=5,
         )
 
@@ -124,6 +126,25 @@ class DatabaseCartTests(TestCase):
         self.add()
         item.refresh_from_db()
         self.assertEqual(item.quantity, 5)
+
+    def test_inactive_shop_blocks_add_update_and_checkout_from_cart(self):
+        self.client.force_login(self.user)
+        self.shop.status = 'PENDING'
+        self.shop.save(update_fields=['status'])
+
+        self.add()
+        self.assertFalse(CartItem.objects.exists())
+
+        item = self.make_item()
+        self.client.post(reverse('buyer_cart_update', args=[item.pk]), {'quantity': 2})
+        item.refresh_from_db()
+        self.assertEqual(item.quantity, 1)
+
+        response = self.client.get(reverse('buyer_cart'))
+        self.assertFalse(response.context['cart_items'][0].available)
+        self.assertFalse(response.context['checkout_available'])
+        self.assertContains(response, 'Shop chưa được duyệt hoặc đang tạm ngừng')
+        self.assertNotContains(response, f'href="{reverse("buyer_checkout")}"')
 
     def test_cart_is_server_rendered_and_uses_current_database_prices(self):
         self.client.force_login(self.user)

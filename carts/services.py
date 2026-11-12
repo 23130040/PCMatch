@@ -13,15 +13,25 @@ def cart_summary(user):
                  .order_by('product__shop_id', 'added_at', 'pk'))
     for item in items:
         item.line_total = item.product.price * item.quantity
-        item.available = item.product.status == 'ACTIVE' and item.product.stock_quantity > 0
+        item.available = (
+            item.product.status == 'ACTIVE'
+            and item.product.stock_quantity > 0
+            and item.product.shop.status == 'ACTIVE'
+        )
     return {
         'cart_items': items,
         'subtotal': sum((item.line_total for item in items), Decimal('0')),
         'item_count': sum(item.quantity for item in items),
+        'checkout_available': all(
+            item.available and item.quantity <= item.product.stock_quantity
+            for item in items
+        ),
     }
 
 
 def validate_quantity(product, quantity):
+    if product.shop.status != 'ACTIVE':
+        raise ValidationError('Gian hàng hiện không nhận đơn hàng.')
     if product.status != 'ACTIVE' or product.stock_quantity <= 0:
         raise ValidationError('Sản phẩm đã hết hàng hoặc tạm ngừng bán.')
     if quantity < 1 or quantity > product.stock_quantity:
@@ -31,7 +41,7 @@ def validate_quantity(product, quantity):
 @transaction.atomic
 def add_product(user, product_id, quantity):
     try:
-        product = Product.objects.select_for_update().get(pk=product_id)
+        product = Product.objects.select_for_update().select_related('shop').get(pk=product_id)
     except Product.DoesNotExist:
         raise ValidationError('Sản phẩm không còn tồn tại.')
 

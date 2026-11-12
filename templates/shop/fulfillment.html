@@ -49,12 +49,14 @@
                             <a class="btn btn--secondary" href="{% url 'shop_order' %}?id={{ order.pk }}">
                                 Chi tiết
                             </a>
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" class="stack">
                                 {% csrf_token %}
-                                <input type="hidden" name="new_status" value="SHIPPING">
+                                <input type="hidden" name="action" value="handoff">
                                 <input type="hidden" name="redirect" value="fulfillment">
+                                <label>Đơn vị vận chuyển<input name="carrier_name" maxlength="100" required></label>
+                                <label>Mã vận đơn<input name="tracking_code" maxlength="100" required></label>
                                 <button class="btn btn--primary" type="submit">
-                                    Bắt đầu giao
+                                    Bàn giao vận chuyển
                                 </button>
                             </form>
                         </div>
@@ -92,17 +94,8 @@
                             <a class="btn btn--secondary" href="{% url 'shop_order' %}?id={{ order.pk }}">
                                 Chi tiết
                             </a>
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="DELIVERED">
-                                {% if order.payment_method == 'COD' %}
-                                <label class="check"><input type="checkbox" name="cod_collected" value="yes" required> Đã thu đủ {{ order.shop_total|vnd }} ₫ tiền COD của shop</label>
-                                {% endif %}
-                                <input type="hidden" name="redirect" value="fulfillment">
-                                <button class="btn btn--primary" type="submit">
-                                    Đã giao và hoàn thành
-                                </button>
-                            </form>
+                            <p>{{ order.shop_order.carrier_name }} · {{ order.shop_order.tracking_code }}</p>
+                            <p>Đang chờ đơn vị vận chuyển xác nhận giao thành công.</p>
 
                         </div>
                     </article>

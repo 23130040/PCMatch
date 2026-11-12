@@ -110,8 +110,14 @@ class FrontendPagesTests(TestCase):
 
     def test_staff_logout(self):
         logout_url = reverse('staff_logout')
-        self.assertEqual(self.client.post(logout_url).status_code, 302)
+        self.client.force_login(self.staff)
         self.assertRedirects(self.client.get(logout_url), reverse('staff_login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        self.client.force_login(self.staff)
+        self.assertRedirects(self.client.post(logout_url), reverse('staff_login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 
@@ -171,6 +177,7 @@ class FrontendPagesTests(TestCase):
             'includes/product_card.html',
             'includes/buyer_icon.html', 'includes/buyer_header.html', 'includes/buyer_account_links.html',
             'includes/admin_interface_controls.html',
+            'admin/order_detail.html',
             'includes/admin_product_drawers.html',
             'includes/admin_support_drawers.html',
             'includes/compare_button.html', 'includes/compare_tray.html',

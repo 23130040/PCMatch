@@ -51,12 +51,9 @@
       </svg>
       <span>Facebook</span>
     </a>
-    <button
+    <a
       class="social-btn social-btn--google"
-      type="button"
-      disabled
-      data-backend-pending="google"
-      title="Đăng nhập Google chưa được kết nối với backend"
+      href="{% url 'auth_google_login' %}?next={{ next|urlencode }}"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -77,7 +74,7 @@
         />
       </svg>
       <span>Google</span>
-    </button>
+    </a>
   </div>
   <a class="linklike" href="{% url 'buyer_forgot_password' %}">
     Quên mật khẩu?

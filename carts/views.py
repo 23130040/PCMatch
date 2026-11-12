@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from products.models import Product
+from payments.vnpay import configured as vnpay_configured
 from users.views import buyer_required, is_active_buyer
 from .forms import CartQuantityForm
 from .models import CartItem
@@ -94,7 +95,7 @@ def cart_add(request, product_id):
 @transaction.atomic
 def cart_update(request, item_id):
     owned = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
-    product = Product.objects.select_for_update().get(pk=owned.product_id)
+    product = Product.objects.select_for_update().select_related('shop').get(pk=owned.product_id)
     item = get_object_or_404(CartItem.objects.select_for_update(), pk=item_id, cart__user=request.user)
     form = CartQuantityForm(request.POST)
     if not form.is_valid():
@@ -125,12 +126,11 @@ def cart_remove(request, item_id):
 @buyer_required
 def cart_checkout(request):
     from orders.services import checkout_token
-    from payments.vnpay import configured
     address = request.user.addresses.filter(is_archived=False).order_by('-is_default', 'pk').first()
     return render(request, 'buyer/checkout.html', {
         'page_name': 'checkout', 'page_section': 'buyer',
         'checkout_user': request.user, 'shipping_address': address,
         'checkout_token': checkout_token(request.user),
-        'vnpay_ready': configured(),
+        'vnpay_available': vnpay_configured(),
         **cart_summary(request.user),
     })

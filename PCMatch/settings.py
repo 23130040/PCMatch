@@ -51,6 +51,7 @@ DEBUG = True
 ALLOWED_HOSTS = list(dict.fromkeys([
     '127.0.0.1',
     'localhost',
+    '.trycloudflare.com',
     'drapery-pessimist-unmatched.ngrok-free.dev',
     *(
         host.strip()
@@ -59,9 +60,17 @@ ALLOWED_HOSTS = list(dict.fromkeys([
     ),
 ]))
 
+# cloudflared terminates HTTPS and forwards the original scheme to Django.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
-    'https://drapery-pessimist-unmatched.ngrok-free.dev',
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
+    'https://drapery-pessimist-unmatched.ngrok-free.dev',
+    *CSRF_TRUSTED_ORIGINS,
+]))
 
 # Application definition
 
@@ -182,12 +191,12 @@ EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.smtp.EmailBackend',
 )
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com').strip()
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pcmatchcomputer@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pcmatchcomputer@gmail.com')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pcmatchcomputer@gmail.com').strip()
+EMAIL_HOST_PASSWORD = ''.join(os.environ.get('EMAIL_HOST_PASSWORD', '').split())
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pcmatchcomputer@gmail.com').strip()
 BUYER_OTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 SHOP_PUBLIC_BASE_URL = os.environ.get(
     'SHOP_PUBLIC_BASE_URL',
@@ -199,11 +208,15 @@ FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '').strip()
 FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '').strip()
 FACEBOOK_GRAPH_VERSION = os.environ.get('FACEBOOK_GRAPH_VERSION', 'v22.0').strip()
 FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '').strip()
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
 
 AUTH_USER_MODEL = 'users.User'
 
 # VNPay sandbox
-VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '')
-VNPAY_HASH_SECRET = os.getenv('VNPAY_HASH_SECRET', '')
-VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', '')
-VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+VNPAY_TMN_CODE = os.environ.get('VNPAY_TMN_CODE', '')
+VNPAY_HASH_SECRET = os.environ.get('VNPAY_HASH_SECRET', '')
+VNPAY_RETURN_URL = os.environ.get('VNPAY_RETURN_URL', '')
+VNPAY_PAYMENT_URL = os.environ.get('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+CARRIER_WEBHOOK_SECRET = os.environ.get('CARRIER_WEBHOOK_SECRET', '').strip()

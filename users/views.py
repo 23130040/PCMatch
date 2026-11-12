@@ -1,11 +1,12 @@
 from time import time
 from datetime import timedelta
 import hmac
+import logging
 from smtplib import SMTPException
 from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import user_passes_test
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
@@ -23,6 +24,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from users.models import Address, BuyerEmailOTP, PasswordResetToken, SocialAccount, User
+from notifications.models import Notification
 from .address_services import save_address, set_default_address
 from users.forms import (
     BuyerRegisterForm,
@@ -31,6 +33,7 @@ from users.forms import (
     BuyerAddressForm,
     BuyerForgotPasswordForm,
     BuyerSetPasswordForm,
+    BuyerProfileForm,
     LoginForm,
     StaffForgotPasswordForm,
     StaffLoginForm,
@@ -42,13 +45,21 @@ from .facebook_oauth import (
     facebook_authorization_url,
     get_facebook_identity,
 )
+from .google_oauth import (
+    GoogleOAuthError,
+    get_google_identity,
+    google_authorization_url,
+)
 
+logger = logging.getLogger(__name__)
 
 # Each portal has its own role, so one session never reaches another area.
 BUYER_ROLES = {'BUYER', 'CUSTOMER'}
 SELLER_ROLES = {'SELLER'}
 FACEBOOK_STATE_SESSION_KEY = 'facebook_oauth_state'
 FACEBOOK_STATE_MAX_AGE = 600
+GOOGLE_STATE_SESSION_KEY = 'google_oauth_state'
+GOOGLE_STATE_MAX_AGE = 600
 
 
 def _is_live_account(user):
@@ -66,10 +77,138 @@ def is_active_buyer(user):
 
 def is_active_seller(user):
     """Shop portal. Buyers and staff must sign in through their own portals."""
-    return _is_live_account(user) and getattr(user, 'role', '') in SELLER_ROLES
+    return (
+        _is_live_account(user)
+        and getattr(user, 'role', '') in SELLER_ROLES
+        and not user.is_staff
+        and not user.is_superuser
+    )
 
 
 buyer_required = user_passes_test(is_active_buyer, login_url=reverse_lazy('auth_login'))
+
+
+@require_http_methods(['GET', 'POST'])
+@buyer_required
+def buyer_notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at', '-pk')
+    if request.method == 'POST':
+        notification_id = request.POST.get('notification_id')
+        if notification_id:
+            if not notification_id.isascii() or not notification_id.isdigit() or len(notification_id) > 19:
+                raise Http404
+            notification = get_object_or_404(notifications, pk=notification_id)
+            if not notification.is_read:
+                notification.is_read = True
+                notification.save(update_fields=['is_read'])
+        else:
+            notifications.filter(is_read=False).update(is_read=True)
+        return redirect('buyer_notifications')
+    notification_page = Paginator(notifications, 20).get_page(request.GET.get('page'))
+    return render(request, 'buyer/notifications.html', {
+        'page_name': 'notifications',
+        'page_section': 'buyer',
+        'notifications': notification_page,
+        'notifications_page': notification_page,
+        'notification_total': notifications.count(),
+        'unread_notification_count': notifications.filter(is_read=False).count(),
+    })
+
+
+@require_http_methods(['GET', 'POST'])
+@buyer_required
+def buyer_account(request):
+    form = BuyerProfileForm(
+        request.POST if request.method == 'POST' else None,
+        request.FILES if request.method == 'POST' else None,
+        instance=User.objects.get(pk=request.user.pk),
+    )
+    if request.method == 'POST' and form.is_valid():
+        user = form.save(commit=False)
+        if 'phone' in form.changed_data:
+            user.phone_verified = False
+        try:
+            with transaction.atomic():
+                user.save()
+        except DatabaseError:
+            logger.exception('Could not update buyer profile for user %s.', request.user.pk)
+            form.add_error(None, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+            messages.error(request, 'Không thể lưu hồ sơ lúc này. Vui lòng thử lại.')
+        else:
+            messages.success(request, 'Thông tin hồ sơ đã được cập nhật.')
+            if 'phone' in form.changed_data:
+                messages.warning(request, 'Số điện thoại đã đổi và cần được xác minh lại.')
+            return redirect('buyer_account')
+    return render(request, 'buyer/account.html', {
+        'page_name': 'account',
+        'page_section': 'buyer',
+        'profile_form': form,
+    })
+
+
+@require_POST
+@buyer_required
+def buyer_password_change_request(request):
+    if not all((
+        settings.EMAIL_HOST,
+        settings.EMAIL_HOST_USER,
+        settings.EMAIL_HOST_PASSWORD,
+        settings.DEFAULT_FROM_EMAIL,
+    )):
+        messages.error(
+            request,
+            'Email chưa được cấu hình. Hãy điền cấu hình SMTP trong .env rồi khởi động lại server.',
+        )
+        return redirect('buyer_account')
+
+    token = get_random_string(48)
+    with transaction.atomic():
+        PasswordResetToken.objects.filter(
+            user=request.user,
+            used=False,
+        ).update(used=True)
+        reset_token = PasswordResetToken.objects.create(
+            user=request.user,
+            token=token,
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+    reset_url = request.build_absolute_uri(
+        reverse('buyer_account_password_reset', args=[reset_token.token])
+    )
+    try:
+        sent_count = send_mail(
+            'Liên kết đổi mật khẩu PCMatch',
+            'Bạn đã yêu cầu đổi mật khẩu tài khoản PCMatch. '
+            'Mở liên kết sau trong vòng 1 giờ để đặt mật khẩu mới:\n'
+            f'{reset_url}\n\n'
+            'Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email.',
+            None,
+            [request.user.email],
+            fail_silently=False,
+        )
+    except (OSError, SMTPException):
+        logger.exception('Could not send buyer password-change email for user %s.', request.user.pk)
+        reset_token.used = True
+        reset_token.save(update_fields=['used'])
+        messages.error(
+            request,
+            'Không gửi được liên kết đổi mật khẩu. Vui lòng kiểm tra cấu hình email và thử lại.',
+        )
+    else:
+        if sent_count != 1:
+            logger.error('SMTP did not accept the buyer password-change email for user %s.', request.user.pk)
+            reset_token.used = True
+            reset_token.save(update_fields=['used'])
+            messages.error(
+                request,
+                'Email chưa được gửi. Hãy kiểm tra cấu hình SMTP rồi thử lại.',
+            )
+            return redirect('buyer_account')
+        messages.success(
+            request,
+            f'Liên kết đổi mật khẩu đã được gửi tới {request.user.email}. Vui lòng kiểm tra hộp thư.',
+        )
+    return redirect('buyer_account')
 
 
 def _buyer_address(user, identifier):
@@ -390,6 +529,217 @@ def facebook_callback(request):
     return finish_auth_login(request, destination)
 
 
+def _google_error_redirect(request, destination, message, *, canceled=False):
+    if canceled:
+        messages.info(request, message)
+    else:
+        messages.error(request, message)
+    return redirect('{}?{}'.format(
+        reverse('auth_login'),
+        urlencode({'next': destination}),
+    ))
+
+
+def _google_redirect_uri(request, configured_uri=None):
+    callback_path = reverse('auth_google_callback')
+    redirect_uri = configured_uri or settings.GOOGLE_REDIRECT_URI
+    if not redirect_uri:
+        redirect_uri = request.build_absolute_uri(callback_path)
+    parsed_uri = urlsplit(redirect_uri)
+    if (parsed_uri.scheme != 'https' or not parsed_uri.netloc
+            or parsed_uri.path != callback_path
+            or parsed_uri.query or parsed_uri.fragment
+            or parsed_uri.username or parsed_uri.password):
+        raise GoogleOAuthError(
+            'Google yêu cầu callback HTTPS. Hãy cấu hình GOOGLE_REDIRECT_URI '
+            'bằng URL HTTPS của tunnel và đăng ký URL đó trong Google Cloud Console.'
+        )
+    return redirect_uri
+
+
+@require_GET
+def google_login(request):
+    destination = safe_auth_next(request)
+    state = get_random_string(48)
+    try:
+        callback_url = _google_redirect_uri(request)
+        authorization_url = google_authorization_url(
+            state=state,
+            redirect_uri=callback_url,
+        )
+    except GoogleOAuthError as error:
+        return _google_error_redirect(request, destination, str(error))
+    request.session[GOOGLE_STATE_SESSION_KEY] = {
+        'state': state,
+        'created_at': time(),
+        'next': destination,
+        'redirect_uri': callback_url,
+    }
+    return redirect(authorization_url)
+
+
+def _activate_google_buyer(account, email):
+    if account.role not in BUYER_ROLES or account.is_staff or account.is_superuser:
+        raise GoogleOAuthError(
+            'Email này thuộc khu vực khác. Vui lòng đăng nhập đúng cổng tài khoản.'
+        )
+    if account.status in {'ACTIVE', 'INACTIVE'}:
+        if account.status == 'INACTIVE' or not account.email_verified:
+            if account.email.strip().lower() != email:
+                raise GoogleOAuthError(
+                    'Email Google không khớp với địa chỉ của tài khoản PCMatch.'
+                )
+            update_fields = []
+            if not account.email_verified:
+                account.email_verified = True
+                update_fields.append('email_verified')
+            if account.status == 'INACTIVE':
+                account.status = 'ACTIVE'
+                update_fields.append('status')
+            if update_fields:
+                account.save(update_fields=update_fields)
+    if not account.email_verified or not is_active_buyer(account):
+        raise GoogleOAuthError(
+            'Tài khoản chưa hoạt động hoặc email chưa xác thực. Vui lòng đăng nhập bằng email.'
+        )
+
+
+def _google_user(identity):
+    if identity.get('email_verified') is not True:
+        raise GoogleOAuthError(
+            'Google chưa xác thực email này. Vui lòng xác thực email Google rồi thử lại.'
+        )
+    try:
+        email = forms.EmailField().clean(identity.get('email', '')).strip().lower()
+    except ValidationError as error:
+        raise GoogleOAuthError('Google không cung cấp email hợp lệ.') from error
+
+    provider_user_id = identity.get('sub')
+    if not isinstance(provider_user_id, str) or not provider_user_id:
+        raise GoogleOAuthError('Không xác định được tài khoản Google.')
+    if len(provider_user_id) > 255:
+        raise GoogleOAuthError('Tài khoản Google không hợp lệ.')
+    provider_name = identity.get('name')
+    full_name = (
+        provider_name.strip()[:100]
+        if isinstance(provider_name, str) else ''
+    ) or 'Người dùng Google'
+
+    try:
+        with transaction.atomic():
+            linked_account = (
+                SocialAccount.objects.select_for_update()
+                .select_related('user')
+                .filter(provider='GOOGLE', provider_user_id=provider_user_id)
+                .first()
+            )
+            if linked_account is not None:
+                account = linked_account.user
+                _activate_google_buyer(account, email)
+            else:
+                matching_accounts = list(
+                    User.objects.select_for_update()
+                    .filter(email__iexact=email)
+                    .order_by('pk')[:2]
+                )
+                if len(matching_accounts) > 1:
+                    raise GoogleOAuthError(
+                        'Email này khớp với nhiều tài khoản PCMatch. Vui lòng liên hệ hỗ trợ.'
+                    )
+                if matching_accounts:
+                    account = matching_accounts[0]
+                    _activate_google_buyer(account, email)
+                else:
+                    account = User.objects.create_user(
+                        username=f'google_{get_random_string(24)}',
+                        email=email,
+                        full_name=full_name,
+                        role='BUYER',
+                        status='ACTIVE',
+                        email_verified=True,
+                    )
+                SocialAccount.objects.create(
+                    user=account,
+                    provider='GOOGLE',
+                    provider_user_id=provider_user_id,
+                )
+    except IntegrityError as error:
+        linked_account = (
+            SocialAccount.objects.select_related('user')
+            .filter(provider='GOOGLE', provider_user_id=provider_user_id)
+            .first()
+        )
+        if linked_account is None:
+            raise GoogleOAuthError(
+                'Không thể liên kết tài khoản Google. Vui lòng thử lại.'
+            ) from error
+        account = linked_account.user
+        _activate_google_buyer(account, email)
+
+    if not account.email_verified or not is_active_buyer(account):
+        raise GoogleOAuthError(
+            'Tài khoản PCMatch chưa hoạt động. Vui lòng đăng nhập bằng email hoặc liên hệ hỗ trợ.'
+        )
+    return account
+
+
+@require_GET
+def google_callback(request):
+    pending = request.session.pop(GOOGLE_STATE_SESSION_KEY, None)
+    destination = pending.get('next') if isinstance(pending, dict) else reverse('buyer_cart')
+    if not isinstance(destination, str) or not destination.startswith('/buyer/'):
+        destination = reverse('buyer_cart')
+
+    received_state = request.GET.get('state', '')
+    expected_state = pending.get('state', '') if isinstance(pending, dict) else ''
+    created_at = pending.get('created_at', 0) if isinstance(pending, dict) else 0
+    state_age = time() - created_at if isinstance(created_at, (int, float)) else None
+    if (not expected_state or not received_state
+            or not hmac.compare_digest(str(expected_state), received_state)
+            or state_age is None
+            or not 0 <= state_age <= GOOGLE_STATE_MAX_AGE):
+        return _google_error_redirect(
+            request, destination,
+            'Yêu cầu đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.',
+        )
+
+    provider_error = request.GET.get('error')
+    if provider_error:
+        canceled = provider_error == 'access_denied'
+        return _google_error_redirect(
+            request,
+            destination,
+            'Bạn đã hủy đăng nhập Google.' if canceled
+            else 'Google không cấp quyền đăng nhập. Vui lòng thử lại.',
+            canceled=canceled,
+        )
+
+    code = request.GET.get('code')
+    if not code:
+        return _google_error_redirect(
+            request, destination,
+            'Google không trả về mã đăng nhập. Vui lòng thử lại.',
+        )
+
+    try:
+        callback_url = _google_redirect_uri(
+            request,
+            configured_uri=pending.get('redirect_uri') if isinstance(pending, dict) else None,
+        )
+        identity = get_google_identity(code=code, redirect_uri=callback_url)
+        account = _google_user(identity)
+    except GoogleOAuthError as error:
+        return _google_error_redirect(request, destination, str(error))
+    except DatabaseError:
+        return _google_error_redirect(
+            request, destination,
+            'Chưa thể xác nhận tài khoản Google. Vui lòng thử lại sau.',
+        )
+
+    login(request, account)
+    return finish_auth_login(request, destination)
+
+
 @require_http_methods(['GET', 'POST'])
 def buyer_verify_email(request):
     pending_user_id = request.session.get('buyer_otp_user_id')
@@ -551,7 +901,7 @@ def buyer_forgot_password(request):
 
 
 @require_http_methods(['GET', 'POST'])
-def buyer_reset_password(request, token):
+def buyer_reset_password(request, token, *, keep_session=False):
     record = (
         PasswordResetToken.objects.filter(
             token=token,
@@ -566,6 +916,8 @@ def buyer_reset_password(request, token):
     )
     if record is None:
         messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+        if is_active_buyer(request.user):
+            return redirect('buyer_account')
         return redirect('auth_login')
 
     form = BuyerSetPasswordForm(request.POST or None, user=record.user)
@@ -589,10 +941,26 @@ def buyer_reset_password(request, token):
             )
             if record is None:
                 messages.error(request, 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+                if is_active_buyer(request.user):
+                    return redirect('buyer_account')
                 return redirect('auth_login')
             account.set_password(form.cleaned_data['password1'])
             account.save(update_fields=['password'])
             PasswordResetToken.objects.filter(user=account, used=False).update(used=True)
+
+        messages.success(request, 'Mật khẩu đã được thay đổi thành công.')
+        keep_buyer_session = keep_session or (
+            request.user.is_authenticated
+            and request.user.pk == account.pk
+            and is_active_buyer(request.user)
+        )
+        if keep_buyer_session and is_active_buyer(account):
+            if request.user.is_authenticated and request.user.pk == account.pk:
+                update_session_auth_hash(request, account)
+            else:
+                login(request, account)
+        elif keep_buyer_session:
+            keep_buyer_session = False
 
         try:
             send_mail(
@@ -609,8 +977,8 @@ def buyer_reset_password(request, token):
                 'Mật khẩu đã được thay đổi nhưng chưa gửi được email thông báo. '
                 'Vui lòng liên hệ bộ phận hỗ trợ nếu bạn không thực hiện thay đổi này.',
             )
-        else:
-            messages.success(request, 'Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.')
+        if keep_buyer_session and is_active_buyer(account):
+            return redirect('buyer_account')
         return redirect('auth_login')
 
     return render(request, 'auth/buyer_reset_password.html', {

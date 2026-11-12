@@ -2,17 +2,22 @@ import re
 from datetime import timedelta
 from io import BytesIO
 from smtplib import SMTPException
+import tempfile
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import DatabaseError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from .facebook_oauth import get_facebook_identity
+from .google_oauth import get_google_identity
 from .models import BuyerEmailOTP, PasswordResetToken, SocialAccount
 
 
@@ -226,6 +231,31 @@ class SharedAuthenticationTests(TestCase):
         strict = Client(enforce_csrf_checks=True)
         for name in ['auth_login', 'auth_register', 'auth_verify_email', 'auth_logout']:
             self.assertEqual(strict.post(reverse(name), {}).status_code, 403)
+
+    @override_settings(
+        ALLOWED_HOSTS=['sample-name.trycloudflare.com'],
+        CSRF_TRUSTED_ORIGINS=['https://sample-name.trycloudflare.com'],
+    )
+    def test_https_tunnel_post_passes_csrf_with_forwarded_scheme(self):
+        client = Client(enforce_csrf_checks=True)
+        proxy_headers = {
+            'HTTP_HOST': 'sample-name.trycloudflare.com',
+            'HTTP_X_FORWARDED_PROTO': 'https',
+        }
+        response = client.get(reverse('auth_login'), **proxy_headers)
+        self.assertEqual(response.status_code, 200)
+
+        response = client.post(
+            reverse('auth_login'),
+            {
+                'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+                'email': 'unknown@example.test',
+                'password': self.password,
+            },
+            HTTP_ORIGIN='https://sample-name.trycloudflare.com',
+            **proxy_headers,
+        )
+        self.assertEqual(response.status_code, 200)
 
 
 @override_settings(
@@ -503,6 +533,505 @@ class FacebookLoginTests(TestCase):
         self.assertEqual(profile_request.get_header('Authorization'), 'Bearer temporary-access-token')
         self.assertNotIn('temporary-access-token', profile_request.full_url)
         self.assertEqual(urlopen_mock.call_args_list[0].kwargs['timeout'], 10)
+
+
+@override_settings(
+    GOOGLE_CLIENT_ID='test-google-client-id',
+    GOOGLE_CLIENT_SECRET='test-google-client-secret',
+    GOOGLE_REDIRECT_URI='https://testserver/auth/google/callback/',
+)
+class GoogleLoginTests(TestCase):
+    def setUp(self):
+        self.buyer = get_user_model().objects.create_user(
+            username='google-existing-buyer',
+            email='google-buyer@example.test',
+            password='GoogleBuyer!82734',
+            full_name='Buyer Account',
+            role='BUYER',
+            status='ACTIVE',
+            email_verified=True,
+        )
+
+    def start_login(self, **query):
+        response = self.client.get(reverse('auth_google_login'), query)
+        self.assertEqual(response.status_code, 302)
+        parsed_url = urlparse(response.url)
+        self.assertEqual(parsed_url.netloc, 'accounts.google.com')
+        return parse_qs(parsed_url.query)
+
+    def callback(self, state, **query):
+        return self.client.get(
+            reverse('auth_google_callback'),
+            {'state': state, **query},
+        )
+
+    def test_login_button_starts_server_configured_oauth_without_exposing_secret(self):
+        response = self.client.get(reverse('auth_login'))
+        self.assertContains(response, f'href="{reverse("auth_google_login")}?next=')
+        self.assertNotContains(response, 'data-backend-pending="google"')
+        self.assertNotContains(response, 'test-google-client-secret')
+
+        parameters = self.start_login(next=reverse('buyer_orders'))
+        self.assertEqual(parameters['client_id'], ['test-google-client-id'])
+        self.assertEqual(parameters['scope'], ['openid email profile'])
+        self.assertEqual(parameters['response_type'], ['code'])
+        self.assertEqual(parameters['redirect_uri'], [
+            'https://testserver/auth/google/callback/',
+        ])
+        self.assertTrue(parameters['state'][0])
+        self.assertNotIn('test-google-client-secret', repr(parameters))
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_links_to_existing_buyer_and_logs_in(self, get_identity):
+        get_identity.return_value = {
+            'sub': 'google-user-1001',
+            'name': 'Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login(next=reverse('buyer_orders'))
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_orders'), fetch_redirect_response=False)
+        get_identity.assert_called_once_with(
+            code='authorization-code',
+            redirect_uri='https://testserver/auth/google/callback/',
+        )
+        social_account = SocialAccount.objects.get(
+            provider='GOOGLE',
+            provider_user_id='google-user-1001',
+        )
+        self.assertEqual(social_account.user, self.buyer)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_pending_buyer_and_logs_in(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-pending-buyer',
+            'name': 'Pending Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+        self.assertTrue(
+            SocialAccount.objects.filter(
+                user=self.buyer,
+                provider='GOOGLE',
+                provider_user_id='google-user-pending-buyer',
+            ).exists()
+        )
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_pending_buyer_with_existing_link(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        SocialAccount.objects.create(
+            user=self.buyer,
+            provider='GOOGLE',
+            provider_user_id='google-user-linked-pending-buyer',
+        )
+        get_identity.return_value = {
+            'sub': 'google-user-linked-pending-buyer',
+            'name': 'Pending Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_verifies_active_buyer_and_logs_in(self, get_identity):
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-active-unverified-buyer',
+            'name': 'Active Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_verified_google_email_activates_inactive_buyer_with_verified_email(self, get_identity):
+        self.buyer.status = 'INACTIVE'
+        self.buyer.save(update_fields=['status'])
+        get_identity.return_value = {
+            'sub': 'google-user-inactive-verified-buyer',
+            'name': 'Inactive Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+        self.assertTrue(self.buyer.email_verified)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.buyer.pk)
+
+    @patch('users.views.get_google_identity')
+    def test_google_sign_in_does_not_unlock_locked_buyer(self, get_identity):
+        self.buyer.status = 'LOCKED'
+        self.buyer.email_verified = False
+        self.buyer.save(update_fields=['status', 'email_verified'])
+        get_identity.return_value = {
+            'sub': 'google-user-locked-buyer',
+            'name': 'Locked Google Buyer',
+            'email': self.buyer.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        self.callback(parameters['state'][0], code='authorization-code')
+
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.status, 'LOCKED')
+        self.assertFalse(self.buyer.email_verified)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_google_identity')
+    def test_new_google_email_creates_buyer_and_persists_provider_identity(self, get_identity):
+        get_identity.return_value = {
+            'sub': 'google-user-1002',
+            'name': 'New Google Buyer',
+            'email': 'new-google-buyer@example.test',
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertRedirects(response, reverse('buyer_cart'), fetch_redirect_response=False)
+        account = get_user_model().objects.get(email='new-google-buyer@example.test')
+        self.assertEqual(account.role, 'BUYER')
+        self.assertEqual(account.status, 'ACTIVE')
+        self.assertTrue(account.email_verified)
+        self.assertFalse(account.has_usable_password())
+        self.assertEqual(
+            SocialAccount.objects.get(
+                provider='GOOGLE',
+                provider_user_id='google-user-1002',
+            ).user,
+            account,
+        )
+
+    @patch('users.views.get_google_identity')
+    def test_unverified_email_is_rejected_without_creating_an_account(self, get_identity):
+        get_identity.return_value = {
+            'sub': 'google-user-unverified',
+            'name': 'Unverified Buyer',
+            'email': 'unverified@example.test',
+            'email_verified': False,
+        }
+        parameters = self.start_login()
+
+        self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_google_identity')
+    def test_google_email_for_non_buyer_is_not_linked(self, get_identity):
+        seller = get_user_model().objects.create_user(
+            username='google-seller',
+            email='google-seller@example.test',
+            password='GoogleSeller!82734',
+            full_name='Seller',
+            role='SELLER',
+            status='ACTIVE',
+            email_verified=True,
+        )
+        get_identity.return_value = {
+            'sub': 'google-seller-user',
+            'name': 'Seller',
+            'email': seller.email,
+            'email_verified': True,
+        }
+        parameters = self.start_login()
+
+        self.callback(parameters['state'][0], code='authorization-code')
+
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_google_identity')
+    def test_invalid_or_replayed_state_is_rejected(self, get_identity):
+        parameters = self.start_login()
+        self.callback('attacker-controlled-state', code='authorization-code')
+        self.callback(parameters['state'][0], code='authorization-code')
+
+        get_identity.assert_not_called()
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @patch('users.views.get_google_identity')
+    def test_cancel_returns_to_login_without_provider_exchange(self, get_identity):
+        parameters = self.start_login()
+
+        response = self.callback(parameters['state'][0], error='access_denied')
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        get_identity.assert_not_called()
+
+    @override_settings(GOOGLE_CLIENT_ID='', GOOGLE_CLIENT_SECRET='')
+    def test_missing_server_credentials_show_configuration_error(self):
+        response = self.client.get(reverse('auth_google_login'))
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+
+    @override_settings(GOOGLE_REDIRECT_URI='')
+    def test_insecure_callback_is_rejected_before_redirecting_to_google(self):
+        response = self.client.get(reverse('auth_google_login'))
+
+        self.assertRedirects(
+            response,
+            reverse('auth_login') + '?next=' + reverse('buyer_cart'),
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn('google_oauth_state', self.client.session)
+
+    @patch(
+        'users.google_oauth.urlopen',
+        side_effect=[
+            BytesIO(b'{"access_token":"temporary-access-token"}'),
+            BytesIO(b'{"sub":"google-user-2001","email":"oauth@example.test","email_verified":true}'),
+        ],
+    )
+    def test_backend_posts_code_and_fetches_identity_with_bearer_token(self, urlopen_mock):
+        identity = get_google_identity(
+            code='authorization-code',
+            redirect_uri='https://testserver/auth/google/callback/',
+        )
+
+        self.assertEqual(identity['sub'], 'google-user-2001')
+        self.assertEqual(urlopen_mock.call_count, 2)
+        token_request = urlopen_mock.call_args_list[0].args[0]
+        profile_request = urlopen_mock.call_args_list[1].args[0]
+        self.assertEqual(token_request.full_url, 'https://oauth2.googleapis.com/token')
+        self.assertEqual(token_request.get_method(), 'POST')
+        self.assertIn(b'test-google-client-secret', token_request.data)
+        self.assertNotIn('test-google-client-secret', token_request.full_url)
+        self.assertEqual(profile_request.get_header('Authorization'), 'Bearer temporary-access-token')
+        self.assertNotIn('temporary-access-token', profile_request.full_url)
+        self.assertEqual(urlopen_mock.call_args_list[0].kwargs['timeout'], 10)
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    EMAIL_HOST='smtp.example.test',
+    EMAIL_HOST_USER='buyer@example.test',
+    EMAIL_HOST_PASSWORD='test-app-password',
+    DEFAULT_FROM_EMAIL='buyer@example.test',
+)
+class BuyerAccountTests(TestCase):
+    old_password = 'BuyerOld!82734'
+    new_password = 'BuyerNew!82734'
+
+    def setUp(self):
+        self.buyer = get_user_model().objects.create_user(
+            username='account-buyer',
+            email='account-buyer@example.test',
+            password=self.old_password,
+            full_name='Buyer Account',
+            role='BUYER',
+            status='ACTIVE',
+            email_verified=True,
+            phone_verified=True,
+            phone='0912345678',
+        )
+        self.client.force_login(self.buyer)
+
+    def test_account_renders_working_forms_without_cancel_button(self):
+        response = self.client.get(reverse('buyer_account'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'action="{reverse("buyer_account")}"')
+        self.assertContains(response, 'name="phone"')
+        self.assertContains(response, 'type="submit">Lưu hồ sơ</button>')
+        self.assertNotContains(response, 'Hủy thay đổi')
+        self.assertContains(response, f'action="{reverse("buyer_password_change_request")}"')
+        self.assertNotContains(response, 'name="old"')
+
+    def test_profile_saves_with_empty_phone_and_updates_filled_phone(self):
+        empty_phone = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Buyer Updated',
+            'phone': '',
+        })
+        self.assertRedirects(empty_phone, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Updated')
+        self.assertEqual(self.buyer.phone, '')
+        self.assertFalse(self.buyer.phone_verified)
+
+        filled_phone = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Buyer Updated',
+            'phone': '0987654321',
+            'role': 'ADMIN',
+            'is_staff': '1',
+            'status': 'LOCKED',
+        })
+        self.assertRedirects(filled_phone, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.phone, '0987654321')
+        self.assertFalse(self.buyer.phone_verified)
+        self.assertEqual(self.buyer.role, 'BUYER')
+        self.assertFalse(self.buyer.is_staff)
+        self.assertEqual(self.buyer.status, 'ACTIVE')
+
+    def test_profile_accepts_valid_avatar_and_rejects_non_image(self):
+        image_buffer = BytesIO()
+        Image.new('RGB', (8, 8), color='blue').save(image_buffer, format='PNG')
+        valid_image = SimpleUploadedFile('avatar.png', image_buffer.getvalue(), content_type='image/png')
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Buyer Account',
+                'phone': self.buyer.phone,
+                'avatar': valid_image,
+            })
+            self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+            self.buyer.refresh_from_db()
+            self.assertTrue(self.buyer.avatar.name.startswith('avatar/'))
+
+            invalid_image = SimpleUploadedFile('avatar.png', b'not an image', content_type='image/png')
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Name should not save',
+                'phone': self.buyer.phone,
+                'avatar': invalid_image,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Tệp tải lên không phải ảnh hợp lệ.')
+            self.buyer.refresh_from_db()
+            self.assertEqual(self.buyer.full_name, 'Buyer Account')
+
+    def test_profile_rejects_invalid_phone_without_saving(self):
+        response = self.client.post(reverse('buyer_account'), {
+            'full_name': 'Changed Name',
+            'phone': '123',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'bắt đầu bằng 0')
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Account')
+        self.assertEqual(self.buyer.phone, '0912345678')
+
+    def test_profile_database_error_keeps_submitted_values_and_reports_failure(self):
+        with patch('users.views.User.save', side_effect=DatabaseError('database unavailable')):
+            response = self.client.post(reverse('buyer_account'), {
+                'full_name': 'Submitted Name',
+                'phone': '0987654321',
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Không thể lưu hồ sơ lúc này')
+        self.assertEqual(response.context['profile_form']['full_name'].value(), 'Submitted Name')
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.full_name, 'Buyer Account')
+        self.assertEqual(self.buyer.phone, '0912345678')
+
+    def test_password_change_request_sends_link_to_signed_in_buyers_email(self):
+        response = self.client.post(reverse('buyer_password_change_request'))
+
+        self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.buyer.email])
+        token = PasswordResetToken.objects.get(user=self.buyer, used=False)
+        self.assertGreater(token.expires_at, timezone.now())
+        self.assertIn(
+            reverse('buyer_account_password_reset', args=[token.token]),
+            mail.outbox[0].body,
+        )
+
+    @override_settings(EMAIL_HOST_PASSWORD='')
+    def test_password_change_without_smtp_credentials_explains_configuration(self):
+        response = self.client.post(
+            reverse('buyer_password_change_request'),
+            follow=True,
+        )
+
+        self.assertContains(response, 'điền cấu hình SMTP trong .env')
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer).exists())
+        self.assertFalse(mail.outbox)
+
+    @patch('users.views.send_mail', side_effect=SMTPException('mail server unavailable'))
+    def test_password_change_delivery_failure_revokes_the_token(self, send_mail_mock):
+        response = self.client.post(reverse('buyer_password_change_request'), follow=True)
+
+        self.assertContains(response, 'Không gửi được liên kết đổi mật khẩu.')
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer, used=False).exists())
+        send_mail_mock.assert_called_once()
+
+    def test_email_password_change_preserves_login_and_returns_to_account(self):
+        self.client.post(reverse('buyer_password_change_request'))
+        token = PasswordResetToken.objects.get(user=self.buyer, used=False)
+        reset_url = reverse('buyer_account_password_reset', args=[token.token])
+        reset_page = self.client.get(reset_url)
+        self.assertEqual(reset_page.status_code, 200)
+        self.assertNotContains(reset_page, 'name="email"')
+
+        mismatch = self.client.post(reset_url, {
+            'password1': self.new_password,
+            'password2': 'Different!82734',
+        })
+        self.assertContains(mismatch, 'Mật khẩu nhập lại không khớp.')
+        self.buyer.refresh_from_db()
+        self.assertTrue(self.buyer.check_password(self.old_password))
+        token.refresh_from_db()
+        self.assertFalse(token.used)
+        self.assertEqual(self.client.get(reverse('buyer_account')).status_code, 200)
+
+        response = self.client.post(reset_url, {
+            'password1': self.new_password,
+            'password2': self.new_password,
+        })
+
+        self.assertRedirects(response, reverse('buyer_account'), fetch_redirect_response=False)
+        self.buyer.refresh_from_db()
+        self.assertTrue(self.buyer.check_password(self.new_password))
+        self.assertIn('_auth_user_id', self.client.session)
+        self.assertEqual(str(self.client.session['_auth_user_id']), str(self.buyer.pk))
+        self.assertFalse(PasswordResetToken.objects.filter(user=self.buyer, used=False).exists())
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn('đã được thay đổi', mail.outbox[-1].subject)
+        self.assertEqual(self.client.get(reverse('buyer_account')).status_code, 200)
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')

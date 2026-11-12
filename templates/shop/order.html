@@ -101,53 +101,90 @@
                     </p>
                     <div class="stack">
                         {% if order.order_status == 'PENDING' %}
-                            <p>Đang chờ admin xác nhận đơn hàng.</p>
-                        {% elif order.order_status == 'AWAITING_PAYMENT' %}
-                            <p>Đang chờ người mua thanh toán VNPay.</p>
-                        {% elif order.order_status == 'COMFIRMED' %}
+                            <p>Hạn xác nhận: {{ order.shop_order.confirmation_deadline|date:'d/m/Y H:i' }}</p>
                             <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
                                 {% csrf_token %}
-                                <input type="hidden" name="new_status" value="PROCESSING">
-                                <button class="btn btn--primary" type="submit">Bắt đầu xử lý</button>
+                                <input type="hidden" name="action" value="accept">
+                                <button class="btn btn--primary" type="submit">Xác nhận nhận đơn</button>
                             </form>
-                        {% elif order.order_status == 'PROCESSING' %}
-                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="new_status" value="SHIPPING">
-                                <button class="btn btn--primary" type="submit">Bắt đầu giao hàng</button>
-                            </form>
-                        {% elif order.order_status == 'SHIPPING' %}
                             <form method="post" action="{% url 'shop_order_update_status' order.pk %}" class="stack">
                                 {% csrf_token %}
-                                <input type="hidden" name="new_status" value="DELIVERED">
-                                {% if order.payment_method == 'COD' %}
-                                <label class="check"><input type="checkbox" name="cod_collected" value="yes" required> Đã thu đủ {{ order.shop_total|vnd }} ₫ tiền COD của shop</label>
-                                {% endif %}
-                                <button class="btn btn--primary" type="submit">Xác nhận đã giao và hoàn thành</button>
+                                <input type="hidden" name="action" value="reject">
+                                <label>Lý do từ chối
+                                    <select name="reason" required>
+                                        <option value="">Chọn lý do</option>
+                                        <option value="OUT_OF_STOCK">Hết hàng</option>
+                                        <option value="DELIVERY_UNAVAILABLE">Không thể giao đến địa chỉ này</option>
+                                        <option value="PRODUCT_INFORMATION">Giá/thông tin sản phẩm sai</option>
+                                        <option value="OPERATIONS">Lý do vận hành khác</option>
+                                    </select>
+                                </label>
+                                <label>Ghi chú (không bắt buộc)
+                                    <textarea name="note" rows="2"></textarea>
+                                </label>
+                                <button class="btn btn--secondary" type="submit">Từ chối đơn</button>
                             </form>
+                        {% elif order.order_status == 'SHIPPING' %}
+                            <p>Đơn vị vận chuyển: {{ order.shop_order.carrier_name }}</p>
+                            <p>Mã vận đơn: {{ order.shop_order.tracking_code }}</p>
+                            <p>Trạng thái giao thành công được cập nhật từ đơn vị vận chuyển.</p>
+                        {% elif order.order_status == 'PROCESSING' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" class="stack">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="handoff">
+                                <label>Đơn vị vận chuyển
+                                    <input name="carrier_name" maxlength="100" required>
+                                </label>
+                                <label>Mã vận đơn
+                                    <input name="tracking_code" maxlength="100" required>
+                                </label>
+                                <button class="btn btn--primary" type="submit">Bàn giao vận chuyển</button>
+                            </form>
+                        {% elif order.order_status == 'DELIVERED' %}
+                            <p>Đã giao thành công {{ order.shop_order.delivered_at|date:'d/m/Y H:i' }}. Đang chờ buyer xác nhận hoặc hệ thống tự hoàn thành sau 3 ngày.</p>
+                        {% elif order.order_status == 'COMPLETED' %}
+                            <p>Phần hàng đã hoàn thành.</p>
                         {% else %}
-                            <p>Đơn hàng đã hoàn tất xử lý.</p>
+                            <p>Phần hàng đã bị hủy.</p>
                         {% endif %}
                     </div>
                 </section>
+                {% for cancellation in order.shop_order.cancellation_requests.all %}
+                    <section class="panel panel--padded">
+                        <h2>Yêu cầu hủy · {{ cancellation.get_status_display }}</h2>
+                        <p>Lý do: {{ cancellation.get_reason_display }}</p>
+                        {% if cancellation.note %}<p>Ghi chú: {{ cancellation.note }}</p>{% endif %}
+                        <p>Hạn phản hồi: {{ cancellation.response_deadline|date:'d/m/Y H:i' }}</p>
+                        {% if cancellation.status == 'PENDING' %}
+                            <form method="post" action="{% url 'shop_order_update_status' order.pk %}" class="cluster">
+                                {% csrf_token %}
+                                <input type="hidden" name="cancellation_request_id" value="{{ cancellation.pk }}">
+                                <button class="btn btn--primary" name="action" value="approve_cancellation" type="submit">Chấp nhận hủy</button>
+                                <button class="btn btn--secondary" name="action" value="reject_cancellation" type="submit">Từ chối hủy</button>
+                            </form>
+                        {% elif cancellation.status == 'ESCALATED' %}
+                            <p>Yêu cầu đã quá hạn và được chuyển admin xử lý.</p>
+                        {% elif cancellation.resolution_note %}
+                            <p>Ghi chú xử lý: {{ cancellation.resolution_note }}</p>
+                        {% endif %}
+                    </section>
+                {% endfor %}
                 <section class="panel panel--padded">
                     <h2>
                         Lịch sử trạng thái
                     </h2>
-                    <ol class="shop-timeline">
-                        {% for item in order.status_history.all %}
-                            <li>
-                                <strong>
-                                    {{ item.changed_at|date:'d/m/Y H:i' }}
-                                </strong>
-                                <span>
-                                    {{ item.new_status }} · {{ item.note }}
-                                </span>
+                    <ol class="timeline shop-timeline">
+                        {% for item in order.shop_order.shop_history %}
+                            <li class="timeline__item is-done">
+                                <span class="timeline__dot" aria-hidden="true"></span>
+                                <div class="timeline__content">
+                                    <strong>{{ item.new_status }}</strong>
+                                    <small>{{ item.changed_at|date:'d/m/Y H:i' }}</small>
+                                    <p>{{ item.note }}{% if item.changed_by %} · {{ item.changed_by.full_name|default:item.changed_by.username }}{% else %} · Hệ thống{% endif %}</p>
+                                </div>
                             </li>
                         {% empty %}
-                            <li>
-                                Chưa có lịch sử cập nhật.
-                            </li>
+                            <li class="timeline__item"><span class="timeline__dot" aria-hidden="true"></span><div class="timeline__content">Chưa có lịch sử cập nhật.</div></li>
                         {% endfor %}
                     </ol>
                 </section>

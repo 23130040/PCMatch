@@ -1,15 +1,29 @@
 {% extends 'includes/shop/auth_base.html' %}
 {% block heading %}
-    Shop đang chờ xét duyệt
+    {% if shop.status == 'REJECTED' %}Hồ sơ shop cần cập nhật{% elif shop.status == 'SUSPENDED' %}Shop đang tạm ngưng{% else %}Shop đang chờ xét duyệt{% endif %}
 {% endblock %}
 {% block subheading %}
-    Hồ sơ của bạn đã được gửi
+    {% if shop.status == 'REJECTED' %}Quản trị viên đã yêu cầu bổ sung thông tin{% elif shop.status == 'SUSPENDED' %}Vui lòng liên hệ quản trị viên{% else %}Hồ sơ của bạn đã được gửi{% endif %}
 {% endblock %}
 {% block content %}
     {% include 'includes/shop/onboarding_steps.html' with current=4 %}
+    {% if shop.status == 'REJECTED' %}
+    <div class="message message--error" role="status">
+        Hồ sơ shop bị từ chối. {% if shop.admin_note %}Lý do: {{ shop.admin_note }}{% endif %}
+    </div>
+    <a class="btn btn--primary shop-auth__submit" href="{% url 'shop_profile_settings' %}">Cập nhật hồ sơ shop</a>
+    {% elif shop.status == 'SUSPENDED' %}
+    <div class="message message--error" role="status">
+        Shop của bạn đang bị tạm ngưng. {% if shop.admin_note %}Ghi chú: {{ shop.admin_note }}{% else %}Vui lòng liên hệ quản trị viên để biết thêm thông tin.{% endif %}
+    </div>
+    {% else %}
     <div class="message message--info" role="status">
         Shop của bạn đang chờ xét duyệt bởi admin. Chúng tôi sẽ gửi email cho bạn ngay khi shop được phê duyệt.
     </div>
+    {% endif %}
+    {% if shop.status != 'ACTIVE' and shop.status != 'REJECTED' %}
+    <a class="btn btn--secondary shop-auth__submit" href="{% url 'shop_profile_settings' %}">Hoàn thiện / cập nhật hồ sơ shop</a>
+    {% endif %}
     {% if shop %}
     <dl class="info-dl">
         <dt>
@@ -22,7 +36,7 @@
             Trạng thái
         </dt>
         <dd>
-            Pending approval
+            {{ shop.get_status_display }}
         </dd>
     </dl>
     {% endif %}
