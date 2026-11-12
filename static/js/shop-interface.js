@@ -36,3 +36,15 @@ document.querySelectorAll('[data-select-all]').forEach(checkbox => {
         checkbox.indeterminate = selected > 0 && selected < rows.length;
     }));
 });
+
+document.addEventListener('submit', (event) => {
+    const form = event.target.closest('form[data-confirm]');
+
+    if (!form) return;
+
+    const message = form.dataset.confirm;
+
+    if (!window.confirm(message)) {
+        event.preventDefault();
+    }
+});

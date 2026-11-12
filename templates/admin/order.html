@@ -27,7 +27,7 @@
             <div>
                 <nav class="breadcrumb"><a href="{% url 'staff_dashboard' %}">Admin</a><span>Quản lý đơn hàng</span></nav>
                 <h1>Quản lý đơn hàng</h1>
-                <p>Chỉ xem và tra cứu đơn hàng. Shop xác nhận và trực tiếp xử lý phần hàng của mình.</p>
+                <p>Shop xác nhận và trực tiếp xử lý phần hàng; staff tra cứu đơn và quyết định yêu cầu hủy được chuyển cấp.</p>
                 <p class="admin-updated"><i class="fa-solid fa-arrows-rotate"></i> Cập nhật lúc {{ updated_at|date:'d/m/Y H:i' }} · Đang xem: {{ period_label }}</p>
             </div>
             <div class="cluster admin-page-actions" aria-label="Lọc đơn hàng theo thời gian">
@@ -124,6 +124,7 @@
                 <a href="{% url 'loadOrder' %}?status=COMPLETED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'COMPLETED' %}is-active{% endif %}" style="text-decoration: none;">Hoàn thành</a>
                 <a href="{% url 'loadOrder' %}?status=CANCELLED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'CANCELLED' %}is-active{% endif %}" style="text-decoration: none;">Đã hủy</a>
                 <a href="{% url 'loadOrder' %}?status=RETURNED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'RETURNED' %}is-active{% endif %}" style="text-decoration: none;">Trả hàng</a>
+                <a href="{% url 'loadOrder' %}?status=ESCALATED&search={{ search|urlencode }}&shop={{ idOfShop }}&{{ period_query }}" class="order-tab {% if locStatus == 'ESCALATED' %}is-active{% endif %}" style="text-decoration: none;">Chờ staff xử lý <span>{{ pending_staff_order_count }}</span></a>
              </div>
 
             <div class="admin-table-wrap">
@@ -194,8 +195,8 @@
                             <td>
                                 <button class="admin-detail-button btn btn--primary order-detail-btn" type="button"
                                         data-order-detail-url="{% url 'staff_order_detail' order.order_id %}"
-                                        aria-label="Xem chi tiết đơn {{ order.order_code }}">
-                                    <i class="fa-regular fa-eye"></i><span>Chi tiết</span>
+                                        aria-label="{% if order.escalated_cancellation_count %}Xử lý yêu cầu hủy của đơn{% else %}Xem chi tiết đơn{% endif %} {{ order.order_code }}">
+                                    {% if order.escalated_cancellation_count %}<i class="fa-solid fa-triangle-exclamation"></i><span>Xử lý ({{ order.escalated_cancellation_count }})</span>{% else %}<i class="fa-regular fa-eye"></i><span>Chi tiết</span>{% endif %}
                                 </button>
                             </td>
                         </tr>

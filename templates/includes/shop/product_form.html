@@ -1,9 +1,9 @@
 <section class="panel panel--padded sa-form-panel">
     <h2>
         {% if editing_product %}
-        Sửa sản phẩm: {{ editing_product.product_name }}
+            Sửa sản phẩm: {{ editing_product.product_name }}
         {% else %}
-        Thêm sản phẩm mới
+            Thêm sản phẩm mới
         {% endif %}
     </h2>
     <form method="post" action="{% url 'shop_product_save' %}" enctype="multipart/form-data" class="stack">
@@ -17,9 +17,10 @@
                     </span>
                     <select name="category">
                         {% for category in categories %}
-                        <option value="{{ category.pk }}" {% if category.pk == editing_product.category_id %}selected{% endif %}>
-                            {{ category.category_name }}
-                        </option>
+                            <option value="{{ category.pk }}"
+                                    {% if category.pk == editing_product.category_id %}selected{% endif %}>
+                                {{ category.category_name }}
+                            </option>
                         {% endfor %}
                     </select>
                 </label>
@@ -41,7 +42,8 @@
                     <span>
                         Giá bán (VND)
                     </span>
-                    <input name="price" type="number" min="1000" step="1000" value="{{ editing_product.price|floatformat:'0' }}">
+                    <input name="price" type="number" min="1000" step="1000"
+                           value="{{ editing_product.price|floatformat:'0' }}">
                 </label>
             </div>
             <div class="two-col">
@@ -49,22 +51,36 @@
                     <span>
                         Tồn kho
                     </span>
-                    <input name="stock_quantity" type="number" min="0" value="{{ editing_product.stock_quantity|default_if_none:'0' }}">
+                    <input name="stock_quantity" type="number" min="0"
+                           value="{{ editing_product.stock_quantity|default_if_none:'0' }}">
                 </label>
                 <label class="field">
                     <span>
                         Trạng thái
                     </span>
                     <select name="status">
-                        <option value="ACTIVE">
+
+                        <option value="ACTIVE"
+                                {% if not editing_product or editing_product.status == 'ACTIVE' %}
+                                selected
+                                {% endif %}>
                             Đang bán
                         </option>
-                        <option value="INACTIVE">
+
+                        <option value="INACTIVE"
+                                {% if editing_product.status == 'INACTIVE' %}
+                                selected
+                                {% endif %}>
                             Tạm ẩn
                         </option>
-                        <option value="OUT_OF_STOCK">
+
+                        <option value="OUT_OF_STOCK"
+                                {% if editing_product.status == 'OUT_OF_STOCK' %}
+                                selected
+                                {% endif %}>
                             Hết hàng
                         </option>
+
                     </select>
                 </label>
             </div>

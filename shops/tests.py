@@ -102,7 +102,8 @@ class ShopBackendLayoutsTests(TestCase):
         self.assertEqual(response.context['products_page'].paginator.count, 0)
         response = self.client.get(reverse('shop_offers'), {'edit': self.product.pk})
         self.assertContains(response, 'name="product_name" value="CPU của gian hàng"')
-        self.assertContains(response, '<fieldset disabled')
+        self.assertContains(response, '<fieldset class="stack">')
+        self.assertNotContains(response, '<fieldset disabled')
         for category in ['invalid', '9' * 100, '²']:
             response = self.client.get(reverse('shop_offers'), {'cat': category})
             self.assertEqual(response.status_code, 200)

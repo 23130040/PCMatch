@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_GET, require_POST
 from django.core.paginator import Paginator
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.contrib import messages
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -32,7 +32,9 @@ from .services import create_order, retry_vnpay_payment
 
 def _staff_filtered_orders(period_orders, status, search, shop_id):
     orders = period_orders
-    if status and status != 'ALL':
+    if status == 'ESCALATED':
+        orders = orders.filter(shop_orders__cancellation_requests__status='ESCALATED').distinct()
+    elif status and status != 'ALL':
         orders = orders.filter(order_status=status)
     if search:
         orders = orders.filter(order_code__icontains=search)
@@ -51,7 +53,13 @@ def order_list(request):
     page = request.GET.get('page', 1)
     allOrder = _staff_filtered_orders(period_orders, locStatus, search, idOfShop)
 
-    allOrder = allOrder.select_related('user', 'address').prefetch_related(
+    allOrder = allOrder.annotate(
+        escalated_cancellation_count=Count(
+            'shop_orders__cancellation_requests',
+            filter=Q(shop_orders__cancellation_requests__status='ESCALATED'),
+            distinct=True,
+        ),
+    ).select_related('user', 'address').prefetch_related(
         Prefetch(
             'order_items',
             queryset=OrderItem.objects.select_related('product', 'shop'),
@@ -83,6 +91,9 @@ def order_list(request):
         'period_year_query': request.GET.get('year', ''),
         'filter_query': urlencode({key: value for key, value in request.GET.items() if key != 'page'}),
         'filtered_order_count': allOrder.count(),
+        'pending_staff_order_count': _staff_filtered_orders(
+            period_orders, 'ESCALATED', search, idOfShop,
+        ).count(),
         'updated_at': timezone.localtime(),
         'total_orders': period_orders.count(),
         'pending_orders': period_orders.filter(order_status='PENDING').count(),
@@ -200,7 +211,17 @@ def buyer_orders(request):
 @require_GET
 @buyer_required
 def buyer_order(request):
+    order_code = request.GET.get('id', '').strip()
+
+    if not order_code:
+        messages.info(
+            request,
+            'Vui lòng chọn một đơn hàng để xem chi tiết.'
+        )
+        return redirect('buyer_orders')
+
     process_order_timeouts()
+
     order = get_object_or_404(
         Order.objects.select_related('address').prefetch_related(
             'order_items__product',
@@ -210,7 +231,8 @@ def buyer_order(request):
             'shop_orders__history__changed_by',
             'shop_orders__cancellation_requests',
         ),
-        order_code=request.GET.get('id', ''), user=request.user,
+        order_code=order_code,
+        user=request.user,
     )
     ensure_shop_orders(order)
     recompute_order_status(order)

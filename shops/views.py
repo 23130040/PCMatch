@@ -61,7 +61,6 @@ from .forms import (
 )
 from .models import Shop
 
-
 shop_required = user_passes_test(is_active_seller, login_url=reverse_lazy('shop_login'))
 logger = logging.getLogger(__name__)
 
@@ -265,7 +264,7 @@ def shop_verify_email(request):
                 token = get_random_string(48)
                 draft['email_token_hash'] = make_password(token)
                 draft['email_token_expires'] = (
-                    timezone.now() + SELLER_EMAIL_TOKEN_TTL
+                        timezone.now() + SELLER_EMAIL_TOKEN_TTL
                 ).timestamp()
                 request.session[SELLER_DRAFT_SESSION_KEY] = draft
                 try:
@@ -292,9 +291,11 @@ def shop_verify_email(request):
                 except SellerVerificationError as error:
                     messages.error(request, str(error))
                 else:
-                    messages.success(request, 'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
+                    messages.success(request,
+                                     'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
             else:
-                messages.success(request, 'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
+                messages.success(request,
+                                 'Nếu email thuộc tài khoản seller chưa xác thực, liên kết kích hoạt đã được gửi.')
             return redirect('shop_verify_email')
 
     return render(request, 'shop/verify_email.html', {
@@ -312,9 +313,9 @@ def shop_verify_email_confirm(request, token):
         token_hash = draft.get('email_token_hash')
         expires_at = draft.get('email_token_expires', 0)
         if (
-            not token_hash
-            or expires_at <= timezone.now().timestamp()
-            or not check_password(token, token_hash)
+                not token_hash
+                or expires_at <= timezone.now().timestamp()
+                or not check_password(token, token_hash)
         ):
             messages.error(request, 'Liên kết xác thực không hợp lệ hoặc đã hết hạn.')
             return redirect('shop_verify_email')
@@ -770,7 +771,8 @@ def _owned_object(queryset, identifier):
 def _revenue(orders, days):
     today = timezone.localdate()
     start = today - timedelta(days=days - 1)
-    completed = [order for order in orders if order.order_status == 'COMPLETED' and start <= timezone.localdate(order.shop_order.completed_at or order.updated_at) <= today]
+    completed = [order for order in orders if order.order_status == 'COMPLETED' and start <= timezone.localdate(
+        order.shop_order.completed_at or order.updated_at) <= today]
     daily = defaultdict(lambda: {'amount': Decimal('0'), 'count': 0})
     categories = defaultdict(Decimal)
     for order in completed:
@@ -784,11 +786,14 @@ def _revenue(orders, days):
     for offset in range(days):
         date = start + timedelta(days=offset)
         amount = daily[date]['amount']
-        rows.append({'date': date, 'amount': amount, 'percent': round(amount / maximum * 100), 'count': daily[date]['count']})
+        rows.append(
+            {'date': date, 'amount': amount, 'percent': round(amount / maximum * 100), 'count': daily[date]['count']})
     total = sum((order.shop_total for order in completed), Decimal('0'))
     return {
         'total': total, 'count': len(completed), 'average': total / len(completed) if completed else 0,
-        'days': rows, 'categories': [{'name': name, 'amount': value, 'percent': round(value / total * 100) if total else 0} for name, value in categories.items()],
+        'days': rows,
+        'categories': [{'name': name, 'amount': value, 'percent': round(value / total * 100) if total else 0} for
+                       name, value in categories.items()],
     }
 
 
@@ -809,21 +814,27 @@ def shop_page(request, page):
     filters = request.GET.copy()
     filters.pop('page', None)
     context.update({
-        'shop': shop, 'q': q, 'status': status, 'filter_query': filters.urlencode(), 'categories': Category.objects.filter(status=True).order_by('category_name'),
-        'product_total': products.count(), 'product_active': products.filter(status='ACTIVE', stock_quantity__gt=0).count(),
-        'product_hidden': products.filter(status='INACTIVE').count(), 'product_out': products.exclude(status='INACTIVE').filter(stock_quantity=0).count(),
+        'shop': shop, 'q': q, 'status': status, 'filter_query': filters.urlencode(),
+        'categories': Category.objects.filter(status=True).order_by('category_name'),
+        'product_total': products.count(),
+        'product_active': products.filter(status='ACTIVE', stock_quantity__gt=0).count(),
+        'product_hidden': products.filter(status='INACTIVE').count(),
+        'product_out': products.exclude(status='INACTIVE').filter(stock_quantity=0).count(),
         'product_low': products.exclude(status='INACTIVE').filter(stock_quantity__lte=3).count(),
         'product_ok': products.filter(status='ACTIVE', stock_quantity__gt=3).count(),
         'order_total': len(orders), 'order_pending': sum(order.order_status == 'PENDING' for order in orders),
         'order_processing': sum(order.order_status in {'PROCESSING', 'SHIPPING'} for order in orders),
         'order_delivered': sum(order.order_status in {'DELIVERED', 'COMPLETED'} for order in orders),
-        'recent_orders': orders[:5], 'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'PROCESSING'}][:5],
-        'order_statuses': [{'code': code, 'label': label, 'count': sum(order.order_status == code for order in orders)} for code, label in ORDER_LABELS.items()],
+        'recent_orders': orders[:5],
+        'pending_orders': [order for order in orders if order.order_status in {'PENDING', 'PROCESSING'}][:5],
+        'order_statuses': [{'code': code, 'label': label, 'count': sum(order.order_status == code for order in orders)}
+                           for code, label in ORDER_LABELS.items()],
         'revenue': _revenue(orders, 30), 'top_products': products.order_by('-sold_quantity', 'pk')[:5],
     })
     questions = ProductQuestion.objects.filter(product__shop=shop).select_related('product', 'user').prefetch_related(
         Prefetch('answers', queryset=conversation_messages(), to_attr='thread_messages'),
-    ).annotate(latest_activity=Coalesce(Max('answers__created_at'), 'created_at')) if shop else ProductQuestion.objects.none()
+    ).annotate(
+        latest_activity=Coalesce(Max('answers__created_at'), 'created_at')) if shop else ProductQuestion.objects.none()
     context['question_pending'] = questions.filter(status=False).count()
     context['recent_questions'] = questions.filter(status=False).order_by('-latest_activity', '-pk')[:3]
 
@@ -832,7 +843,8 @@ def shop_page(request, page):
             products = products.filter(Q(product_name__icontains=q) | Q(brand__brand_name__icontains=q))
         category = request.GET.get('cat', '')
         if category:
-            if category.isascii() and category.isdigit() and len(category) <= 19 and int(category) <= 9223372036854775807:
+            if category.isascii() and category.isdigit() and len(category) <= 19 and int(
+                    category) <= 9223372036854775807:
                 products = products.filter(category_id=int(category))
             else:
                 products = products.none()
@@ -845,10 +857,12 @@ def shop_page(request, page):
         context['category_filter'] = category
         context['products_page'] = Paginator(products, 10).get_page(request.GET.get('page'))
         context['low_products'] = products.exclude(status='INACTIVE').filter(stock_quantity__lte=3)
-        context['editing_product'] = _owned_object(Product.objects.filter(shop=shop), request.GET['edit']) if request.GET.get('edit') else None
+        context['editing_product'] = _owned_object(Product.objects.filter(shop=shop),
+                                                   request.GET['edit']) if request.GET.get('edit') else None
         context['show_product_form'] = 'new' in request.GET or context['editing_product'] is not None
     elif page in {'orders', 'order', 'fulfillment'}:
-        filtered = [order for order in orders if (not status or order.order_status == status) and (not q or q.lower() in order.order_code.lower() or q.lower() in order.user.full_name.lower())]
+        filtered = [order for order in orders if (not status or order.order_status == status) and (
+                    not q or q.lower() in order.order_code.lower() or q.lower() in order.user.full_name.lower())]
         context['orders_page'] = Paginator(filtered, 10).get_page(request.GET.get('page'))
         context['processing_orders'] = [order for order in orders if order.order_status == 'PROCESSING']
         context['shipping_orders'] = [order for order in orders if order.order_status == 'SHIPPING']
@@ -859,9 +873,12 @@ def shop_page(request, page):
     elif page == 'questions':
         answered = request.GET.get('answered') == '1'
         context['answered'] = answered
-        context['questions_page'] = Paginator(questions.filter(status=answered).order_by('-latest_activity', '-pk'), 10).get_page(request.GET.get('page'))
+        context['questions_page'] = Paginator(questions.filter(status=answered).order_by('-latest_activity', '-pk'),
+                                              10).get_page(request.GET.get('page'))
     elif page == 'aftersales':
-        cases = Return.objects.filter(order__order_items__shop=shop).distinct().select_related('order', 'user').order_by('-created_at') if shop else Return.objects.none()
+        cases = Return.objects.filter(order__order_items__shop=shop).distinct().select_related('order',
+                                                                                               'user').order_by(
+            '-created_at') if shop else Return.objects.none()
         if status in RETURN_LABELS:
             cases = cases.filter(status=status)
         context['cases_page'] = Paginator(cases, 10).get_page(request.GET.get('page'))
@@ -889,17 +906,34 @@ def shop_product_save(request):
     status = request.POST.get('status', 'ACTIVE')
     description = request.POST.get('description', '').strip()
 
+    if status not in dict(Product.STATUS_CHOICES):
+        messages.error(request, 'Trạng thái sản phẩm không hợp lệ.')
+        return redirect('shop_offers')
+
     if not product_name:
         messages.error(request, 'Tên sản phẩm không được để trống.')
         return redirect('shop_offers')
 
     try:
         price = Decimal(price_raw)
+
+        if (
+                not price.is_finite()
+                or price < Decimal('1000')
+                or price > Decimal('9999999999999.99')
+                or price.as_tuple().exponent < -2
+        ):
+            raise InvalidOperation
+
     except (InvalidOperation, ValueError):
-        price = Decimal('0')
+        messages.error(request, 'Giá sản phẩm không hợp lệ.')
+        return redirect('shop_offers')
 
     try:
         stock_quantity = int(stock_raw)
+        if stock_quantity < 0:
+            messages.error(request, 'Số lượng tồn kho không được âm.')
+            return redirect('shop_offers')
     except (ValueError, TypeError):
         stock_quantity = 0
 
@@ -1053,9 +1087,9 @@ def shop_order_update_status(request, order_id):
                 tracking_code=request.POST.get('tracking_code', '').strip(),
             )
             if (
-                updated.status == 'CANCELLED'
-                and updated.confirmation_deadline <= timezone.now()
-                and action != 'reject'
+                    updated.status == 'CANCELLED'
+                    and updated.confirmation_deadline <= timezone.now()
+                    and action != 'reject'
             ):
                 messages.warning(request, 'Hạn xác nhận đã hết; hệ thống đã tự hủy phần hàng.')
             else:
@@ -1120,7 +1154,6 @@ def shop_return_update(request, return_id):
         messages.error(request, 'Hành động không hợp lệ.')
 
     return redirect('shop_aftersales')
-
 
 
 STAFF_SHOP_STATUSES = (
@@ -1194,7 +1227,9 @@ def staff_shop_list(request):
             count=Count('pk'), category_name=Min('category__category_name'),
         )
     }
-    revenue_totals = dict(OrderItem.objects.filter(shop_id__in=shop_ids, order__order_status='DELIVERED').values('shop_id').annotate(total=Sum('subtotal')).values_list('shop_id', 'total'))
+    revenue_totals = dict(
+        OrderItem.objects.filter(shop_id__in=shop_ids, order__order_status='DELIVERED').values('shop_id').annotate(
+            total=Sum('subtotal')).values_list('shop_id', 'total'))
     for shop in shop_page:
         shop.product_count = product_summaries.get(shop.pk, {}).get('count', 0)
         shop.category_name = product_summaries.get(shop.pk, {}).get('category_name') or 'Chưa phân loại'

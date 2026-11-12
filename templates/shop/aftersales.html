@@ -73,7 +73,9 @@
                                 Duyệt yêu cầu
                             </button>
                         </form>
-                        <form method="post" action="{% url 'shop_return_update' case.pk %}" onsubmit="return confirm('Bạn có chắc muốn từ chối?')">
+                        <form method="post"
+                              action="{% url 'shop_return_update' case.pk %}"
+                              data-confirm="Bạn có chắc muốn từ chối?">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="reject">
                             <button class="btn btn--danger" type="submit">

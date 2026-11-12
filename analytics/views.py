@@ -220,7 +220,10 @@ def dashboard_view(request):
 
     available_years = {value.year for value in Order.objects.dates('created_at', 'year')}
     available_years.add(period['selected_year'])
-    context = {}
+    context = {
+        'page_name': 'dashboard',
+        'page_section': 'staff',
+    }
     context.update(_dashboard_data(orders, period))
     context.update(_status_summary(orders))
     context.update({

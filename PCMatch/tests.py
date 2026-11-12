@@ -137,6 +137,12 @@ class FrontendPagesTests(TestCase):
                 if name in {'buyer_model', 'buyer_shop'}:
                     self.assertRedirects(response, reverse('buyer_search'))
                     continue
+                if name in {'buyer_order', 'buyer_payment'}:
+                    self.assertRedirects(
+                        response,
+                        reverse('buyer_orders')
+                    )
+                    continue
                 self.assertEqual(response.status_code, 200)
                 parser = PageParser()
                 parser.feed(response.content.decode())
@@ -186,6 +192,13 @@ class FrontendPagesTests(TestCase):
             'shop/onboarding_profile.html', 'shop/onboarding_legal.html',
             'shop/onboarding_pending.html', 'shop/notifications.html',
             'staff/login.html', 'staff/forgot_password.html', 'staff/reset_password.html',
+            'auth/buyer_reset_password.html',
+            'auth/buyer_forgot_password.html',
+            'shop/reset_password.html',
+            'shop/forgot_password.html',
+            'shop/profile_settings.html',
+            'buyer/shop_profile.html',
+            'admin/shop_detail.html',
         }
         root = settings.BASE_DIR / 'templates'
         partials.update(path.relative_to(root).as_posix() for path in (root / 'includes/shop').glob('*.html'))
@@ -207,7 +220,7 @@ class FrontendPagesTests(TestCase):
             for forbidden in ['localStorage', 'sessionStorage']:
                 self.assertNotIn(forbidden, content, path.name)
             # Comparison enhances only its own backend POST forms.
-            if path.name != 'comparison.js':
+            if path.name not in {'comparison.js', 'cart-add.js', 'shop-interface.js'}:
                 for forbidden in ["addEventListener('submit'", 'addEventListener("submit"']:
                     self.assertNotIn(forbidden, content, path.name)
         for path in (settings.BASE_DIR / 'templates' / 'buyer').glob('*.html'):

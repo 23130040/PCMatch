@@ -225,7 +225,9 @@
                                             {% if product.status == 'INACTIVE' %}Hiện{% else %}Ẩn{% endif %}
                                         </button>
                                     </form>
-                                    <form method="post" action="{% url 'shop_product_delete' product.pk %}" onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?')">
+                                    <form method="post"
+                                          action="{% url 'shop_product_delete' product.pk %}"
+                                          data-confirm="Bạn có chắc muốn xóa sản phẩm này?">
                                         {% csrf_token %}
                                         <button class="sa-detail-btn sa-detail-btn--danger" type="submit">
                                             Xóa

@@ -43,10 +43,13 @@ load_local_env()
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-n8f&%gmxzdzf&j&o6a$qsj(iqm*=+^yxks9+gl47(1xkn5q709'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = (
+    os.environ.get('DJANGO_DEBUG', 'false').lower()
+    == 'true'
+)
 
 ALLOWED_HOSTS = list(dict.fromkeys([
     '127.0.0.1',
