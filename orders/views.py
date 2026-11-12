@@ -19,6 +19,7 @@ from orders.services import (
     recompute_order_status,
     request_order_cancellation,
     resolve_escalated_cancellation,
+    staff_update_order_statuses,
     verify_carrier_webhook,
 )
 from analytics.views import _filter_period, _filtered_orders
@@ -101,6 +102,44 @@ def order_list(request):
         'cancelled_orders': period_orders.filter(order_status__in=('CANCELLED', 'RETURNED')).count(),
     }
     return render(request, 'admin/order.html', box)
+
+
+@require_POST
+@staff_required
+def change_many_status(request):
+    action = request.POST.get('action_status', '').strip()
+    return_query = request.POST.get('return_query', '').strip()
+
+    if request.POST.get('select_all') == '1':
+        period = _filter_period(request, request.POST)
+        orders = _staff_filtered_orders(
+            _filtered_orders(period),
+            request.POST.get('status', '').strip(),
+            request.POST.get('search', '').strip(),
+            request.POST.get('shop', '').strip(),
+        ).exclude(pk__in=request.POST.getlist('excluded_order_ids'))
+        order_ids = list(orders.values_list('pk', flat=True))
+    else:
+        order_ids = request.POST.getlist('order_ids')
+
+    if not order_ids:
+        messages.error(request, 'Hãy chọn ít nhất một đơn hàng.')
+    else:
+        try:
+            result = staff_update_order_statuses(order_ids, request.user, action)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            if result['updated_shop_orders']:
+                messages.success(
+                    request,
+                    f"Đã cập nhật {result['updated_shop_orders']} phần hàng thuộc {result['updated_orders']} đơn.",
+                )
+            else:
+                messages.info(request, 'Không có phần hàng nào phù hợp để cập nhật trạng thái này.')
+
+    destination = reverse('loadOrder')
+    return redirect(f'{destination}?{return_query}' if return_query else destination)
 
 
 @require_GET
@@ -315,7 +354,7 @@ def staff_resolve_cancellation(request, request_id):
         messages.error(request, error.messages[0])
         return redirect('load_ListOrder')
     messages.success(request, f'Đã xử lý yêu cầu hủy đơn {cancellation.shop_order.order.order_code}.')
-    return redirect('staff_order_detail', order_id=cancellation.shop_order.order_id)
+    return redirect(f'{reverse("loadOrder")}?status=ESCALATED')
 
 @csrf_exempt
 @require_POST

@@ -217,6 +217,7 @@ for section, pages in PAGE_GROUPS.items():
         ))
 
 urlpatterns += [
+    path('staff/orders/many/', order_views.change_many_status, name='updateOrderStatus'),
     path('staff/orders/', staff_required(order_views.order_list), name='loadOrder'),
     path('staff/orders/', staff_required(order_views.order_list), name='load_ListOrder'),
     path('staff/products/', staff_required(product_views.load_products), name='load_products'),

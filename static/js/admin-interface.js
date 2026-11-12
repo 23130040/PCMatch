@@ -46,12 +46,27 @@ const orderDetailContent = document.querySelector('#order-detail-content');
 let orderDetailRequest;
 
 if (orderDetailDrawer && orderDetailContent) {
+    const orderDetailTitle = document.querySelector('#order-detail-title');
+    const orderDetailCreated = document.querySelector('#order-detail-created');
+    const openDrawer = () => {
+        orderDetailDrawer.hidden = false;
+        orderDetailDrawer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('has-order-drawer');
+    };
+    const closeDrawer = () => {
+        orderDetailRequest?.abort();
+        orderDetailDrawer.hidden = true;
+        orderDetailDrawer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('has-order-drawer');
+    };
     document.querySelectorAll('[data-order-detail-url]').forEach(button => {
         button.addEventListener('click', async () => {
             orderDetailRequest?.abort();
             orderDetailRequest = new AbortController();
             orderDetailContent.innerHTML = '<p class="order-detail-drawer__loading">Đang tải chi tiết đơn hàng…</p>';
-            if (!orderDetailDrawer.open) orderDetailDrawer.showModal();
+            if (orderDetailTitle) orderDetailTitle.textContent = `Đơn ${button.dataset.orderCode || ''}`.trim();
+            if (orderDetailCreated) orderDetailCreated.textContent = button.dataset.orderCreated || '';
+            openDrawer();
 
             try {
                 const response = await fetch(button.dataset.orderDetailUrl, {
@@ -67,9 +82,46 @@ if (orderDetailDrawer && orderDetailContent) {
         });
     });
 
-    orderDetailDrawer.querySelector('[data-order-detail-close]')?.addEventListener('click', () => orderDetailDrawer.close());
-    orderDetailDrawer.addEventListener('click', event => {
-        if (event.target === orderDetailDrawer) orderDetailDrawer.close();
+    orderDetailDrawer.querySelectorAll('[data-order-detail-close]').forEach(button => {
+        button.addEventListener('click', closeDrawer);
     });
-    orderDetailDrawer.addEventListener('close', () => orderDetailRequest?.abort());
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !orderDetailDrawer.hidden) closeDrawer();
+    });
+}
+
+const orderSelectAll = document.querySelector('#order-select-all');
+const orderSelectionRows = [...document.querySelectorAll('.row-check')];
+const orderBulkActions = document.querySelector('#order-bulk-actions');
+const selectedOrderCount = document.querySelector('#selected-order-count');
+const openSelectedOrder = document.querySelector('#open-selected-order');
+const clearOrderSelection = document.querySelector('#clear-order-selection');
+
+if (orderSelectAll && orderSelectionRows.length && orderBulkActions && selectedOrderCount && openSelectedOrder && clearOrderSelection) {
+    const selectedOrders = () => orderSelectionRows.filter(box => box.checked);
+    const refreshOrderSelection = () => {
+        const selected = selectedOrders();
+        orderBulkActions.hidden = selected.length === 0;
+        selectedOrderCount.textContent = selected.length;
+        orderSelectAll.checked = selected.length === orderSelectionRows.length;
+        orderSelectAll.indeterminate = selected.length > 0 && selected.length < orderSelectionRows.length;
+        openSelectedOrder.disabled = selected.length !== 1;
+        openSelectedOrder.title = selected.length === 1 ? '' : 'Chọn một đơn để xem chi tiết.';
+        orderSelectionRows.forEach(box => box.closest('tr').classList.toggle('is-row-selected', box.checked));
+    };
+
+    orderSelectAll.addEventListener('change', () => {
+        orderSelectionRows.forEach(box => { box.checked = orderSelectAll.checked; });
+        refreshOrderSelection();
+    });
+    orderSelectionRows.forEach(box => box.addEventListener('change', refreshOrderSelection));
+    clearOrderSelection.addEventListener('click', () => {
+        orderSelectionRows.forEach(box => { box.checked = false; });
+        refreshOrderSelection();
+    });
+    openSelectedOrder.addEventListener('click', () => {
+        const row = selectedOrders()[0]?.closest('tr');
+        row?.querySelector('[data-order-detail-url]')?.click();
+    });
+    refreshOrderSelection();
 }

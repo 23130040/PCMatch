@@ -411,6 +411,117 @@ def fulfill_order(order_id, shop, actor, new_status, cod_collected=False, note='
     )
 
 
+STAFF_ORDER_ACTIONS = {
+    'COMFIRMED': 'PROCESSING',
+    'PROCESSING': 'PROCESSING',
+    'SHIPPING': 'SHIPPING',
+    'DELIVERED': 'DELIVERED',
+    'CANCELLED': 'CANCELLED',
+}
+
+
+@transaction.atomic
+def staff_update_order_statuses(order_ids, actor, action):
+    """Apply a staff action from the operations screen to eligible shop orders."""
+    if action not in STAFF_ORDER_ACTIONS:
+        raise ValidationError('Trạng thái cập nhật không hợp lệ.')
+
+    orders = list(
+        Order.objects.select_for_update()
+        .filter(pk__in=order_ids)
+        .select_related('user')
+        .order_by('pk')
+    )
+    updated_orders = 0
+    updated_shop_orders = 0
+    now = timezone.now()
+
+    for order in orders:
+        ensure_shop_orders(order)
+        shop_orders = list(
+            ShopOrder.objects.select_for_update()
+            .filter(order=order)
+            .select_related('shop')
+            .order_by('pk')
+        )
+        changed = False
+
+        for shop_order in shop_orders:
+            old_status = shop_order.status
+
+            if action in {'COMFIRMED', 'PROCESSING'} and old_status == 'PENDING':
+                shop_order.status = 'PROCESSING'
+                shop_order.save(update_fields=['status', 'updated_at'])
+                _sync_item_status(shop_order, 'PROCESSING')
+                _shop_order_history(
+                    shop_order, actor, 'PROCESSING',
+                    'Admin xác nhận đơn và chuyển shop xử lý.', old_status=old_status,
+                )
+                _notify(
+                    order.user, 'Đơn hàng đã được xác nhận',
+                    f'Admin đã chuyển phần hàng của {shop_order.shop.shop_name} sang xử lý.',
+                    'ORDER_STATUS',
+                )
+            elif action == 'SHIPPING' and old_status == 'PROCESSING':
+                shop_order.status = 'SHIPPING'
+                shop_order.carrier_name = 'PCMatch Operations'
+                shop_order.tracking_code = f'ADMIN-{order.pk}-{shop_order.pk}'
+                shop_order.save(update_fields=['status', 'carrier_name', 'tracking_code', 'updated_at'])
+                _sync_item_status(shop_order, 'SHIPPING')
+                _shop_order_history(
+                    shop_order, actor, 'SHIPPING',
+                    'Admin bàn giao phần hàng cho vận chuyển.', old_status=old_status,
+                )
+                _notify(
+                    order.user, 'Đơn hàng đang được giao',
+                    f'Phần hàng của {shop_order.shop.shop_name} đã được bàn giao vận chuyển.',
+                    'ORDER_STATUS',
+                )
+            elif action == 'DELIVERED' and old_status == 'SHIPPING':
+                shop_order.status = 'DELIVERED'
+                shop_order.delivered_at = now
+                shop_order.save(update_fields=['status', 'delivered_at', 'updated_at'])
+                _sync_item_status(shop_order, 'DELIVERED')
+                _shop_order_history(
+                    shop_order, actor, 'DELIVERED',
+                    'Admin xác nhận phần hàng đã giao.', old_status=old_status,
+                )
+                _notify(
+                    order.user, 'Đơn hàng đã giao',
+                    f'Phần hàng của {shop_order.shop.shop_name} đang chờ bạn xác nhận đã nhận.',
+                    'ORDER_STATUS',
+                )
+            elif action == 'CANCELLED' and old_status in {'PENDING', 'PROCESSING'}:
+                _cancel_shop_order(shop_order, actor, 'Admin hủy đơn')
+                CancellationRequest.objects.filter(
+                    shop_order=shop_order,
+                    status__in={'PENDING', 'ESCALATED'},
+                ).update(
+                    status='ADMIN_APPROVED', resolved_by=actor,
+                    resolved_at=now, resolution_note='Admin hủy đơn từ màn hình vận hành.',
+                )
+                _notify(
+                    order.user, 'Đơn hàng đã hủy',
+                    f'Phần hàng của {shop_order.shop.shop_name} đã được admin hủy.',
+                    'ORDER_CANCELLED',
+                )
+            else:
+                continue
+
+            changed = True
+            updated_shop_orders += 1
+
+        if changed:
+            recompute_order_status(order, actor, 'Admin cập nhật trạng thái đơn từ màn hình vận hành.')
+            updated_orders += 1
+
+    return {
+        'updated_orders': updated_orders,
+        'updated_shop_orders': updated_shop_orders,
+        'requested_orders': len(orders),
+    }
+
+
 @transaction.atomic
 def request_order_cancellation(order_id, buyer, reason, note=''):
     order = Order.objects.select_for_update().filter(pk=order_id, user=buyer).first()
