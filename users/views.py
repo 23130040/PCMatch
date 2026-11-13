@@ -5,6 +5,7 @@ import logging
 from smtplib import SMTPException
 from urllib.parse import urlencode, urlsplit
 
+from django.core.files.storage import default_storage
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import user_passes_test
@@ -125,6 +126,13 @@ def buyer_account(request):
     )
     if request.method == 'POST' and form.is_valid():
         user = form.save(commit=False)
+
+        old_avatar_name = None
+
+        if form.cleaned_data.get('remove_avatar') and user.avatar:
+            old_avatar_name = user.avatar.name
+            user.avatar = None
+
         if 'phone' in form.changed_data:
             user.phone_verified = False
         try:
@@ -138,6 +146,8 @@ def buyer_account(request):
             messages.success(request, 'Thông tin hồ sơ đã được cập nhật.')
             if 'phone' in form.changed_data:
                 messages.warning(request, 'Số điện thoại đã đổi và cần được xác minh lại.')
+            if old_avatar_name:
+                default_storage.delete(old_avatar_name)
             return redirect('buyer_account')
     return render(request, 'buyer/account.html', {
         'page_name': 'account',

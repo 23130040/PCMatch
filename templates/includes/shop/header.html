@@ -1,5 +1,6 @@
 <header class="sa-topbar" id="shop-topbar">
-    <button class="sa-menu-btn" type="button" data-sidebar-toggle aria-label="Mở menu" aria-controls="shop-sidebar" aria-expanded="false">
+    <button class="sa-menu-btn" type="button" data-sidebar-toggle aria-label="Mở menu" aria-controls="shop-sidebar"
+            aria-expanded="false">
         <span>
         </span>
         <span>
@@ -24,49 +25,60 @@
         <input id="shop-search" name="q" value="{{ q }}" placeholder="Tìm sản phẩm của gian hàng...">
     </form>
     {% if request.user.is_authenticated %}
-    <div class="sa-topbar__right">
-        <div class="sa-notification">
-            <a href="{% url 'shop_notifications' %}" aria-label="Thông báo{% if notification_count %}, {{ notification_count }} chưa đọc{% endif %}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17h14l-2-4V8a5 5 0 0 0-10 0v5l-2 4Zm5 3h4"/></svg>
-                <span>Thông báo</span>
-                {% if notification_count %}<b>{% if notification_count > 99 %}99+{% else %}{{ notification_count }}{% endif %}</b>{% endif %}
-            </a>
-            <div class="sa-notification-preview" role="region" aria-label="Thông báo gần đây">
-                <strong>Thông báo gần đây</strong>
-                {% for note in notification_preview %}
-                    <a href="{% url 'shop_notifications' %}"{% if not note.is_read %} class="is-unread"{% endif %}>{{ note.title }}</a>
-                {% empty %}
-                    <p>Chưa có thông báo.</p>
-                {% endfor %}
-                <a class="sa-notification-all" href="{% url 'shop_notifications' %}">Xem tất cả thông báo</a>
+        <div class="sa-topbar__right">
+            <div class="sa-notification">
+                <a href="{% url 'shop_notifications' %}"
+                   aria-label="Thông báo{% if notification_count %}, {{ notification_count }} chưa đọc{% endif %}">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 17h14l-2-4V8a5 5 0 0 0-10 0v5l-2 4Zm5 3h4"/>
+                    </svg>
+                    <span>Thông báo</span>
+                    {% if notification_count %}<b>{% if notification_count > 99 %}99+{% else %}
+                        {{ notification_count }}{% endif %}</b>{% endif %}
+                </a>
+                <div class="sa-notification-preview" role="region" aria-label="Thông báo gần đây">
+                    <strong>Thông báo gần đây</strong>
+                    {% for note in notification_preview %}
+                        <a href="{% url 'shop_notifications' %}"{% if not note.is_read %}
+                           class="is-unread"{% endif %}>{{ note.title }}</a>
+                    {% empty %}
+                        <p>Chưa có thông báo.</p>
+                    {% endfor %}
+                    <a class="sa-notification-all" href="{% url 'shop_notifications' %}">Xem tất cả thông báo</a>
+                </div>
             </div>
-        </div>
-        <a class="sa-topbar-help" href="{% url 'buyer_help' %}">
-            Trợ giúp
-        </a>
-        <details class="sa-user-dropdown" id="shop-user-dropdown">
-            <summary class="sa-user-btn" id="shop-user-btn">
-                {{ shop.shop_name|default:request.user.full_name|default:request.user.username }}
-            </summary>
-            <div class="sa-user-menu" id="shop-user-menu">
-                <div class="sa-udm-header">
-                    <div class="sa-udm-name">
-                        {{ request.user.full_name }}
-                    </div>
-                    <div class="sa-udm-email">
-                        {{ request.user.email }}
-                    </div>
-                    <span class="sa-udm-badge">
+            <a class="sa-topbar-help" href="{% url 'buyer_help' %}">
+                Trợ giúp
+            </a>
+            <details class="sa-user-dropdown" id="shop-user-dropdown">
+                <summary class="sa-user-btn" id="shop-user-btn">
+                    {% if request.user.avatar %}
+                        <img src="{{ request.user.avatar.url }}"
+                             class="shop-header-avatar"
+                             alt="Ảnh đại diện">
+                    {% endif %}
+                    {{ shop.shop_name|default:request.user.full_name|default:request.user.username }}
+                </summary>
+                <div class="sa-user-menu" id="shop-user-menu">
+                    <div class="sa-udm-header">
+                        <div class="sa-udm-name">
+                            {{ request.user.full_name }}
+                        </div>
+                        <div class="sa-udm-email">
+                            {{ request.user.email }}
+                        </div>
+                        <span class="sa-udm-badge">
                         Kênh bán
                     </span>
+                    </div>
+                    <a class="sa-udm-logout btn" href="{% url 'shop_logout' %}">Đăng xuất</a>
                 </div>
-                <a class="sa-udm-logout btn" href="{% url 'shop_logout' %}">Đăng xuất</a>
-            </div>
-        </details>
-    </div>
+            </details>
+        </div>
     {% else %}
-    <a class="btn btn--secondary" href="{% url 'auth_login' %}?next={{ request.get_full_path|urlencode }}">
-        Đăng nhập
-    </a>
+        <a class="btn btn--secondary" href="{% url 'auth_login' %}?next={{ request.get_full_path|urlencode }}">
+            Đăng nhập
+        </a>
     {% endif %}
 </header>

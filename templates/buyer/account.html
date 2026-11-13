@@ -1,82 +1,166 @@
 {% extends 'includes/buyer_base.html' %}
 {% block title %}Tài khoản — PCMatch{% endblock %}
 {% block content %}
-<div class="page-head">
-    <div>
-        <h1>Xin chào, {{ request.user.full_name|default:request.user.username }}</h1>
-        <p>{{ request.user.email }}</p>
+    <div class="page-head">
+        <div>
+            <h1>Xin chào, {{ request.user.full_name|default:request.user.username }}</h1>
+            <p>{{ request.user.email }}</p>
+        </div>
+        <div class="cluster">
+            <a class="btn btn--secondary" href="{% url 'auth_logout' %}">Đăng xuất</a>
+        </div>
     </div>
-    <div class="cluster">
-        <a class="btn btn--secondary" href="{% url 'auth_logout' %}">Đăng xuất</a>
+
+    <div class="two-col">
+        <section class="panel panel--padded">
+            <h2>Hồ sơ</h2>
+            <form class="stack" method="post" enctype="multipart/form-data" action="{% url 'buyer_account' %}">
+                {% csrf_token %}
+                {% if profile_form.non_field_errors %}
+                    <div class="form-error" role="alert">{{ profile_form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="profile-avatar-editor" id="avatar-editor">
+
+                    <div class="profile-avatar-preview" id="avatar-preview">
+                        {% if request.user.avatar %}
+                            <img src="{{ request.user.avatar.url }}"
+                                 alt="Ảnh đại diện"
+                                 class="account-avatar"
+                                 id="avatar-preview-image">
+                        {% else %}
+                            <span class="profile-avatar-placeholder">{{ request.user.full_name|first|upper }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="profile-avatar-field">
+                        <label for="{{ profile_form.avatar.id_for_label }}">
+                            <strong>Thay đổi ảnh đại diện</strong>
+                        </label>
+                        {{ profile_form.avatar }}
+                        {{ profile_form.remove_avatar }}
+                        <small>JPG, PNG hoặc WebP · Tối đa 5 MB</small>
+                        {% if request.user.avatar %}
+                            <button type="button"
+                                    class="avatar-delete-button"
+                                    id="avatar-delete-button"
+                                    aria-pressed="false">
+                                <span>×</span>
+                                <span id="avatar-delete-text">Xóa avatar</span>
+                            </button>
+                        {% endif %}
+                        {% if profile_form.avatar.errors %}
+                            <span class="form-error" role="alert">{{ profile_form.avatar.errors }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <label class="field" for="{{ profile_form.full_name.id_for_label }}">
+                    <span>{{ profile_form.full_name.label }}</span>
+                    {{ profile_form.full_name }}
+                    {% if profile_form.full_name.errors %}
+                        <span class="form-error" role="alert">{{ profile_form.full_name.errors }}</span>{% endif %}
+                </label>
+                <label class="field">
+                    <span>Email</span>
+                    <input type="email" value="{{ request.user.email }}" autocomplete="email" disabled>
+                </label>
+                <label class="field" for="{{ profile_form.phone.id_for_label }}">
+                    <span>{{ profile_form.phone.label }}</span>
+                    {{ profile_form.phone }}
+                    <small>{% if request.user.phone_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</small>
+                    {% if profile_form.phone.errors %}
+                        <span class="form-error" role="alert">{{ profile_form.phone.errors }}</span>{% endif %}
+                </label>
+                <button class="btn btn--primary" type="submit">Lưu hồ sơ</button>
+            </form>
+        </section>
+        <section class="panel panel--padded">
+            <h2>Đổi mật khẩu</h2>
+            <p>Gửi liên kết đặt mật khẩu mới tới email {{ request.user.email }}. Liên kết có hiệu lực trong 1 giờ.</p>
+            <form class="stack" method="post" action="{% url 'buyer_password_change_request' %}">
+                {% csrf_token %}
+                <button class="btn btn--primary" type="submit">Gửi liên kết đổi mật khẩu</button>
+            </form>
+        </section>
     </div>
-</div>
-<nav class="account-links">
-    <a class="btn btn--secondary" href="/buyer/addresses/">
-        Địa chỉ giao hàng
-    </a>
-    <a class="btn btn--secondary" href="/buyer/builds/">
-        Cấu hình đã lưu
-    </a>
-    <a class="btn btn--secondary" href="/buyer/requests/">
-        Yêu cầu ngân sách
-    </a>
-    <a class="btn btn--secondary" href="/buyer/consultation/">
-        Tư vấn cấu hình
-    </a>
-    <a class="btn btn--secondary" href="/buyer/orders/">
-        Lịch sử đơn hàng
-    </a>
-    <a class="btn btn--secondary" href="/buyer/cases/">
-        Hậu mãi
-        &amp;
-        hỗ trợ
-    </a>
-    <a class="btn btn--secondary" href="/buyer/notifications/">
-        Thông báo
-    </a>
-</nav>
-<div class="two-col">
-    <section class="panel panel--padded">
-        <h2>Hồ sơ</h2>
-        <form class="stack" method="post" enctype="multipart/form-data" action="{% url 'buyer_account' %}">
-            {% csrf_token %}
-            {% if profile_form.non_field_errors %}
-            <div class="form-error" role="alert">{{ profile_form.non_field_errors }}</div>
-            {% endif %}
-            {% if request.user.avatar %}
-            <img src="{{ request.user.avatar.url }}" alt="Ảnh đại diện" width="96" height="96" class="account-avatar">
-            {% endif %}
-            <label class="field" for="{{ profile_form.avatar.id_for_label }}">
-                <span>{{ profile_form.avatar.label }}</span>
-                {{ profile_form.avatar }}
-                {% if profile_form.avatar.help_text %}<small>{{ profile_form.avatar.help_text }}</small>{% endif %}
-                {% if profile_form.avatar.errors %}<span class="form-error" role="alert">{{ profile_form.avatar.errors }}</span>{% endif %}
-            </label>
-            <label class="field" for="{{ profile_form.full_name.id_for_label }}">
-                <span>{{ profile_form.full_name.label }}</span>
-                {{ profile_form.full_name }}
-                {% if profile_form.full_name.errors %}<span class="form-error" role="alert">{{ profile_form.full_name.errors }}</span>{% endif %}
-            </label>
-            <label class="field">
-                <span>Email</span>
-                <input type="email" value="{{ request.user.email }}" autocomplete="email" disabled>
-            </label>
-            <label class="field" for="{{ profile_form.phone.id_for_label }}">
-                <span>{{ profile_form.phone.label }}</span>
-                {{ profile_form.phone }}
-                <small>{% if request.user.phone_verified %}Đã xác minh{% else %}Chưa xác minh{% endif %}</small>
-                {% if profile_form.phone.errors %}<span class="form-error" role="alert">{{ profile_form.phone.errors }}</span>{% endif %}
-            </label>
-            <button class="btn btn--primary" type="submit">Lưu hồ sơ</button>
-        </form>
-    </section>
-    <section class="panel panel--padded">
-        <h2>Đổi mật khẩu</h2>
-        <p>Gửi liên kết đặt mật khẩu mới tới email {{ request.user.email }}. Liên kết có hiệu lực trong 1 giờ.</p>
-        <form class="stack" method="post" action="{% url 'buyer_password_change_request' %}">
-            {% csrf_token %}
-            <button class="btn btn--primary" type="submit">Gửi liên kết đổi mật khẩu</button>
-        </form>
-    </section>
-</div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editor = document.getElementById('avatar-editor');
+
+            if (!editor) return;
+
+            const form = editor.closest('form');
+            const preview = document.getElementById('avatar-preview');
+            const deleteButton = document.getElementById('avatar-delete-button');
+            const deleteText = document.getElementById('avatar-delete-text');
+            const removeInput = form.querySelector('[name="remove_avatar"]');
+            const fileInput = form.querySelector('[name="avatar"]');
+
+            if (!removeInput || !fileInput) return;
+
+            const originalPreview = preview.innerHTML;
+
+            function showRemovedPreview() {
+                preview.innerHTML = `
+            <div class="avatar-empty-preview">
+                <span>Đã chọn xóa</span>
+            </div>
+        `;
+            }
+
+            function restorePreview() {
+                preview.innerHTML = originalPreview;
+            }
+
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function () {
+                    const isRemoved = removeInput.value === 'true';
+
+                    if (isRemoved) {
+                        removeInput.value = 'false';
+                        restorePreview();
+                        deleteText.textContent = 'Xóa avatar';
+                        deleteButton.classList.remove('is-undo');
+                        deleteButton.setAttribute('aria-pressed', 'false');
+                    } else {
+                        removeInput.value = 'true';
+                        showRemovedPreview();
+                        deleteText.textContent = 'Hoàn tác';
+                        deleteButton.classList.add('is-undo');
+                        deleteButton.setAttribute('aria-pressed', 'true');
+                    }
+                });
+            }
+
+            fileInput.addEventListener('change', function () {
+                const file = this.files[0];
+
+                if (!file) return;
+
+                removeInput.value = 'false';
+
+                if (deleteButton) {
+                    deleteText.textContent = 'Xóa avatar';
+                    deleteButton.classList.remove('is-undo');
+                    deleteButton.setAttribute('aria-pressed', 'false');
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+                    preview.innerHTML = `
+                <img src="${event.target.result}"
+                     alt="Ảnh đại diện xem trước"
+                     class="account-avatar">
+            `;
+                };
+
+                reader.readAsDataURL(file);
+            });
+        });
+    </script>
+
 {% endblock %}

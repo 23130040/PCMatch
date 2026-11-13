@@ -10,16 +10,22 @@ User = get_user_model()
 
 
 class BuyerAddressForm(forms.ModelForm):
-    receiver_name = forms.CharField(label='Người nhận', max_length=150, widget=forms.TextInput(attrs={'autocomplete': 'name'}))
+    receiver_name = forms.CharField(label='Người nhận', max_length=150,
+                                    widget=forms.TextInput(attrs={'autocomplete': 'name'}))
     receiver_phone = forms.RegexField(
         label='Số điện thoại', regex=r'\A0[0-9]{9}\Z', max_length=10,
         error_messages={'invalid': 'Nhập số điện thoại gồm 10 chữ số, bắt đầu bằng 0.'},
-        widget=forms.TextInput(attrs={'type': 'tel', 'autocomplete': 'tel-national', 'inputmode': 'tel', 'pattern': '0[0-9]{9}', 'placeholder': '0901234567'}),
+        widget=forms.TextInput(
+            attrs={'type': 'tel', 'autocomplete': 'tel-national', 'inputmode': 'tel', 'pattern': '0[0-9]{9}',
+                   'placeholder': '0901234567'}),
     )
-    province = forms.CharField(label='Tỉnh / thành phố', max_length=100, widget=forms.TextInput(attrs={'autocomplete': 'address-level1'}))
+    province = forms.CharField(label='Tỉnh / thành phố', max_length=100,
+                               widget=forms.TextInput(attrs={'autocomplete': 'address-level1'}))
     district = forms.CharField(label='Quận / huyện (nếu có)', max_length=100, required=False)
-    ward = forms.CharField(label='Phường / xã', max_length=100, widget=forms.TextInput(attrs={'autocomplete': 'address-level2'}))
-    detail_address = forms.CharField(label='Số nhà, tên đường', max_length=255, widget=forms.TextInput(attrs={'autocomplete': 'street-address'}))
+    ward = forms.CharField(label='Phường / xã', max_length=100,
+                           widget=forms.TextInput(attrs={'autocomplete': 'address-level2'}))
+    detail_address = forms.CharField(label='Số nhà, tên đường', max_length=255,
+                                     widget=forms.TextInput(attrs={'autocomplete': 'street-address'}))
     is_default = forms.BooleanField(label='Đặt làm địa chỉ mặc định', required=False)
 
     class Meta:
@@ -28,10 +34,21 @@ class BuyerAddressForm(forms.ModelForm):
 
 
 class BuyerProfileForm(forms.ModelForm):
-    avatar = forms.ImageField(
-        label='Ảnh đại diện',
+    remove_avatar = forms.BooleanField(
         required=False,
-        error_messages={'invalid_image': 'Tệp tải lên không phải ảnh hợp lệ.'},
+        widget=forms.HiddenInput(),
+    )
+
+    avatar = forms.ImageField(
+        label='Thay đổi ảnh đại diện',
+        required=False,
+        widget=forms.FileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/webp',
+            'class': 'avatar-file-input',
+        }),
+        error_messages={
+            'invalid_image': 'Tệp tải lên không phải ảnh hợp lệ.'
+        },
     )
     full_name = forms.CharField(
         label='Họ và tên',
@@ -82,8 +99,8 @@ class BuyerProfileForm(forms.ModelForm):
         try:
             image = Image.open(upload)
             valid = (
-                image.format in {'JPEG', 'PNG', 'WEBP'}
-                and image.width * image.height <= 20_000_000
+                    image.format in {'JPEG', 'PNG', 'WEBP'}
+                    and image.width * image.height <= 20_000_000
             )
             image.verify()
         except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
@@ -94,6 +111,18 @@ class BuyerProfileForm(forms.ModelForm):
             raise forms.ValidationError('Tệp tải lên không phải ảnh hợp lệ.')
         return upload
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        new_avatar = self.files.get(self.add_prefix('avatar'))
+
+        if cleaned_data.get('remove_avatar') and new_avatar:
+            self.add_error(
+                'avatar',
+                'Bạn chỉ có thể chọn đổi ảnh hoặc xóa ảnh, không thể chọn cả hai.'
+            )
+
+        return cleaned_data
 
 class SellerAccountProfileForm(BuyerProfileForm):
     class Meta(BuyerProfileForm.Meta):
@@ -111,7 +140,8 @@ class BuyerRegisterForm(forms.Form):
     )
     phone = forms.CharField(
         label='Số điện thoại (tùy chọn)', max_length=20, required=False,
-        widget=forms.TextInput(attrs={'autocomplete': 'tel', 'pattern': '0[0-9]{9}', 'title': '10 chữ số, bắt đầu bằng 0'}),
+        widget=forms.TextInput(
+            attrs={'autocomplete': 'tel', 'pattern': '0[0-9]{9}', 'title': '10 chữ số, bắt đầu bằng 0'}),
     )
     password1 = forms.CharField(
         label='Mật khẩu (ít nhất 8 ký tự)', required=True, min_length=8,
@@ -120,7 +150,8 @@ class BuyerRegisterForm(forms.Form):
     password2 = forms.CharField(
         label='Nhập lại mật khẩu', required=True, min_length=8,
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-    )  
+    )
+
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
@@ -213,7 +244,8 @@ class StaffLoginForm(forms.Form):
     remember_me = forms.BooleanField(label='Ghi nhớ đăng nhập', required=False)
     otp = forms.CharField(
         label='Mã OTP', max_length=6, required=False,
-        widget=forms.TextInput(attrs={'autocomplete': 'one-time-code', 'inputmode': 'numeric', 'placeholder': '______'}),
+        widget=forms.TextInput(
+            attrs={'autocomplete': 'one-time-code', 'inputmode': 'numeric', 'placeholder': '______'}),
     )
 
 
