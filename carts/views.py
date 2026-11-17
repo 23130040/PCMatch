@@ -122,15 +122,26 @@ def cart_remove(request, item_id):
     messages.success(request, 'Đã xóa sản phẩm khỏi giỏ hàng.')
     return redirect('buyer_cart')
 
+
 @require_GET
 @buyer_required
 def cart_checkout(request):
     from orders.services import checkout_token
-    address = request.user.addresses.filter(is_archived=False).order_by('-is_default', 'pk').first()
+
+    addresses = request.user.addresses.filter(
+        is_archived=False
+    ).order_by('-is_default', 'pk')
+
+    shipping_address = addresses.first()
+
     return render(request, 'buyer/checkout.html', {
-        'page_name': 'checkout', 'page_section': 'buyer',
-        'checkout_user': request.user, 'shipping_address': address,
+        'page_name': 'checkout',
+        'page_section': 'buyer',
+        'checkout_user': request.user,
+        'addresses': addresses,
+        'shipping_address': shipping_address,
         'checkout_token': checkout_token(request.user),
         'vnpay_available': vnpay_configured(),
         **cart_summary(request.user),
     })
+

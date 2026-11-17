@@ -1,4 +1,3 @@
-// UI only: all content is rendered by Django/HTML and business forms submit normally.
 document.documentElement.classList.add('interface-ready');
 
 document.querySelectorAll('.product-detail-cart-form input[name="quantity"]').forEach(input => {
@@ -52,10 +51,6 @@ matchMedia('(min-width:768px)').addEventListener('change', event => {
 header?.querySelectorAll('.header-dropdown').forEach(dropdown => {
     if (dropdown.querySelector('[aria-current]')) dropdown.classList.add('is-current');
 });
-window.addEventListener('scroll', () => {
-    header?.classList.toggle('header-scrolled', scrollY > 260 && !header.contains(document.activeElement));
-}, {passive: true});
-header?.addEventListener('focusin', () => header.classList.remove('header-scrolled'));
 
 const search = document.querySelector('#global-search');
 const suggestions = document.querySelector('#header-suggestions');

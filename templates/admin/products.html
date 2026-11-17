@@ -334,21 +334,11 @@
                                 {% endif %}
                             </td>
                             <td class="center">
-                                <button type="button" class="admin-detail-button detail-button product-detail">
-                                    <i class="fa-solid fa-eye"></i> Chi tiết
+                                <button type="button"
+                                        class="admin-detail-button detail-button product-detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                    Chi tiết
                                 </button>
-                                <form action="{% url 'showORhide_Product' p.product_id %}" method="POST" style="display:inline;">
-                                    {% csrf_token %}
-                                    {% if p.status == 'INACTIVE' %}
-                                        <button type="submit" class="btn btn--primary">
-                                            <i class="fa-solid fa-eye"></i> Hiện SP
-                                        </button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn--secondary">
-                                            <i class="fa-solid fa-eye-slash"></i> Ẩn SP
-                                        </button>
-                                    {% endif %}
-                                </form>
                             </td>
                         </tr>
                     {% empty %}
@@ -384,7 +374,8 @@
                 <nav aria-label="Phân trang">
                     {% if showProduct.has_previous %}
 
-                        <a href="{% url 'staff_products' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.previous_page_number }}"
+                        <a href="{% url 'staff_products' %}?
+                                {% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.previous_page_number }}"
                            aria-label="Trang trước">
 
                             <svg viewBox="0 0 24 24"
@@ -415,7 +406,8 @@
                         {{ showProduct.paginator.num_pages|default:1 }}
                     </span>
                     {% if showProduct.has_next %}
-                        <a href="{% url 'staff_products' %}?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.next_page_number }}"
+                        <a href="{% url 'staff_products' %}?
+                                {% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.next_page_number }}"
                            aria-label="Trang sau">
                             <svg viewBox="0 0 24 24"
                                  fill="none"
@@ -445,7 +437,7 @@
 </div>
 
 {% include 'includes/admin_product_drawers.html' %}
-<script src="{% static 'js/product-effects.js' %}?v=html-drawers-2"></script>
+<script src="{% static 'js/product-effects.js' %}?v=20261117-product-actions"></script>
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 {% include 'includes/admin_interface_controls.html' %}
 <script src="{% static 'js/admin-interface.js' %}" defer></script>

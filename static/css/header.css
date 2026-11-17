@@ -725,13 +725,6 @@
 }
 
 @media (min-width: 768px) {
-    .buyer-header.header-scrolled .market-top {
-        padding-block: 12px
-    }
-
-    .buyer-header.header-scrolled .header-nav-strip {
-        display: none
-    }
 
     .header-services > .header-popover {
         left: auto;

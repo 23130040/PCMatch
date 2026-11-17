@@ -2425,3 +2425,611 @@
     font-size: 11px;
     border-radius: 50%;
 }
+
+.buyer-app .cancel-request-panel {
+    padding: 28px;
+    border: 1px solid #e1e7ef;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(25, 45, 75, 0.05);
+}
+
+.buyer-app .cancel-request-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 22px;
+}
+
+.buyer-app .cancel-request-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #fff1f0;
+    color: #dc3545;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.buyer-app .cancel-request-icon span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+}
+
+.buyer-app .cancel-request-header h2 {
+    margin: 0 0 5px;
+    color: #172b4d;
+    font-size: 23px;
+    font-weight: 750;
+}
+
+.buyer-app .cancel-request-header p {
+    margin: 0;
+    color: #718096;
+    font-size: 14px;
+}
+
+.buyer-app .cancel-request-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 26px;
+    padding: 15px 17px;
+    border: 1px solid #cfe0fa;
+    border-radius: 9px;
+    background: #f1f6ff;
+    color: #315b91;
+}
+
+.buyer-app .cancel-notice-icon {
+    flex-shrink: 0;
+    font-size: 19px;
+    font-weight: 700;
+}
+
+.buyer-app .cancel-request-notice p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.buyer-app .cancel-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.buyer-app .cancel-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: 100%;
+}
+
+.buyer-app .cancel-form-field label {
+    display: block;
+    margin: 0;
+    color: #26374d;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.buyer-app .cancel-form-field .required-mark {
+    color: #dc3545;
+}
+
+.buyer-app .cancel-form-field .optional-mark {
+    color: #8793a3;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.buyer-app .cancel-form-field select {
+    width: 100%;
+    min-height: 49px;
+    padding: 11px 14px;
+    border: 1px solid #d8e0eb;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #26374d;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.buyer-app .cancel-form-field select:focus {
+    border-color: #2878dc;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 120, 220, 0.12);
+}
+
+.buyer-app .cancel-form-field textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 13px 14px;
+    border: 1px solid #d8e0eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #26374d;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.buyer-app .cancel-form-field textarea::placeholder {
+    color: #a0aaba;
+}
+
+.buyer-app .cancel-form-field textarea:focus {
+    border-color: #2878dc;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 120, 220, 0.12);
+}
+
+.buyer-app .cancel-form-field small {
+    color: #8a96a6;
+    font-size: 12px;
+}
+
+.buyer-app .cancel-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 5px;
+    border-top: 1px solid #edf0f5;
+}
+
+.buyer-app .cancel-submit-btn {
+    min-width: 210px;
+    min-height: 46px;
+    padding: 11px 22px;
+    border: none;
+    border-radius: 8px;
+    background: #dc3545;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s,
+                box-shadow 0.2s;
+}
+
+.buyer-app .cancel-submit-btn:hover {
+    background: #bd2535;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    transform: translateY(-1px);
+}
+
+.buyer-app .cancel-submit-btn:active {
+    transform: translateY(0);
+}
+
+.buyer-app .cancel-submit-btn:focus-visible {
+    outline: 3px solid rgba(220, 53, 69, 0.25);
+    outline-offset: 3px;
+}
+
+
+@media (max-width: 600px) {
+    .buyer-app .cancel-request-panel {
+        padding: 18px;
+    }
+
+    .buyer-app .cancel-request-header {
+        align-items: flex-start;
+        gap: 11px;
+    }
+
+    .buyer-app .cancel-request-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 21px;
+    }
+
+    .buyer-app .cancel-request-header h2 {
+        font-size: 19px;
+    }
+
+    .buyer-app .cancel-request-notice {
+        padding: 12px;
+    }
+
+    .buyer-app .cancel-form-actions {
+        justify-content: stretch;
+    }
+
+    .buyer-app .cancel-submit-btn {
+        width: 100%;
+    }
+}
+
+.buyer-app .checkout-address-panel {
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.buyer-app .checkout-address-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.buyer-app .checkout-address-header h2 {
+    margin: 0 0 5px;
+    color: #172b4d;
+    font-size: 21px;
+    font-weight: 750;
+}
+
+.buyer-app .checkout-address-header p {
+    margin: 0;
+    color: #7b8797;
+    font-size: 13px;
+}
+
+.buyer-app .checkout-address-edit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #dce6f3;
+    border-radius: 9px;
+    background: #f5f8fd;
+    color: #2878dc;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.buyer-app .checkout-address-edit:hover {
+    border-color: #2878dc;
+    background: #eaf2ff;
+    color: #155bb0;
+}
+
+.buyer-app .checkout-address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.buyer-app .checkout-address-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 17px;
+    border: 1px solid #e0e6ef;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s,
+                box-shadow 0.2s;
+}
+
+.buyer-app .checkout-address-option:hover {
+    border-color: #8db8ee;
+    background: #f8fbff;
+}
+
+.buyer-app .checkout-address-option.is-selected {
+    border-color: #2878dc;
+    background: #f4f8ff;
+    box-shadow: 0 0 0 2px rgba(40, 120, 220, 0.07);
+}
+
+.buyer-app .checkout-address-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.buyer-app .checkout-address-radio {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 19px;
+    height: 19px;
+    margin-top: 2px;
+    border: 2px solid #c3ccd8;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.buyer-app .checkout-address-option input:checked
++ .checkout-address-radio {
+    border-color: #2878dc;
+}
+
+.buyer-app .checkout-address-option input:checked
++ .checkout-address-radio::after {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #2878dc;
+    content: "";
+}
+
+.buyer-app .checkout-address-option input:focus-visible
++ .checkout-address-radio {
+    outline: 3px solid rgba(40, 120, 220, 0.2);
+    outline-offset: 3px;
+}
+
+.buyer-app .checkout-address-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.buyer-app .checkout-address-name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    color: #25364d;
+    font-size: 15px;
+}
+
+.buyer-app .checkout-address-default {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 5px;
+    background: #e9f3ff;
+    color: #2878dc;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.buyer-app .checkout-address-phone {
+    color: #536277;
+    font-size: 13px;
+}
+
+.buyer-app .checkout-address-detail {
+    color: #536277;
+    font-size: 13px;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+}
+
+.buyer-app .checkout-address-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 17px 0 0;
+    color: #8491a3;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.buyer-app .checkout-address-hint svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.buyer-app .checkout-address-empty {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 9px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.buyer-app .checkout-address-empty a {
+    color: #2878dc;
+    font-weight: 650;
+}
+
+@media (max-width: 600px) {
+    .buyer-app .checkout-address-panel {
+        padding: 17px;
+    }
+
+    .buyer-app .checkout-address-header h2 {
+        font-size: 18px;
+    }
+
+    .buyer-app .checkout-address-option {
+        padding: 13px;
+    }
+}
+
+.buyer-app .checkout-address-option:has(
+    input[type="radio"]:checked
+) {
+    border-color: #2878dc;
+    background: #f4f8ff;
+    box-shadow: 0 0 0 2px rgba(40, 120, 220, 0.07);
+}
+
+.buyer-app .wallet-balance-panel {
+    padding: 27px;
+    margin-bottom: 22px;
+    border: 1px solid #dce8f7;
+    border-radius: 13px;
+    background: linear-gradient(120deg, #f0f6ff, #ffffff);
+}
+
+.buyer-app .wallet-balance-content {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+}
+
+.buyer-app .wallet-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 55px;
+    height: 55px;
+    border-radius: 13px;
+    background: #2878dc;
+    color: white;
+    font-size: 28px;
+    font-weight: 750;
+}
+
+.buyer-app .wallet-balance-content p {
+    margin: 0 0 7px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.buyer-app .wallet-balance-content h2 {
+    margin: 0;
+    color: #17365d;
+    font-size: 30px;
+    font-weight: 800;
+}
+
+.buyer-app .wallet-balance-content h2 span {
+    font-size: 18px;
+}
+
+.buyer-app .wallet-description {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #dce8f7;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.buyer-app .wallet-history-panel {
+    padding: 24px;
+}
+
+.buyer-app .wallet-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.buyer-app .wallet-history-header h2 {
+    margin: 0;
+    color: #24364b;
+    font-size: 19px;
+}
+
+.buyer-app .wallet-history-header > span {
+    color: #8793a3;
+    font-size: 13px;
+}
+
+.buyer-app .wallet-transaction {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 17px 0;
+    border-top: 1px solid #edf0f5;
+}
+
+.buyer-app .wallet-transaction-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #eaf8ef;
+    color: #16a36a;
+    font-size: 23px;
+}
+
+.buyer-app .wallet-transaction-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.buyer-app .wallet-transaction-info strong {
+    display: block;
+    color: #26374d;
+    font-size: 14px;
+}
+
+.buyer-app .wallet-transaction-info p {
+    margin: 5px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.buyer-app .wallet-transaction-info small,
+.buyer-app .wallet-transaction-amount small {
+    color: #94a0af;
+    font-size: 11px;
+}
+
+.buyer-app .wallet-transaction-amount {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    text-align: right;
+}
+
+.buyer-app .wallet-transaction-amount strong {
+    color: #16a36a;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.buyer-app .wallet-empty {
+    padding: 35px 15px;
+    text-align: center;
+    color: #64748b;
+}
+
+.buyer-app .wallet-empty p {
+    margin: 7px 0 0;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .buyer-app .wallet-balance-panel,
+    .buyer-app .wallet-history-panel {
+        padding: 18px;
+    }
+
+    .buyer-app .wallet-balance-content h2 {
+        font-size: 25px;
+    }
+
+    .buyer-app .wallet-transaction {
+        gap: 9px;
+    }
+
+    .buyer-app .wallet-transaction-amount strong {
+        font-size: 13px;
+    }
+}

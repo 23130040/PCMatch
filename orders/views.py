@@ -189,7 +189,14 @@ def place_order(request):
         payment_method = request.POST.get('paymentMethod', '').strip()
         if payment_method == 'VNPAY' and not configured():
             raise ValidationError('VNPay chưa được cấu hình sandbox. Vui lòng chọn COD hoặc thử lại sau.')
-        order = create_order(request.user, payment_method, token['nonce'])
+        address_id = request.POST.get('shipping_address_id') or None
+
+        order = create_order(
+            request.user,
+            payment_method,
+            token['nonce'],
+            address_id=address_id,
+        )
     except (signing.BadSignature, KeyError, TypeError):
         messages.error(request, 'Phiên đặt hàng không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang.')
         return redirect('buyer_checkout')

@@ -68,84 +68,90 @@ urlpatterns = [
 
     path('', product_views.buyer_home, name='home'),
     path('buyer/products/<int:product_id>/', product_views.product_detail, name='buyer_product_detail'),
-    path('buyer/products/<int:product_id>/questions/', product_views.product_question_create, name='buyer_product_question_create'),
-    path('buyer/products/<int:product_id>/questions/<int:question_id>/reply/', product_views.product_question_followup, name='buyer_product_question_followup'),
-    path('buyer/products/<int:product_id>/reviews/', product_views.product_review_create, name='buyer_product_review_create'),
+    path('buyer/products/<int:product_id>/questions/', product_views.product_question_create,
+         name='buyer_product_question_create'),
+    path('buyer/products/<int:product_id>/questions/<int:question_id>/reply/', product_views.product_question_followup,
+         name='buyer_product_question_followup'),
+    path('buyer/products/<int:product_id>/reviews/', product_views.product_review_create,
+         name='buyer_product_review_create'),
     path('staff/shop/<int:shop_id>/',
          staff_required(shop_views.staff_shop_detail),
          name='staff_shop_detail',
-    ),
+         ),
     path('staff/shop/<int:shop_id>/approve/',
          staff_required(shop_views.staff_shop_approve),
          name='staff_shop_approve',
-    ),
+         ),
     path('staff/shop/<int:shop_id>/documents/<str:document_type>/',
          staff_required(shop_views.staff_shop_document),
          name='staff_shop_document',
-    ),
+         ),
     path('staff/shop/<int:shop_id>/suspend/',
          staff_required(shop_views.staff_shop_suspend),
          name='staff_shop_suspend',
-    ),
+         ),
     path('staff/shop/<int:shop_id>/reject/',
          staff_required(shop_views.staff_shop_reject),
          name='staff_shop_reject',
-    ),
+         ),
     path('staff/shop/<int:shop_id>/identity/',
          staff_required(shop_views.staff_shop_set_identity_verified),
          name='staff_shop_set_identity_verified',
-    ),
+         ),
     path('staff/shops/bulk/',
          staff_required(shop_views.staff_shop_bulk),
          name='staff_shop_bulk',
-    ),
+         ),
 
     path('staff/logout/',
          user_views.staff_logout,
          name='staff_logout',
-    ),
+         ),
     path('shop/logout/',
          user_views.shop_logout,
          name='shop_logout',
-    ),
+         ),
 
     path('shop/product/save/',
          shop_views.shop_required(shop_views.shop_product_save),
          name='shop_product_save',
-    ),
+         ),
     path('shop/product/<int:product_id>/toggle/',
          shop_views.shop_required(shop_views.shop_product_toggle),
          name='shop_product_toggle',
-    ),
+         ),
     path('shop/product/<int:product_id>/delete/',
          shop_views.shop_required(shop_views.shop_product_delete),
          name='shop_product_delete',
-    ),
+         ),
     path('shop/inventory/update/',
          shop_views.shop_required(shop_views.shop_inventory_update),
          name='shop_inventory_update',
-    ),
+         ),
     path('shop/order/<int:order_id>/status/',
          shop_views.shop_required(shop_views.shop_order_update_status),
          name='shop_order_update_status',
-    ),
+         ),
     path('shop/question/<int:question_id>/answer/',
          shop_views.shop_required(shop_views.shop_question_answer),
          name='shop_question_answer',
-    ),
+         ),
     path('shop/return/<int:return_id>/update/',
          shop_views.shop_required(shop_views.shop_return_update),
          name='shop_return_update',
-    ),
-    path('buyer/orders/create/', order_views.place_order, name='buyer_place_order',),
+         ),
+    path('buyer/orders/create/', order_views.place_order, name='buyer_place_order', ),
     path('buyer/orders/<int:order_id>/cancel/', order_views.buyer_cancel_order, name='buyer_cancel_order'),
     path('buyer/orders/<int:order_id>/received/', order_views.buyer_confirm_received, name='buyer_confirm_received'),
-    path('staff/cancellations/<int:request_id>/resolve/', order_views.staff_resolve_cancellation, name='staff_resolve_cancellation'),
+    path('staff/cancellations/<int:request_id>/resolve/', order_views.staff_resolve_cancellation,
+         name='staff_resolve_cancellation'),
     path('carrier/webhooks/delivery/', order_views.carrier_delivery_webhook, name='carrier_delivery_webhook'),
-    path('buyer/orders/<int:order_id>/retry-payment/', order_views.buyer_retry_vnpay_payment, name='buyer_retry_vnpay_payment'),
+    path('buyer/orders/<int:order_id>/retry-payment/', order_views.buyer_retry_vnpay_payment,
+         name='buyer_retry_vnpay_payment'),
     path('buyer/addresses/<int:address_id>/default/', user_views.buyer_address_default, name='buyer_address_default'),
     path('payments/vnpay/ipn/', payment_views.vnpay_ipn, name='vnpay_ipn'),
     path('payments/vnpay/return/', payment_views.vnpay_return, name='vnpay_return'),
+    path('buyer/wallet/', payment_views.buyer_wallet, name='buyer_wallet'),
 ]
 
 for section, pages in PAGE_GROUPS.items():
@@ -175,8 +181,8 @@ for section, pages in PAGE_GROUPS.items():
             view = user_views.buyer_account
         elif section == 'buyer' and page in {'order', 'payment'}:
             view = order_views.buyer_order
-            
-        
+
+
         elif section == 'staff' and page == 'dashboard':
             view = staff_required(analytics_views.dashboard_view)
         elif section == 'staff' and (page == 'order' or page == 'orders'):
@@ -184,7 +190,7 @@ for section, pages in PAGE_GROUPS.items():
         elif section == 'staff' and page == 'products':
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
-            view = staff_required(user_views.guest_list)      
+            view = staff_required(user_views.guest_list)
 
         elif section == 'staff' and page == 'shop':
             view = staff_required(shop_views.staff_shop_list)

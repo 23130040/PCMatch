@@ -1,5 +1,7 @@
 import logging
 
+from django.shortcuts import render
+from .models import Payment, Wallet, WalletTransaction
 from django.contrib import messages
 from django.db import DatabaseError
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -8,7 +10,6 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET
 
 from users.views import buyer_required
-from .models import Payment
 from .services import process_notification
 from .vnpay import verify
 
@@ -66,3 +67,31 @@ def vnpay_return(request):
     else:
         messages.info(request, 'Đang chờ VNPay xác nhận giao dịch. Vui lòng tải lại chi tiết đơn sau ít phút.')
     return redirect(f'{reverse("buyer_order")}?id={payment.order.order_code}')
+
+
+@require_GET
+@buyer_required
+def buyer_wallet(request):
+
+    wallet, created = Wallet.objects.get_or_create(
+        user=request.user
+    )
+
+    transactions = WalletTransaction.objects.filter(
+        wallet=wallet
+    ).select_related(
+        'order'
+    ).order_by(
+        '-created_at'
+    )
+
+    return render(
+        request,
+        'buyer/wallet.html',
+        {
+            'page_name': 'wallet',
+            'page_section': 'buyer',
+            'wallet': wallet,
+            'transactions': transactions,
+        }
+    )

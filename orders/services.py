@@ -107,10 +107,15 @@ def _sync_item_status(shop_order, status):
 
 def recompute_order_status(order, actor=None, note=''):
     shop_orders = list(order.shop_orders.order_by('pk'))
+
     if not shop_orders:
         return order.order_status
 
-    active = [shop_order for shop_order in shop_orders if shop_order.status != 'CANCELLED']
+    active = [
+        shop_order for shop_order in shop_orders
+        if shop_order.status != 'CANCELLED'
+    ]
+
     if not active:
         new_status = 'CANCELLED'
     else:
@@ -121,11 +126,29 @@ def recompute_order_status(order, actor=None, note=''):
 
     old_status = order.order_status
     has_partial_cancellation = len(active) != len(shop_orders)
+
     if old_status != new_status:
         order.order_status = new_status
         order.save(update_fields=['order_status', 'updated_at'])
-        history(order, actor, old_status, note or f'Trạng thái đơn được cập nhật: {new_status}.')
+
+        history(
+            order,
+            actor,
+            old_status,
+            note or f'Trạng thái đơn được cập nhật: {new_status}.'
+        )
+
     order.has_partial_cancellation = has_partial_cancellation
+
+    if (
+            new_status == 'CANCELLED'
+            and order.payment_method == 'VNPAY'
+            and order.payment_status == 'PAID'
+    ):
+        from payments.services import refund_order_to_wallet
+
+        refund_order_to_wallet(order)
+
     return new_status
 
 
@@ -197,16 +220,37 @@ def ensure_shop_orders(order):
 
 
 @transaction.atomic
-def create_order(user, payment_method, checkout_token):
+def create_order(user, payment_method, checkout_token, address_id=None):
     if payment_method not in dict(Order.PAYMENT_METHOD_CHOICES):
         raise ValidationError('Phương thức thanh toán không hợp lệ.')
     Cart.objects.filter(user=user).update(updated_at=timezone.now())
     existing = Order.objects.filter(user=user, checkout_token=checkout_token).first()
     if existing:
         return existing
-    address = user.addresses.select_for_update().filter(is_archived=False).order_by('-is_default', 'pk').first()
+
+    addresses = user.addresses.select_for_update().filter(
+        is_archived=False
+    )
+
+    if address_id:
+        try:
+            address = addresses.filter(pk=address_id).first()
+        except (ValueError, TypeError):
+            address = None
+
+        if address is None:
+            raise ValidationError(
+                'Địa chỉ nhận hàng không hợp lệ hoặc không còn tồn tại. '
+                'Vui lòng chọn lại địa chỉ.'
+            )
+    else:
+        address = addresses.order_by('-is_default', 'pk').first()
+
     if not address:
-        raise ValidationError('Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.')
+        raise ValidationError(
+            'Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.'
+        )
+
     cart_items = list(CartItem.objects.select_for_update().filter(cart__user=user).order_by('product_id'))
     if not cart_items:
         raise ValidationError('Giỏ hàng đang trống.')

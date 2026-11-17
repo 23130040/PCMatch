@@ -1,0 +1,99 @@
+
+{% extends 'includes/buyer_base.html' %}
+
+{% block title %}Ví điện tử — PCMatch{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <div>
+        <h1>Ví điện tử PCMatch</h1>
+        <p>Quản lý số dư và lịch sử hoàn tiền của bạn.</p>
+    </div>
+</div>
+
+<section class="panel panel--padded wallet-balance-panel">
+
+    <div class="wallet-balance-content">
+
+        <div class="wallet-icon">
+            <span>₫</span>
+        </div>
+
+        <div>
+            <p>Số dư ví hiện tại</p>
+
+            <h2>
+                {{ wallet.balance|floatformat:0 }}
+                <span>₫</span>
+            </h2>
+        </div>
+
+    </div>
+
+    <div class="wallet-description">
+        Số tiền hoàn từ các đơn hàng đã hủy thành công
+        sẽ được cộng vào ví này.
+    </div>
+
+</section>
+
+<section class="panel panel--padded wallet-history-panel">
+
+    <div class="wallet-history-header">
+        <h2>Lịch sử giao dịch</h2>
+        <span>{{ transactions|length }} giao dịch</span>
+    </div>
+
+    {% for item in transactions %}
+
+        <div class="wallet-transaction">
+
+            <div class="wallet-transaction-icon">
+                <span>↙</span>
+            </div>
+
+            <div class="wallet-transaction-info">
+
+                <strong>
+                    {{ item.get_transaction_type_display }}
+                </strong>
+
+                <p>
+                    {% if item.order %}
+                        Đơn hàng {{ item.order.order_code }}
+                    {% else %}
+                        Giao dịch ví PCMatch
+                    {% endif %}
+                </p>
+
+                <small>
+                    {{ item.created_at|date:"H:i - d/m/Y" }}
+                </small>
+
+            </div>
+
+            <div class="wallet-transaction-amount">
+                <strong>
+                    {% if item.transaction_type == 'ORDER_REFUND' %}+{% else %}-{% endif %}
+                    {{ item.amount|floatformat:0 }} ₫
+                </strong>
+
+                <small>
+                    Số dư: {{ item.balance_after|floatformat:0 }} ₫
+                </small>
+            </div>
+
+        </div>
+
+    {% empty %}
+
+        <div class="wallet-empty">
+            <span>Chưa có giao dịch nào.</span>
+        </div>
+
+    {% endfor %}
+
+</section>
+
+{% endblock %}

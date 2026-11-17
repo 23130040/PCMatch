@@ -13,7 +13,7 @@ from django.http import FileResponse, Http404
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import DatabaseError, transaction
-from django.db.models import Count, Max, Min, Prefetch, Q, Sum
+from django.db.models import Count, F, Max, Min, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
 from django.urls import reverse, reverse_lazy
@@ -1227,9 +1227,25 @@ def staff_shop_list(request):
             count=Count('pk'), category_name=Min('category__category_name'),
         )
     }
+
     revenue_totals = dict(
-        OrderItem.objects.filter(shop_id__in=shop_ids, order__order_status='DELIVERED').values('shop_id').annotate(
-            total=Sum('subtotal')).values_list('shop_id', 'total'))
+        OrderItem.objects.filter(
+            shop_id__in=shop_ids,
+
+            order__shop_orders__shop_id=F('shop_id'),
+
+            order__shop_orders__status__in=[
+                'DELIVERED',
+                'COMPLETED',
+            ],
+        )
+        .values('shop_id')
+        .annotate(
+            total=Sum('subtotal')
+        )
+        .values_list('shop_id', 'total')
+    )
+
     for shop in shop_page:
         shop.product_count = product_summaries.get(shop.pk, {}).get('count', 0)
         shop.category_name = product_summaries.get(shop.pk, {}).get('category_name') or 'Chưa phân loại'

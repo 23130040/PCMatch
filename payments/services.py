@@ -7,8 +7,8 @@ from django.db.models import F
 from orders.models import Order
 from orders.services import _notify, ensure_shop_orders, history
 from products.models import Product
-from .models import Payment
-
+from django.core.exceptions import ValidationError
+from .models import Payment, Wallet, WalletTransaction
 
 @transaction.atomic
 def process_notification(params):
@@ -71,3 +71,83 @@ def process_notification(params):
             )
     history(order, order.user, old_status, 'VNPay IPN: thanh toán thành công.' if success else 'VNPay IPN: thanh toán thất bại; đã hoàn tồn kho.')
     return '00', 'Confirm success'
+
+@transaction.atomic
+def refund_order_to_wallet(order):
+
+    if (
+        order.payment_method != 'VNPAY'
+        or order.payment_status != 'PAID'
+        or order.order_status != 'CANCELLED'
+    ):
+        return None
+
+    from orders.models import Order
+
+    order = Order.objects.select_for_update().get(
+        pk=order.pk
+    )
+
+    if (
+        order.payment_method != 'VNPAY'
+        or order.payment_status != 'PAID'
+        or order.order_status != 'CANCELLED'
+    ):
+        return None
+
+    existing = WalletTransaction.objects.filter(
+        order=order,
+        transaction_type='ORDER_REFUND',
+    ).first()
+
+    if existing:
+        return existing
+
+    payment = Payment.objects.select_for_update().filter(
+        order=order,
+        payment_method='VNPAY',
+        status='PAID',
+    ).order_by('-created_at').first()
+
+    if payment is None:
+        raise ValidationError(
+            'Không tìm thấy giao dịch VNPay đã thanh toán thành công.'
+        )
+
+    refund_amount = payment.amount
+
+    if refund_amount <= 0 or refund_amount != order.total_amount:
+        raise ValidationError(
+            'Số tiền hoàn không hợp lệ.'
+        )
+
+    wallet, created = Wallet.objects.get_or_create(
+        user=order.user
+    )
+
+    wallet = Wallet.objects.select_for_update().get(
+        pk=wallet.pk
+    )
+
+    wallet.balance += refund_amount
+    wallet.save(update_fields=['balance', 'updated_at'])
+
+    transaction_record = WalletTransaction.objects.create(
+        wallet=wallet,
+        order=order,
+        transaction_type='ORDER_REFUND',
+        amount=refund_amount,
+        balance_after=wallet.balance,
+        description=(
+            f'Hoàn tiền đơn hàng {order.order_code} '
+            'do đơn hàng đã được hủy thành công.'
+        ),
+    )
+
+    payment.status = 'REFUNDED'
+    payment.save(update_fields=['status'])
+
+    order.payment_status = 'REFUNDED'
+    order.save(update_fields=['payment_status', 'updated_at'])
+
+    return transaction_record

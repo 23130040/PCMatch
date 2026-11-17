@@ -5794,3 +5794,146 @@ body.has-order-drawer { overflow: hidden; }
 .admin-ui .new-shop-actions .btn {
     font-size: var(--admin-type-small) !important;
 }
+
+.order-page .order-detail-drawer {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: none !important;
+    overflow: hidden !important;
+
+    transform: none !important;
+    background: transparent !important;
+}
+
+.order-page .order-detail-drawer__panel {
+    position: fixed !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+
+    width: min(540px, 100vw) !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    margin: 0 !important;
+    border-radius: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: #ffffff !important;
+    box-shadow: -12px 0 35px rgba(15, 30, 54, 0.16) !important;
+}
+
+.order-page .order-detail-drawer__backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(15, 30, 54, 0.42) !important;
+}
+
+.order-page .order-detail-drawer__content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+}
+
+.order-page .order-detail-drawer__header,
+.order-page .order-detail-drawer__footer {
+    flex-shrink: 0;
+    background: #ffffff;
+}
+
+@media (max-width: 600px) {
+    .order-page .order-detail-drawer__panel {
+        width: 100vw !important;
+    }
+}
+
+.shop-page #shop-detail-drawer {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: none !important;
+    overflow: hidden !important;
+
+    transform: none !important;
+    background: transparent !important;
+}
+
+.shop-page #shop-detail-drawer .order-detail-drawer__panel {
+    position: fixed !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+
+    width: min(540px, 100vw) !important;
+    max-width: 100vw !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    margin: 0 !important;
+    border-radius: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: #ffffff !important;
+    box-shadow: -12px 0 35px rgba(15, 30, 54, 0.16) !important;
+}
+
+.shop-page #shop-detail-drawer .order-detail-drawer__backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+
+    background: rgba(15, 30, 54, 0.42) !important;
+}
+
+.shop-page #shop-detail-drawer .order-detail-drawer__content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+}
+
+.shop-page #shop-detail-drawer .order-detail-drawer__header,
+.shop-page #shop-detail-drawer .order-detail-drawer__footer {
+    flex-shrink: 0;
+    background: #ffffff;
+}
+
+@media (max-width: 600px) {
+    .shop-page #shop-detail-drawer .order-detail-drawer__panel {
+        width: 100vw !important;
+    }
+}
