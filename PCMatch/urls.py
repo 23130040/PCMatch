@@ -191,7 +191,10 @@ for section, pages in PAGE_GROUPS.items():
             view = staff_required(product_views.load_products)
         elif section == 'staff' and page == 'guest':
             view = staff_required(user_views.guest_list)
-
+        elif section == 'staff' and page == 'password':
+            view = staff_required(user_views.staff_password_change)
+        elif section == 'staff' and page == 'profile':
+            view = staff_required(user_views.staff_profile)
         elif section == 'staff' and page == 'shop':
             view = staff_required(shop_views.staff_shop_list)
         elif section == 'shop' and page == 'login':

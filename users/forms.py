@@ -3,7 +3,7 @@ from django.contrib.auth import password_validation
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import UploadedFile
 from PIL import Image, UnidentifiedImageError
-
+from django.contrib.auth.forms import PasswordChangeForm
 from .models import Address
 
 User = get_user_model()
@@ -123,6 +123,41 @@ class BuyerProfileForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+class StaffProfileForm(BuyerProfileForm):
+
+    email = forms.EmailField(
+        label='Email công việc',
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'autocomplete': 'email',
+            'placeholder': 'admin@example.com',
+        })
+    )
+
+    class Meta(BuyerProfileForm.Meta):
+        fields = [
+            'full_name',
+            'email',
+            'phone',
+            'avatar',
+        ]
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+
+        duplicate = User.objects.filter(
+            email__iexact=email
+        ).exclude(
+            pk=self.instance.pk
+        )
+
+        if duplicate.exists():
+            raise forms.ValidationError(
+                'Email này đã được sử dụng bởi tài khoản khác.'
+            )
+
+        return email
 
 class SellerAccountProfileForm(BuyerProfileForm):
     class Meta(BuyerProfileForm.Meta):
@@ -285,3 +320,62 @@ class StaffSetPasswordForm(forms.Form):
 
 class BuyerSetPasswordForm(StaffSetPasswordForm):
     pass
+
+
+class StaffPasswordChangeForm(PasswordChangeForm):
+
+    old_password = forms.CharField(
+        label='Mật khẩu hiện tại',
+        widget=forms.PasswordInput(attrs={
+            'id': 'current-password',
+            'autocomplete': 'current-password',
+            'placeholder': 'Nhập mật khẩu hiện tại',
+        })
+    )
+
+    new_password1 = forms.CharField(
+        label='Mật khẩu mới',
+        widget=forms.PasswordInput(attrs={
+            'id': 'new-password',
+            'autocomplete': 'new-password',
+            'placeholder': 'Nhập mật khẩu mới',
+        })
+    )
+
+    new_password2 = forms.CharField(
+        label='Xác nhận mật khẩu mới',
+        widget=forms.PasswordInput(attrs={
+            'id': 'confirm-password',
+            'autocomplete': 'new-password',
+            'placeholder': 'Nhập lại mật khẩu mới',
+        })
+    )
+
+    def clean_new_password1(self):
+
+        password = self.cleaned_data.get('new_password1')
+
+        if not password:
+            return password
+
+        errors = []
+
+        if len(password) < 8:
+            errors.append('Mật khẩu phải có ít nhất 8 ký tự.')
+
+        if not any(char.isupper() for char in password):
+            errors.append('Phải có ít nhất một chữ hoa.')
+
+        if not any(char.islower() for char in password):
+            errors.append('Phải có ít nhất một chữ thường.')
+
+        if not any(char.isdigit() for char in password):
+            errors.append('Phải có ít nhất một chữ số.')
+
+        if not any(not char.isalnum() for char in password):
+            errors.append('Phải có ít nhất một ký tự đặc biệt.')
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+        return password

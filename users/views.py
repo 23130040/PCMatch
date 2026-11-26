@@ -23,8 +23,14 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
-
-from users.models import Address, BuyerEmailOTP, PasswordResetToken, SocialAccount, User
+from users.models import (
+    Address,
+    BuyerEmailOTP,
+    PasswordResetToken,
+    PasswordSecurityEvent,
+    SocialAccount,
+    User,
+)
 from notifications.models import Notification
 from .address_services import save_address, set_default_address
 from users.forms import (
@@ -35,10 +41,12 @@ from users.forms import (
     BuyerForgotPasswordForm,
     BuyerSetPasswordForm,
     BuyerProfileForm,
+    StaffProfileForm,
     LoginForm,
     StaffForgotPasswordForm,
     StaffLoginForm,
     StaffSetPasswordForm,
+    StaffPasswordChangeForm,
 )
 from .otp_services import BuyerOTPDeliveryError, issue_buyer_email_otp, verify_buyer_email_otp
 from .facebook_oauth import (
@@ -51,10 +59,11 @@ from .google_oauth import (
     get_google_identity,
     google_authorization_url,
 )
+from datetime import date, timedelta
+from django.utils.dateparse import parse_date
 
 logger = logging.getLogger(__name__)
 
-# Each portal has its own role, so one session never reaches another area.
 BUYER_ROLES = {'BUYER', 'CUSTOMER'}
 SELLER_ROLES = {'SELLER'}
 FACEBOOK_STATE_SESSION_KEY = 'facebook_oauth_state'
@@ -65,9 +74,9 @@ GOOGLE_STATE_MAX_AGE = 600
 
 def _is_live_account(user):
     return (
-        user.is_authenticated
-        and user.is_active
-        and getattr(user, 'status', 'ACTIVE') == 'ACTIVE'
+            user.is_authenticated
+            and user.is_active
+            and getattr(user, 'status', 'ACTIVE') == 'ACTIVE'
     )
 
 
@@ -79,10 +88,10 @@ def is_active_buyer(user):
 def is_active_seller(user):
     """Shop portal. Buyers and staff must sign in through their own portals."""
     return (
-        _is_live_account(user)
-        and getattr(user, 'role', '') in SELLER_ROLES
-        and not user.is_staff
-        and not user.is_superuser
+            _is_live_account(user)
+            and getattr(user, 'role', '') in SELLER_ROLES
+            and not user.is_staff
+            and not user.is_superuser
     )
 
 
@@ -160,10 +169,10 @@ def buyer_account(request):
 @buyer_required
 def buyer_password_change_request(request):
     if not all((
-        settings.EMAIL_HOST,
-        settings.EMAIL_HOST_USER,
-        settings.EMAIL_HOST_PASSWORD,
-        settings.DEFAULT_FROM_EMAIL,
+            settings.EMAIL_HOST,
+            settings.EMAIL_HOST_USER,
+            settings.EMAIL_HOST_PASSWORD,
+            settings.DEFAULT_FROM_EMAIL,
     )):
         messages.error(
             request,
@@ -413,9 +422,9 @@ def _facebook_user(identity):
         raise FacebookOAuthError('Tài khoản Facebook không hợp lệ.')
     provider_name = identity.get('name')
     full_name = (
-        provider_name.strip()[:100]
-        if isinstance(provider_name, str) else ''
-    ) or 'Người dùng Facebook'
+                    provider_name.strip()[:100]
+                    if isinstance(provider_name, str) else ''
+                ) or 'Người dùng Facebook'
 
     try:
         with transaction.atomic():
@@ -631,9 +640,9 @@ def _google_user(identity):
         raise GoogleOAuthError('Tài khoản Google không hợp lệ.')
     provider_name = identity.get('name')
     full_name = (
-        provider_name.strip()[:100]
-        if isinstance(provider_name, str) else ''
-    ) or 'Người dùng Google'
+                    provider_name.strip()[:100]
+                    if isinstance(provider_name, str) else ''
+                ) or 'Người dùng Google'
 
     try:
         with transaction.atomic():
@@ -960,9 +969,9 @@ def buyer_reset_password(request, token, *, keep_session=False):
 
         messages.success(request, 'Mật khẩu đã được thay đổi thành công.')
         keep_buyer_session = keep_session or (
-            request.user.is_authenticated
-            and request.user.pk == account.pk
-            and is_active_buyer(request.user)
+                request.user.is_authenticated
+                and request.user.pk == account.pk
+                and is_active_buyer(request.user)
         )
         if keep_buyer_session and is_active_buyer(account):
             if request.user.is_authenticated and request.user.pk == account.pk:
@@ -1013,13 +1022,174 @@ def shop_logout(request):
 
 def is_staff_user(user):
     return (
-        user.is_authenticated
-        and user.is_active
-        and getattr(user, 'status', 'ACTIVE') == 'ACTIVE'
-        and (user.is_staff or getattr(user, 'role', '') == 'ADMIN')
+            user.is_authenticated
+            and user.is_active
+            and getattr(user, 'status', 'ACTIVE') == 'ACTIVE'
+            and (user.is_staff or getattr(user, 'role', '') == 'ADMIN')
     )
 
+
 staff_required = user_passes_test(is_staff_user, login_url=reverse_lazy('staff_login'))
+
+
+@require_http_methods(['GET', 'POST'])
+def staff_password_change(request):
+    account = request.user
+
+    form = StaffPasswordChangeForm(
+        account,
+        request.POST or None
+    )
+
+    if request.method == 'POST' and form.is_valid():
+
+        try:
+            with transaction.atomic():
+
+                updated_user = form.save()
+
+                PasswordSecurityEvent.objects.create(
+                    user=updated_user,
+                    event_type='PASSWORD_CHANGED',
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get(
+                        'HTTP_USER_AGENT', ''
+                    )[:512],
+                )
+
+            update_session_auth_hash(
+                request,
+                updated_user
+            )
+
+            messages.success(
+                request,
+                'Mật khẩu đã được cập nhật thành công.'
+            )
+
+            return redirect('staff_password')
+
+        except DatabaseError:
+
+            logger.exception(
+                'Failed to change password for staff user %s',
+                account.pk
+            )
+
+            messages.error(
+                request,
+                'Không thể cập nhật mật khẩu. Vui lòng thử lại.'
+            )
+
+    security_history = (
+        PasswordSecurityEvent.objects
+        .filter(
+            user=account,
+            event_type='PASSWORD_CHANGED'
+        )
+        .order_by('-created_at')[:20]
+    )
+
+    # Lần đổi mật khẩu gần nhất
+    last_password_change = (
+        PasswordSecurityEvent.objects
+        .filter(
+            user=account,
+            event_type='PASSWORD_CHANGED'
+        )
+        .order_by('-created_at')
+        .first()
+    )
+
+    return render(
+        request,
+        'admin/password.html',
+        {
+            'page_name': 'password',
+            'page_section': 'staff',
+            'password_form': form,
+            'account': account,
+            'security_history': security_history,
+            'last_password_change': last_password_change,
+        }
+    )
+
+
+@require_http_methods(['GET', 'POST'])
+def staff_profile(request):
+    account = User.objects.get(pk=request.user.pk)
+
+    form = StaffProfileForm(
+        request.POST if request.method == 'POST' else None,
+        request.FILES if request.method == 'POST' else None,
+        instance=account,
+    )
+
+    if request.method == 'POST' and form.is_valid():
+
+        old_avatar_name = (
+            account.avatar.name if account.avatar else None
+        )
+
+        user = form.save(commit=False)
+
+        if 'email' in form.changed_data:
+            user.email_verified = False
+
+        if 'phone' in form.changed_data:
+            user.phone_verified = False
+
+        try:
+            with transaction.atomic():
+                user.save()
+
+        except IntegrityError:
+            logger.exception(
+                'Duplicate profile data for staff user %s',
+                request.user.pk
+            )
+
+            form.add_error(
+                'email',
+                'Email đã tồn tại hoặc dữ liệu bị trùng.'
+            )
+
+        except DatabaseError:
+            logger.exception(
+                'Could not update staff profile %s',
+                request.user.pk
+            )
+
+            messages.error(
+                request,
+                'Không thể lưu thông tin lúc này. Vui lòng thử lại.'
+            )
+
+        else:
+
+            if (
+                    old_avatar_name
+                    and 'avatar' in form.changed_data
+            ):
+                default_storage.delete(old_avatar_name)
+
+            messages.success(
+                request,
+                'Thông tin tài khoản đã được cập nhật thành công.'
+            )
+
+            return redirect('staff_profile')
+
+    return render(
+        request,
+        'admin/profile.html',
+        {
+            'page_name': 'profile',
+            'page_section': 'staff',
+            'account': account,
+            'profile_form': form,
+        }
+    )
 
 
 @require_GET
@@ -1190,24 +1360,265 @@ def staff_reset_password(request, token):
 
 
 def guest_list(request):
-    danhSach = User.objects.exclude(is_superuser=True).exclude(role='ADMIN').order_by('-date_joined', '-id')
+    today = timezone.localdate()
+    params = request.GET
 
-    search = request.GET.get('search', '').strip()
+    customers = (
+        User.objects
+        .exclude(is_superuser=True)
+        .exclude(role='ADMIN')
+        .order_by('-date_joined', '-id')
+    )
 
-    if search != '':
-        danhSach = (danhSach.filter(full_name__icontains=search) | danhSach.filter(email__icontains=search) | danhSach.filter(phone__icontains=search))
+    preset = params.get('preset', 'all').lower()
 
-    dividePage = Paginator(danhSach, 10)
-    numPage = request.GET.get('page')
-    showUser = dividePage.get_page(numPage)
+    requested_start = parse_date(params.get('from_date', ''))
+    requested_end = parse_date(params.get('to_date', ''))
+
+    selected_day = parse_date(params.get('period_day', ''))
+
+    period_month = params.get('period_month', '')
+    selected_year = params.get('year', '')
+
+    start_date = None
+    end_date = None
+    period_label = 'Tất cả thời gian'
+    active_picker_tab = 'month'
+
+    if requested_start and requested_end:
+        if requested_start > requested_end:
+            requested_start, requested_end = (
+                requested_end,
+                requested_start
+            )
+
+        start_date = requested_start
+        end_date = requested_end
+
+        period_label = (
+            f'{start_date:%d/%m/%Y} - {end_date:%d/%m/%Y}'
+        )
+
+        active_picker_tab = 'month'
+
+    elif preset == 'today':
+        start_date = end_date = today
+        period_label = f'Hôm nay · {today:%d/%m/%Y}'
+
+    elif preset == '7days':
+        start_date = today - timedelta(days=6)
+        end_date = today
+        period_label = '7 ngày qua'
+
+    elif preset == '30days':
+        start_date = today - timedelta(days=29)
+        end_date = today
+        period_label = '30 ngày qua'
+
+    elif preset == 'month':
+        start_date = today.replace(day=1)
+        end_date = today
+        period_label = 'Tháng này'
+
+    elif preset == 'quarter':
+        quarter_month = ((today.month - 1) // 3) * 3 + 1
+        start_date = date(today.year, quarter_month, 1)
+        end_date = today
+        period_label = 'Quý này'
+
+    elif preset == 'year':
+        start_date = date(today.year, 1, 1)
+        end_date = today
+        period_label = 'Năm nay'
+
+    elif selected_day:
+        start_date = end_date = selected_day
+        period_label = f'Ngày {selected_day:%d/%m/%Y}'
+        active_picker_tab = 'day'
+        preset = ''
+
+    elif period_month:
+        try:
+            year, month = map(int, period_month.split('-'))
+
+            if 2000 <= year <= today.year + 1 and 1 <= month <= 12:
+                start_date = date(year, month, 1)
+
+                if month == 12:
+                    end_date = date(year + 1, 1, 1) - timedelta(days=1)
+                else:
+                    end_date = date(year, month + 1, 1) - timedelta(days=1)
+
+                period_label = f'Tháng {month:02d}/{year}'
+                active_picker_tab = 'month'
+                preset = ''
+
+        except (ValueError, TypeError):
+            period_month = ''
+
+    elif selected_year:
+        try:
+            year = int(selected_year)
+
+            if 2000 <= year <= today.year + 1:
+                start_date = date(year, 1, 1)
+                end_date = date(year, 12, 31)
+
+                period_label = f'Năm {year}'
+                active_picker_tab = 'year'
+                preset = ''
+
+        except (ValueError, TypeError):
+            selected_year = ''
+
+    period_customers = customers
+
+    if start_date:
+        period_customers = period_customers.filter(
+            date_joined__date__gte=start_date
+        )
+
+    if end_date:
+        period_customers = period_customers.filter(
+            date_joined__date__lte=end_date
+        )
+
+    total_customers = period_customers.count()
+
+    active_customers = period_customers.filter(
+        is_active=True
+    ).count()
+
+    locked_customers = period_customers.filter(
+        is_active=False
+    ).count()
+
+    verified_customers = period_customers.filter(
+        phone_verified=True
+    ).count()
+
+    unverified_customers = period_customers.filter(
+        phone_verified=False
+    ).count()
+
+    search = params.get('search', '').strip()
+
+    verification = params.get('verification', '')
+
+    filtered_customers = period_customers
+
+    if verification == 'verified':
+        filtered_customers = filtered_customers.filter(
+            phone_verified=True
+        )
+
+    elif verification == 'unverified':
+        filtered_customers = filtered_customers.filter(
+            phone_verified=False
+        )
+
+    if search:
+        filtered_customers = filtered_customers.filter(
+            Q(full_name__icontains=search)
+            | Q(username__icontains=search)
+            | Q(email__icontains=search)
+            | Q(phone__icontains=search)
+        )
+
+    customer_total = filtered_customers.count()
+
+    active_count = filtered_customers.filter(
+        is_active=True
+    ).count()
+
+    locked_count = filtered_customers.filter(
+        is_active=False
+    ).count()
+
+    status = params.get('status', '')
+
+    if status == 'active':
+        filtered_customers = filtered_customers.filter(
+            is_active=True
+        )
+
+    elif status == 'locked':
+        filtered_customers = filtered_customers.filter(
+            is_active=False
+        )
+
+    paginator = Paginator(filtered_customers, 10)
+
+    showUser = paginator.get_page(
+        params.get('page')
+    )
+
+    query_params = params.copy()
+    query_params.pop('page', None)
+
+    filter_query = query_params.urlencode()
+
+    status_params = params.copy()
+    status_params.pop('page', None)
+    status_params.pop('status', None)
+
+    status_query = status_params.urlencode()
 
     box = {
         'page_name': 'guest',
         'page_section': 'staff',
+
         'showUser': showUser,
         'search': search,
+        'status': status,
+
+        'period_label': period_label,
+        'active_preset': preset,
+        'active_picker_tab': active_picker_tab,
+
+        'selected_day': (
+            selected_day.isoformat() if selected_day else ''
+        ),
+
+        'month_input_value': (
+            period_month if period_month
+            else today.strftime('%Y-%m')
+        ),
+
+        'selected_year': (
+            selected_year if selected_year
+            else today.year
+        ),
+
+        'current_year': today.year,
+
+        'from_date': (
+            requested_start.isoformat()
+            if requested_start else ''
+        ),
+
+        'to_date': (
+            requested_end.isoformat()
+            if requested_end else ''
+        ),
+
+        'total_customers': total_customers,
+        'active_customers': active_customers,
+        'locked_customers': locked_customers,
+        'verified_customers': verified_customers,
+        'unverified_customers': unverified_customers,
+
+        'customer_total': customer_total,
+        'active_count': active_count,
+        'locked_count': locked_count,
+
+        'filter_query': filter_query,
+        'status_query': status_query,
+        'verification': verification,
     }
+
     return render(request, 'admin/guest.html', box)
+
 
 def toggle_user_lock(request, user_id):
     user = User.objects.filter(id=user_id).first()

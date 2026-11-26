@@ -20,10 +20,10 @@ from django.core.exceptions import ValidationError
 from users.views import is_active_buyer
 from shops.models import Shop
 from .comparison import SESSION_KEY, comparison_products, parse_product_ids, session_products
-
-logger = logging.getLogger(__name__)
-
+from analytics.views import _filter_period
+from django.utils import timezone
 from recommendations.services import get_frequently_bought_together, get_recommended_products
+logger = logging.getLogger(__name__)
 
 def buyer_home(request):
     products = (
@@ -57,58 +57,146 @@ def buyer_home(request):
     })
 
 def load_products(request):
+
     selling = Q(status='ACTIVE', stock_quantity__gt=0)
-    out_of_stock = Q(status='OUT_OF_STOCK') | Q(status='ACTIVE', stock_quantity__lte=0)
+
+    out_of_stock = (
+        Q(status='OUT_OF_STOCK')
+        | Q(status='ACTIVE', stock_quantity__lte=0)
+    )
+
     status_filters = {
-        'ACTIVE': selling, 'OUT_OF_STOCK': out_of_stock, 'INACTIVE': Q(status='INACTIVE'),
+        'ACTIVE': selling,
+        'OUT_OF_STOCK': out_of_stock,
+        'INACTIVE': Q(status='INACTIVE'),
     }
+
     counts = {
         'total': Count('pk'),
         'selling': Count('pk', filter=selling),
         'out_of_stock': Count('pk', filter=out_of_stock),
         'hidden': Count('pk', filter=Q(status='INACTIVE')),
     }
-    products = Product.objects.select_related('category', 'shop', 'brand')
+
+    period = _filter_period(request)
+
+    products = Product.objects.select_related(
+        'category', 'shop', 'brand'
+    )
+
+    if period['start_date']:
+        products = products.filter(
+            created_at__date__gte=period['start_date']
+        )
+
+    if period['end_date']:
+        products = products.filter(
+            created_at__date__lte=period['end_date']
+        )
+
     stats = products.aggregate(**counts)
+
     filter_form = AdminProductFilterForm(request.GET)
+
     selected_status = request.GET.get('status', '')
+
     if filter_form.is_valid():
+
         filters = filter_form.cleaned_data
+
         keyword = filters['search']
+
         if keyword:
-            matches = Q(product_name__icontains=keyword) | Q(shop__shop_name__icontains=keyword)
+            matches = (
+                Q(product_name__icontains=keyword)
+                | Q(shop__shop_name__icontains=keyword)
+            )
+
             product_id = keyword.lstrip('#')
+
             if product_id.isascii() and product_id.isdigit() and len(product_id) <= 18:
                 matches |= Q(product_id=product_id)
+
             products = products.filter(matches)
+
         for name in ['category', 'shop']:
             if filters[name] is not None:
-                products = products.filter(**{name: filters[name]})
+                products = products.filter(**{
+                    name: filters[name]
+                })
+
     else:
         products = products.none()
 
     tab_counts = products.aggregate(**counts)
+
     if selected_status in status_filters:
-        products = products.filter(status_filters[selected_status])
-    products = products.order_by('-created_at', '-product_id')
-    show_product = Paginator(products, 10).get_page(request.GET.get('page'))
+        products = products.filter(
+            status_filters[selected_status]
+        )
+
+    products = products.order_by(
+        '-created_at', '-product_id'
+    )
+
+    show_product = Paginator(products, 10).get_page(
+        request.GET.get('page')
+    )
+
     for product in show_product:
-        product.current_sales_value = product.price * product.sold_quantity
+        product.current_sales_value = (
+            product.price * product.sold_quantity
+        )
+
     query_params = request.GET.copy()
     query_params.pop('page', None)
+
     context = {
-        'page_name': 'products', 'page_section': 'staff',
-        'showProduct': show_product, 'filter_form': filter_form, 'stats': stats,
-        'locStatus': selected_status, 'query_string': query_params.urlencode(),
+        'page_name': 'products',
+        'page_section': 'staff',
+        'showProduct': show_product,
+        'filter_form': filter_form,
+        'stats': stats,
+        'locStatus': selected_status,
+        'query_string': query_params.urlencode(),
+
         'status_tabs': [
-            {'value': value, 'label': label, 'count': tab_counts[count_name]}
+            {
+                'value': value,
+                'label': label,
+                'count': tab_counts[count_name]
+            }
             for value, label, count_name in [
-                ('', 'Tất cả', 'total'), ('ACTIVE', 'Đang bán', 'selling'),
-                ('OUT_OF_STOCK', 'Hết hàng', 'out_of_stock'), ('INACTIVE', 'Tạm ẩn', 'hidden'),
+                ('', 'Tất cả', 'total'),
+                ('ACTIVE', 'Đang bán', 'selling'),
+                ('OUT_OF_STOCK', 'Hết hàng', 'out_of_stock'),
+                ('INACTIVE', 'Tạm ẩn', 'hidden'),
             ]
         ],
+
+        'period_label': period['label'],
+        'selected_year': period['selected_year'],
+        'month_input_value': period['month_input_value'],
+        'active_preset': period['active_preset'],
+        'active_picker_tab': period['active_picker_tab'],
+        'current_year': timezone.localdate().year,
+
+        'from_date': (
+            period['requested_start'].isoformat()
+            if period['requested_start'] else ''
+        ),
+
+        'to_date': (
+            period['requested_end'].isoformat()
+            if period['requested_end'] else ''
+        ),
     }
-    return render(request, 'admin/products.html', context)
+
+    return render(
+        request,
+        'admin/products.html',
+        context
+    )
 
 def showORhide_Product(request, product_id):
     product = Product.objects.filter(product_id=product_id).first()

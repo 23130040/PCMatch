@@ -125,3 +125,70 @@ if (orderSelectAll && orderSelectionRows.length && orderBulkActions && selectedO
     });
     refreshOrderSelection();
 }
+
+document.querySelectorAll('[data-dashboard-period]').forEach(period => {
+
+    const trigger = period.querySelector(
+        '.dashboard-period__trigger'
+    );
+
+    const menu = period.querySelector(
+        '.dashboard-period__menu'
+    );
+
+    if (!trigger || !menu) return;
+
+    trigger.addEventListener('click', () => {
+
+        const isOpen = period.classList.toggle('is-open');
+
+        menu.hidden = !isOpen;
+
+        trigger.setAttribute(
+            'aria-expanded',
+            String(isOpen)
+        );
+
+    });
+
+    period.querySelectorAll('[data-period-tab]').forEach(tab => {
+
+        tab.addEventListener('click', () => {
+
+            const selected = tab.dataset.periodTab;
+
+            period.querySelectorAll('[data-period-tab]').forEach(item => {
+                item.classList.toggle(
+                    'is-active',
+                    item === tab
+                );
+            });
+
+            period.querySelectorAll('[data-period-form]').forEach(form => {
+                form.hidden = (
+                    form.dataset.periodForm !== selected
+                );
+            });
+
+        });
+
+    });
+
+    document.addEventListener('click', event => {
+
+        if (!period.contains(event.target)) {
+
+            period.classList.remove('is-open');
+
+            menu.hidden = true;
+
+            trigger.setAttribute(
+                'aria-expanded',
+                'false'
+            );
+
+        }
+
+    });
+
+});

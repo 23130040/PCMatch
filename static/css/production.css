@@ -5937,3 +5937,133 @@ body.has-order-drawer { overflow: hidden; }
         width: 100vw !important;
     }
 }
+
+.customer-page {
+    font-family: var(--font-body), sans-serif;
+}
+
+.customer-main {
+    min-width: 0;
+}
+
+.customer-page-head {
+    margin-bottom: 18px;
+    align-items: flex-end;
+}
+
+.customer-page-head .pending-note {
+    margin-top: 5px;
+}
+
+.customer-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.customer-metrics .admin-metric {
+    height: 130px;
+    min-height: 130px;
+    padding: 17px 20px;
+    box-sizing: border-box;
+}
+
+.customer-metrics .metric-value {
+    display: block;
+}
+
+.customer-metrics .metric-value em {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: #edf5ff;
+    color: #2465d6;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 650;
+    vertical-align: middle;
+}
+
+.customer-metrics .metric-value em .fa-arrow-down {
+    color: #dc2626;
+}
+
+.customer-metrics .admin-metric p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+    .customer-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .customer-page-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .customer-page-head > div:first-child > p {
+        white-space: normal;
+    }
+
+    .customer-page-head .admin-page-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .customer-metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+.customer-filter-tabs .order-tab,
+.customer-filter-tabs .order-tab:link,
+.customer-filter-tabs .order-tab:visited,
+.customer-filter-tabs .order-tab:hover,
+.customer-filter-tabs .order-tab:focus,
+.customer-filter-tabs .order-tab:active {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+}
+
+.customer-filter-tabs .order-tab .tab-count {
+    text-decoration: none !important;
+}
+
+
+.customer-page .dashboard-period__tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100%;
+    min-height: 54px;
+    padding: 4px;
+    gap: 4px;
+    box-sizing: border-box;
+    border-radius: 999px;
+}
+
+.customer-page .dashboard-period__tabs button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 12px;
+    margin: 0;
+    box-sizing: border-box;
+    border-radius: 999px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.customer-page .dashboard-period__tabs button.is-active {
+    width: 100%;
+    background: #dceaff;
+    color: #1f63ca;
+}

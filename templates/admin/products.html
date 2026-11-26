@@ -1,4 +1,4 @@
-{% load static i18n tz %}
+{% load static i18n tz cart_prices %}
 <!DOCTYPE html>
 <html lang="vi" data-page="{{ page_name }}" data-section="{{ page_section }}">
 
@@ -63,41 +63,162 @@
                 </div>
             </div>
 
-            <div class="page-actions">
-                <button class="button button--secondary"
+            <div class="dashboard-period" data-dashboard-period>
+                <button class="dashboard-period__trigger"
                         type="button"
-                        disabled>
+                        aria-expanded="false"
+                        aria-controls="product-period-menu">
 
-                    <svg viewBox="0 0 24 24"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="2"
-                         aria-hidden="true">
+                    <i class="fa-solid fa-calendar-days"
+                       aria-hidden="true"></i>
 
-                        <rect x="3" y="4" width="18" height="18" rx="2"/>
-                        <path d="M16 2v4M8 2v4M3 10h18"/>
-                    </svg>
+                    <span>{{ period_label|default:"Tất cả thời gian" }}</span>
 
-                    <span data-time-label>
-                        Tất cả thời gian
-                    </span>
-
-                    <svg class="chevron"
-                         viewBox="0 0 24 24"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="2"
-                         aria-hidden="true">
-
-                        <path d="m19 9-7 7-7-7"
-                              stroke-linecap="round"/>
-                    </svg>
+                    <i class="fa-solid fa-chevron-down"
+                       aria-hidden="true"></i>
                 </button>
-                <button class="button button--primary"
-                        type="button">
-                    <i class="fa-solid fa-file"></i>
-                    <span>Xuất danh mục</span>
-                </button>
+
+                <div class="dashboard-period__menu"
+                     id="product-period-menu"
+                     hidden>
+
+                    <form class="dashboard-period__presets"
+                          method="get"
+                          aria-label="Khoảng thời gian nhanh">
+
+                        <input type="hidden" name="search" value="{{ filter_form.search.value|default:'' }}">
+                        <input type="hidden" name="shop" value="{{ filter_form.shop.value|default:'' }}">
+                        <input type="hidden" name="category" value="{{ filter_form.category.value|default:'' }}">
+                        <input type="hidden" name="status" value="{{ locStatus }}">
+
+                        <button type="submit" name="preset" value="all"
+                                {% if active_preset == 'all' %}class="is-active"{% endif %}>
+                            Tất cả
+                        </button>
+
+                        <button type="submit" name="preset" value="7days"
+                                {% if active_preset == '7days' %}class="is-active"{% endif %}>
+                            7 ngày qua
+                        </button>
+
+                        <button type="submit" name="preset" value="30days"
+                                {% if active_preset == '30days' %}class="is-active"{% endif %}>
+                            30 ngày qua
+                        </button>
+
+                        <button type="submit" name="preset" value="month"
+                                {% if active_preset == 'month' %}class="is-active"{% endif %}>
+                            Tháng này
+                        </button>
+
+                        <button type="submit" name="preset" value="quarter"
+                                {% if active_preset == 'quarter' %}class="is-active"{% endif %}>
+                            Quý này
+                        </button>
+
+                        <button type="submit" name="preset" value="year"
+                                {% if active_preset == 'year' %}class="is-active"{% endif %}>
+                            Năm nay
+                        </button>
+                    </form>
+
+                    <div class="dashboard-period__tabs" role="tablist">
+
+                        <button
+                                {% if active_picker_tab == 'month' %}class="is-active"{% endif %}
+                                type="button"
+                                data-period-tab="month">
+                            Tháng
+                        </button>
+
+                        <button
+                                {% if active_picker_tab == 'year' %}class="is-active"{% endif %}
+                                type="button"
+                                data-period-tab="year">
+                            Năm
+                        </button>
+
+                    </div>
+
+                    <form class="dashboard-period__form"
+                          method="get"
+                          data-period-form="month"
+                          {% if active_picker_tab == 'year' %}hidden{% endif %}>
+
+                        <input type="hidden" name="search" value="{{ filter_form.search.value|default:'' }}">
+                        <input type="hidden" name="shop" value="{{ filter_form.shop.value|default:'' }}">
+                        <input type="hidden" name="category" value="{{ filter_form.category.value|default:'' }}">
+                        <input type="hidden" name="status" value="{{ locStatus }}">
+
+                        <label>
+                            <span class="sr-only">Chọn tháng</span>
+                            <input type="month"
+                                   name="period_month"
+                                   value="{{ month_input_value }}">
+                        </label>
+
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng
+                        </button>
+                    </form>
+
+                    <form class="dashboard-period__form"
+                          method="get"
+                          data-period-form="year"
+                          {% if active_picker_tab != 'year' %}hidden{% endif %}>
+
+                        <input type="hidden" name="search" value="{{ filter_form.search.value|default:'' }}">
+                        <input type="hidden" name="shop" value="{{ filter_form.shop.value|default:'' }}">
+                        <input type="hidden" name="category" value="{{ filter_form.category.value|default:'' }}">
+                        <input type="hidden" name="status" value="{{ locStatus }}">
+
+                        <label>
+                            <span class="sr-only">Chọn năm</span>
+                            <input type="number"
+                                   name="year"
+                                   min="2000"
+                                   max="{{ current_year|add:1 }}"
+                                   value="{{ selected_year }}">
+                        </label>
+
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng
+                        </button>
+                    </form>
+
+                    <form class="dashboard-period__custom" method="get">
+
+                        <input type="hidden" name="search" value="{{ filter_form.search.value|default:'' }}">
+                        <input type="hidden" name="shop" value="{{ filter_form.shop.value|default:'' }}">
+                        <input type="hidden" name="category" value="{{ filter_form.category.value|default:'' }}">
+                        <input type="hidden" name="status" value="{{ locStatus }}">
+
+                        <strong>KHOẢNG TÙY CHỈNH</strong>
+
+                        <div>
+                            <label>
+                                <span class="sr-only">Từ ngày</span>
+                                <input type="date"
+                                       name="from_date"
+                                       value="{{ from_date }}"
+                                       required>
+                            </label>
+
+                            <span>–</span>
+
+                            <label>
+                                <span class="sr-only">Đến ngày</span>
+                                <input type="date"
+                                       name="to_date"
+                                       value="{{ to_date }}"
+                                       required>
+                            </label>
+                        </div>
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng khoảng
+                        </button>
+                    </form>
+                </div>
             </div>
         </section>
 
@@ -309,7 +430,7 @@
                             </td>
                             <td class="product-price">
                                 <strong>
-                                    {% language 'vi' %}{{ p.price|floatformat:"0g" }} đ{% endlanguage %}
+                                    {{ p.price|vnd }} đ
                                 </strong>
                             </td>
                             <td class="center product-number">
@@ -375,6 +496,7 @@
                     {% if showProduct.has_previous %}
 
                         <a href="{% url 'staff_products' %}?
+
                                 {% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.previous_page_number }}"
                            aria-label="Trang trước">
 
@@ -407,6 +529,7 @@
                     </span>
                     {% if showProduct.has_next %}
                         <a href="{% url 'staff_products' %}?
+
                                 {% if query_string %}{{ query_string }}&amp;{% endif %}page={{ showProduct.next_page_number }}"
                            aria-label="Trang sau">
                             <svg viewBox="0 0 24 24"

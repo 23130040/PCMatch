@@ -108,3 +108,44 @@ class BuyerEmailOTP(models.Model):
     consumed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class PasswordSecurityEvent(models.Model):
+
+    EVENT_CHOICES = [
+        ('PASSWORD_CHANGED', 'Đổi mật khẩu'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='password_security_events'
+    )
+
+    event_type = models.CharField(
+        max_length=40,
+        choices=EVENT_CHOICES,
+        default='PASSWORD_CHANGED'
+    )
+
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True
+    )
+
+    user_agent = models.CharField(
+        max_length=512,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Lịch sử bảo mật'
+        verbose_name_plural = 'Lịch sử bảo mật'
+
+    def __str__(self):
+        return f'{self.user.email} - {self.get_event_type_display()}'

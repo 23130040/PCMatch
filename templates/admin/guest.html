@@ -8,19 +8,18 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
-          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebAsset/FontAwesome@pro/css/all.min.css">
 
     <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/components.css' %}?v=20260917b">
     <link rel="stylesheet" href="{% static 'css/pages.css' %}?v=20260917b">
-    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260926k">
+    <link rel="stylesheet" href="{% static 'css/production.css' %}?v=20261126-customer">
     <link rel="stylesheet" href="{% static 'css/reusable-controls.css' %}?v=20260926">
     <link rel="stylesheet" href="{% static 'css/admin-table-badges.css' %}?v=20260926">
-{% include 'includes/frontend_config.html' %}</head>
-<body class="operations-page">
+    {% include 'includes/frontend_config.html' %}</head>
+<body class="admin-dashboard customer-page">
 <a class="skip-link" href="#main">Chuyển đến nội dung chính</a>
 
 {% include 'admin/header.html' %}
@@ -28,117 +27,396 @@
 <div class="shell">
     {% include 'admin/sidebar.html' %}
 
-    <main class="shell__content" id="main">
-        <nav class="breadcrumb" aria-label="Đường dẫn">
-            <a href="{% url 'staff_dashboard' %}">Admin</a>
-            <span>Quản lý khách hàng</span>
-        </nav>
+    <main class="shell__content shop-main customer-main" id="main">
+        <section class="page-heading admin-page-head customer-page-head">
 
-        {% if messages %}
-            <div style="margin-bottom: var(--space-4);">
-                {% for message in messages %}
-                    <div style="padding: 10px 16px; border-radius: var(--radius-control); margin-bottom: 8px; font-size: 14px;
-                                background-color: {% if message.tags == 'error' %}#fee2e2; color: #dc2626; border: 1px solid #fca5a5;{% elif message.tags == 'warning' %}#fef3c7; color: #d97706; border: 1px solid #fcd34d;{% else %}#dcfce7; color: #16a34a; border: 1px solid #86efac;{% endif %}">
-                        <i class="fa-solid {% if message.tags == 'error' %}fa-circle-xmark{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}" style="margin-right: 6px;"></i>
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <div class="page-head" style="align-items: flex-start;">
             <div>
+                <div class="breadcrumbs">
+                    <a href="{% url 'staff_dashboard' %}">Admin</a>
+                    <span>/</span>
+                    <span>Quản lý khách hàng</span>
+                </div>
+
                 <h1>Quản lý khách hàng</h1>
-                <p>Xem thông tin người mua, duyệt yêu cầu đổi số điện thoại và theo dõi lịch sử thay đổi tài khoản.</p>
+
+                <p>
+                    Xem thông tin người mua, duyệt yêu cầu đổi số điện thoại
+                    và theo dõi lịch sử thay đổi tài khoản.
+                </p>
+
                 <div class="pending-note">
-                    <i class="fa-regular fa-user"></i> 5 yêu cầu đổi số điện thoại đang chờ admin duyệt
+                    <i class="fa-regular fa-user"></i>
+
+                    <span>
+                {{ unverified_customers }} tài khoản chưa xác minh số điện thoại
+            </span>
                 </div>
             </div>
-            <div class="cluster">
-                <button class="btn btn--secondary" type="button" data-time-filter><i class="fa-regular fa-calendar"></i>
-                    <span data-time-label>Hôm nay · 26/09/2026</span><i class="fa-solid fa-angle-down chevron"></i></button>
-                <button class="btn btn--primary" type="button">
-                    <span><i class="fa-solid fa-file"></i> Xuất danh sách</span>
+
+
+            <div class="dashboard-period" data-dashboard-period>
+
+                <button class="dashboard-period__trigger"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="customer-period-menu">
+
+                    <i class="fa-solid fa-calendar-days"
+                       aria-hidden="true"></i>
+
+                    <span>{{ period_label|default:"Tất cả thời gian" }}</span>
+
+                    <i class="fa-solid fa-chevron-down"
+                       aria-hidden="true"></i>
                 </button>
-            </div>
-        </div>
 
-        <div class="dashboard-metrics" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
-            <div class="panel metric-panel">
+                <div class="dashboard-period__menu"
+                     id="customer-period-menu"
+                     hidden>
+
+                    <!-- CÁC LỰA CHỌN THỜI GIAN NHANH -->
+                    <form class="dashboard-period__presets"
+                          method="get"
+                          aria-label="Khoảng thời gian nhanh">
+
+                        <input type="hidden" name="search" value="{{ search }}">
+                        <input type="hidden" name="status" value="{{ status }}">
+
+                        <button type="submit" name="preset" value="all"
+                                {% if active_preset == 'all' %}class="is-active"{% endif %}>
+                            Tất cả
+                        </button>
+
+                        <button type="submit" name="preset" value="7days"
+                                {% if active_preset == '7days' %}class="is-active"{% endif %}>
+                            7 ngày qua
+                        </button>
+
+                        <button type="submit" name="preset" value="30days"
+                                {% if active_preset == '30days' %}class="is-active"{% endif %}>
+                            30 ngày qua
+                        </button>
+
+                        <button type="submit" name="preset" value="month"
+                                {% if active_preset == 'month' %}class="is-active"{% endif %}>
+                            Tháng này
+                        </button>
+
+                        <button type="submit" name="preset" value="quarter"
+                                {% if active_preset == 'quarter' %}class="is-active"{% endif %}>
+                            Quý này
+                        </button>
+
+                        <button type="submit" name="preset" value="year"
+                                {% if active_preset == 'year' %}class="is-active"{% endif %}>
+                            Năm nay
+                        </button>
+
+                    </form>
+
+                    <!-- CHỈ CÒN HAI TAB THÁNG VÀ NĂM -->
+                    <div class="dashboard-period__tabs" role="tablist">
+
+                        <button type="button"
+                                {% if active_picker_tab == 'month' %}class="is-active"{% endif %}
+                                data-period-tab="month">
+
+                            Tháng
+
+                        </button>
+
+                        <button type="button"
+                                {% if active_picker_tab == 'year' %}class="is-active"{% endif %}
+                                data-period-tab="year">
+
+                            Năm
+
+                        </button>
+
+                    </div>
+
+                    <!-- CHỌN THÁNG -->
+                    <form class="dashboard-period__form"
+                          method="get"
+                          data-period-form="month"
+                          {% if active_picker_tab == 'year' %}hidden{% endif %}>
+
+                        <input type="hidden" name="search" value="{{ search }}">
+                        <input type="hidden" name="status" value="{{ status }}">
+
+                        <label>
+                            <span class="sr-only">Chọn tháng</span>
+
+                            <input type="month"
+                                   name="period_month"
+                                   value="{{ month_input_value }}"
+                                   required>
+                        </label>
+
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng
+                        </button>
+
+                    </form>
+
+                    <!-- CHỌN NĂM -->
+                    <form class="dashboard-period__form"
+                          method="get"
+                          data-period-form="year"
+                          {% if active_picker_tab != 'year' %}hidden{% endif %}>
+
+                        <input type="hidden" name="search" value="{{ search }}">
+                        <input type="hidden" name="status" value="{{ status }}">
+
+                        <label>
+                            <span class="sr-only">Chọn năm</span>
+
+                            <input type="number"
+                                   name="year"
+                                   min="2000"
+                                   max="{{ current_year|add:1 }}"
+                                   value="{{ selected_year }}"
+                                   required>
+                        </label>
+
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng
+                        </button>
+
+                    </form>
+
+                    <!-- KHOẢNG THỜI GIAN TÙY CHỈNH -->
+                    <form class="dashboard-period__custom" method="get">
+
+                        <input type="hidden" name="search" value="{{ search }}">
+                        <input type="hidden" name="status" value="{{ status }}">
+
+                        <strong>KHOẢNG TÙY CHỈNH</strong>
+
+                        <div>
+
+                            <label>
+                                <span class="sr-only">Từ ngày</span>
+
+                                <input type="date"
+                                       name="from_date"
+                                       value="{{ from_date }}"
+                                       required>
+                            </label>
+
+                            <span>–</span>
+
+                            <label>
+                                <span class="sr-only">Đến ngày</span>
+
+                                <input type="date"
+                                       name="to_date"
+                                       value="{{ to_date }}"
+                                       required>
+                            </label>
+
+                        </div>
+
+                        <button class="btn btn--primary" type="submit">
+                            Áp dụng khoảng
+                        </button>
+
+                    </form>
+
+                </div>
+            </div>
+
+
+        </section>
+
+        <section class="dashboard-metrics admin-metrics shop-metrics customer-metrics"
+                 aria-label="Thống kê khách hàng">
+
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+
                 <span class="metric-label">Tổng khách hàng</span>
-                <div class="metric-value">
-                    2.418 <small>tài khoản</small>
-                    <span class="status status--info" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +64 tuần này</span>
-                </div>
-                <p class="muted">Tài khoản người mua đã đăng ký trên sàn PCMatch</p>
-            </div>
 
-            <div class="panel metric-panel metric-panel--urgent">
-                <span class="metric-label">Yêu cầu đổi SĐT</span>
-                <div class="metric-value">
-                    5 <small>yêu cầu</small>
-                    <span class="status status--warn" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +3 hôm nay</span>
-                </div>
-                <p class="muted">Yêu cầu đổi số điện thoại đang chờ admin duyệt</p>
-            </div>
+                <strong class="metric-value">
+                    {{ total_customers|default:0 }}
+                    <small>tài khoản</small>
+                </strong>
 
-            <div class="panel metric-panel">
-                <span class="metric-label">Hoạt động 30 ngày</span>
-                <div class="metric-value">
-                    1.264 <small>khách hàng</small>
-                    <span class="status status--ok" style="margin-left: 6px;"><i class="fa-solid fa-arrow-up"></i> +5,2%</span>
-                </div>
-                <p class="muted">Khách hàng có phát sinh đơn trong 30 ngày gần nhất</p>
-            </div>
+                <p>Khách hàng đăng ký trong {{ period_label|lower }}</p>
 
-            <div class="panel metric-panel metric-panel--stock">
+            </article>
+
+            <article class="panel metric-panel admin-metric admin-metric--plain">
+
+                <span class="metric-label">Đang hoạt động</span>
+
+                <strong class="metric-value">
+                    {{ active_customers|default:0 }}
+                    <small>tài khoản</small>
+                </strong>
+
+                <p>Tài khoản đang được phép hoạt động</p>
+
+            </article>
+
+            <article class="panel metric-panel admin-metric admin-metric--amber">
+
                 <span class="metric-label">Tài khoản bị khóa</span>
-                <div class="metric-value">
-                    14 <small>tài khoản</small>
-                    <span class="status status--bad" style="margin-left: 6px;"><i class="fa-solid fa-arrow-down"></i> +1</span>
-                </div>
-                <p class="muted">Tài khoản tạm khóa do vi phạm hoặc dấu hiệu gian lận</p>
-            </div>
-        </div>
+
+                <strong class="metric-value">
+                    {{ locked_customers|default:0 }}
+                    <small>tài khoản</small>
+                </strong>
+
+                <p>Tài khoản đang bị khóa trong khoảng thời gian lọc</p>
+
+            </article>
+
+            <article class="panel metric-panel admin-metric admin-metric--blue">
+
+                <span class="metric-label">Đã xác minh SĐT</span>
+
+                <strong class="metric-value">
+                    {{ verified_customers|default:0 }}
+                    <small>tài khoản</small>
+                </strong>
+
+                <p>Có {{ unverified_customers }} tài khoản chưa xác minh SĐT</p>
+
+            </article>
+
+        </section>
 
         <div class="panel panel--padded" style="padding-inline: var(--space-5);" data-selection-container
              data-selection-actions="Mở khóa tài khoản|Khóa tài khoản|Duyệt đổi SĐT">
             <div class="cluster" style="justify-content: space-between; margin-bottom: var(--space-4);">
-                
-              
+
+
                 <div class="cluster" style="flex: 1; max-width: 600px;">
-                    <form method="GET" action="{% url 'staff_guest' %}" style="flex: 1; display: flex;">
-                        <label class="field" style="flex: 1;">
-                            <span class="sr-only">Tìm kiếm khách hàng theo họ tên, email, số điện thoại hoặc mã</span>
-                            <input type="text" name="search" value="{{ search }}" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
-                        </label>
+                    <form method="GET"
+                          action="{% url 'staff_guest' %}"
+                          class="table-search order-toolbar__search">
+
+                        <input type="hidden" name="status" value="{{ status }}">
+
+                        <input type="hidden" name="verification" value="{{ verification }}">
+
+                        {% if active_preset %}
+                            <input type="hidden" name="preset" value="{{ active_preset }}">
+                        {% endif %}
+
+                        {% if from_date and to_date %}
+
+                            <input type="hidden"
+                                   name="from_date"
+                                   value="{{ from_date }}">
+
+                            <input type="hidden"
+                                   name="to_date"
+                                   value="{{ to_date }}">
+
+                        {% elif not active_preset and period_label != 'Tất cả thời gian' %}
+
+                            {% if active_picker_tab == 'month' %}
+
+                                <input type="hidden"
+                                       name="period_month"
+                                       value="{{ month_input_value }}">
+
+                            {% elif active_picker_tab == 'year' %}
+
+                                <input type="hidden"
+                                       name="year"
+                                       value="{{ selected_year }}">
+
+                            {% endif %}
+
+                        {% endif %}
+
+                        <input type="search"
+                               name="search"
+                               value="{{ search }}"
+                               placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã...">
+
+                        <button type="submit" hidden>Tìm kiếm</button>
+
                     </form>
                     <div class="field">
-                        <select>
-                            <option>Tất cả yêu cầu</option>
-                            <option>Chờ đổi SĐT</option>
-                            <option>Tài khoản bị khóa</option>
-                        </select>
+                        <form method="get" id="customer-verification-filter">
+
+                            <input type="hidden" name="search" value="{{ search }}">
+                            <input type="hidden" name="status" value="{{ status }}">
+                            <input type="hidden" name="preset" value="{{ active_preset }}">
+
+                            {% if active_picker_tab == 'day' and selected_day %}
+                                <input type="hidden" name="period_day" value="{{ selected_day }}">
+                            {% elif active_picker_tab == 'month' %}
+                                <input type="hidden" name="period_month" value="{{ month_input_value }}">
+                            {% elif active_picker_tab == 'year' %}
+                                <input type="hidden" name="year" value="{{ selected_year }}">
+                            {% endif %}
+
+                            {% if from_date and to_date %}
+                                <input type="hidden" name="from_date" value="{{ from_date }}">
+                                <input type="hidden" name="to_date" value="{{ to_date }}">
+                            {% endif %}
+
+                            <select name="verification"
+                                    onchange="this.form.submit()">
+
+                                <option value=""
+                                        {% if not verification %}selected{% endif %}>
+                                    Tất cả xác minh
+                                </option>
+
+                                <option value="verified"
+                                        {% if verification == 'verified' %}selected{% endif %}>
+                                    Đã xác minh SĐT
+                                </option>
+
+                                <option value="unverified"
+                                        {% if verification == 'unverified' %}selected{% endif %}>
+                                    Chưa xác minh SĐT
+                                </option>
+
+                            </select>
+
+                        </form>
                     </div>
                 </div>
-                
+
                 <div class="muted" style="font-size: 13px;">
                     <strong>{{ showUser.paginator.count|default:"0" }}</strong> khách hàng khớp bộ lọc
                 </div>
             </div>
 
-            <div class="tabs" role="tablist" aria-label="Lọc khách hàng theo trạng thái"
-                 style="margin-bottom: var(--space-4);">
-                <button class="tab" type="button" role="tab" id="tab-all" aria-selected="true"
-                        aria-controls="panel-customers">Tất cả <span class="sidebar__count">{{ showUser.paginator.count|default:"0" }}</span></button>
-                <button class="tab" type="button" role="tab" id="tab-active" aria-selected="false"
-                        aria-controls="panel-customers">Đang hoạt động</button>
-                <button class="tab" type="button" role="tab" id="tab-locked" aria-selected="false"
-                        aria-controls="panel-customers">Đã khóa</button>
-            </div>
+            <nav class="filter-tabs order-tabs customer-filter-tabs"
+                 aria-label="Lọc khách hàng theo trạng thái">
+
+                <a href="?{{ status_query }}"
+                   class="order-tab {% if not status %}is-active{% endif %}"
+                   {% if not status %}aria-current="page"{% endif %}>
+                    Tất cả
+                    <span class="tab-count">{{ customer_total }}</span>
+                </a>
+
+                <a href="?{{ status_query }}&amp;status=active"
+                   class="order-tab {% if status == 'active' %}is-active{% endif %}"
+                   {% if status == 'active' %}aria-current="page"{% endif %}>
+                    Đang hoạt động
+                    <span class="tab-count">{{ active_count }}</span>
+                </a>
+
+                <a href="?{{ status_query }}&amp;status=locked"
+                   class="order-tab {% if status == 'locked' %}is-active{% endif %}"
+                   {% if status == 'locked' %}aria-current="page"{% endif %}>
+                    Đã khóa
+                    <span class="tab-count">{{ locked_count }}</span>
+                </a>
+            </nav>
 
             <div class="table-wrap" id="panel-customers" role="tabpanel" aria-labelledby="tab-all">
-                <table class="data-table" data-selectable-table data-selection-noun="khách hàng" data-selection-limit="8">
+                <table class="data-table" data-selectable-table data-selection-noun="khách hàng"
+                       data-selection-limit="8">
                     <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" aria-label="Chọn tất cả"></th>
@@ -150,12 +428,13 @@
                         <th style="text-align: right;">Thao tác</th>
                     </tr>
                     </thead>
-                    
-                
+
+
                     <tbody>
-                        {% for u in showUser %}
+                    {% for u in showUser %}
                         <tr>
-                            <td><input type="checkbox" aria-label="Chọn khách hàng {{ u.full_name|default:u.username }}"></td>
+                            <td><input type="checkbox"
+                                       aria-label="Chọn khách hàng {{ u.full_name|default:u.username }}"></td>
                             <td>
                                 <div class="stack" style="gap: 2px;">
                                     <strong>{{ u.full_name|default:u.username }}</strong>
@@ -175,26 +454,27 @@
                                 {% endif %}
                             </td>
                             <td style="text-align: right;">
-                                <!-- Nút Khóa / Mở khóa gọi vào hàm lockUser -->
                                 <a href="{% url 'staff_guest_toggle' u.id %}"
                                    onclick="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản {{ u.username }}?');"
                                    class="btn btn--secondary btn--quiet"
                                    style="text-decoration: none; padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
                                     {% if u.is_active %}
-                                        <i class="fa-solid fa-lock" style="color: #ef4444;"></i> <span style="color: #ef4444;">Khóa</span>
+                                        <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
+                                        <span style="color: #ef4444;">Khóa</span>
                                     {% else %}
-                                        <i class="fa-solid fa-lock-open" style="color: #10b981;"></i> <span style="color: #10b981;">Mở</span>
+                                        <i class="fa-solid fa-lock-open" style="color: #10b981;"></i>
+                                        <span style="color: #10b981;">Mở</span>
                                     {% endif %}
                                 </a>
                             </td>
                         </tr>
-                        {% empty %}
+                    {% empty %}
                         <tr>
                             <td colspan="7" style="text-align: center; padding: 30px; color: var(--color-slate);">
                                 Không tìm thấy khách hàng nào.
                             </td>
                         </tr>
-                        {% endfor %}
+                    {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -202,14 +482,16 @@
             <div class="cluster"
                  style="justify-content: space-between; margin-top: var(--space-4); padding-top: var(--space-3); font-size: 13px; color: var(--color-slate);">
                 <div data-table-info>
-                    Hiển thị trang <strong>{{ showUser.number }}</strong> trên <strong>{{ showUser.paginator.num_pages|default:1 }}</strong> trang
+                    Hiển thị trang <strong>{{ showUser.number }}</strong> trên
+                    <strong>{{ showUser.paginator.num_pages|default:1 }}</strong> trang
                 </div>
-                
-             # Phân trang hiển thị danh sách khách hàng
+
                 <div class="cluster" style="gap: 6px; align-items: center;">
                     {% if showUser.has_previous %}
-                        <a href="?page={{ showUser.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
-                           class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px; text-decoration: none;">‹</a>
+                        <a href="?page=
+                                {{ showUser.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
+                           class="btn btn--secondary btn--quiet"
+                           style="min-height: 34px; padding: 0 10px; text-decoration: none;">‹</a>
                     {% endif %}
 
                     <span style="font-size: 13px; color: var(--color-slate); padding: 0 8px;">
@@ -218,7 +500,8 @@
 
                     {% if showUser.has_next %}
                         <a href="?page={{ showUser.next_page_number }}{% if search %}&search={{ search }}{% endif %}"
-                           class="btn btn--secondary btn--quiet" style="min-height: 34px; padding: 0 10px; text-decoration: none;">›</a>
+                           class="btn btn--secondary btn--quiet"
+                           style="min-height: 34px; padding: 0 10px; text-decoration: none;">›</a>
                     {% endif %}
                 </div>
             </div>
@@ -226,6 +509,24 @@
     </main>
 </div>
 
+{% if showUser.has_previous %}
+    <a href="?{{ filter_query }}&amp;page={{ showUser.previous_page_number }}"
+       class="btn btn--secondary btn--quiet">
+        ‹
+    </a>
+{% endif %}
+
+<span>
+    Trang {{ showUser.number }} /
+    {{ showUser.paginator.num_pages|default:1 }}
+</span>
+
+{% if showUser.has_next %}
+    <a href="?{{ filter_query }}&amp;page={{ showUser.next_page_number }}"
+       class="btn btn--secondary btn--quiet">
+        ›
+    </a>
+{% endif %}
 <script src="{% static 'js/app.js' %}?v=20260926e"></script>
 
 {% include 'includes/admin_interface_controls.html' %}
